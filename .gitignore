@@ -63,3 +63,6 @@ coverage/
 
 # AI Studio local artifacts
 .aistudio/
+
+# Firebase CLI
+.firebase/
