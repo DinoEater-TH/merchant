@@ -26,6 +26,7 @@ data class ShopInfo(
     val minOrderForFreeDelivery: Double = 120.0,
     val stampsRequiredForReward: Int = 10,
     val rewardDescription: String = "ฟรี! ชุดลูกชิ้นรวมมิตร 1 ชุด",
+val addonConfig: String = "", // JSON: {"friedChili":true,"cucumber":true,"sauceCup":true}
     // Shop Logo Customization
     val logoType: LogoType = LogoType.PRESET,
     val logoUri: String? = null,

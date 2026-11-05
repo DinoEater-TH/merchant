@@ -144,6 +144,12 @@
           <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
           <input id="s_pin" maxlength="4" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
+        <div class="border-t pt-2">
+          <label class="text-xs font-bold text-gray-700">ตัวเลือกเสริมที่ลูกค้าเห็น</label>
+          <label class="flex items-center gap-2 text-sm mt-1"><input type="checkbox" id="s_addon_chili"> พริกทอด</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_addon_cucumber"> แตงกวา</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_addon_sauceCup"> ถ้วยน้ำจิ้ม</label>
+        </div>
         <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกการตั้งค่า</button>
       </div>
     </section>
@@ -569,6 +575,11 @@
       document.getElementById('s_freeDelivery').value = s.minOrderForFreeDelivery ?? 120;
       document.getElementById('s_stamps').value = s.stampsRequiredForReward ?? 10;
       document.getElementById('s_pin').value = state.adminPin || '1234';
+      let cfg = {};
+      try { cfg = JSON.parse(s.addonConfig || '{}'); } catch (e) { cfg = {}; }
+      document.getElementById('s_addon_chili').checked = cfg.friedChili !== false;
+      document.getElementById('s_addon_cucumber').checked = cfg.cucumber !== false;
+      document.getElementById('s_addon_sauceCup').checked = cfg.sauceCup !== false;
     }
     function saveSettings() {
       state.shopInfo.name = document.getElementById('s_name').value.trim() || state.shopInfo.name;
@@ -580,6 +591,11 @@
       state.shopInfo.stampsRequiredForReward = parseInt(document.getElementById('s_stamps').value) || state.shopInfo.stampsRequiredForReward;
       const pin = document.getElementById('s_pin').value.trim();
       if (pin.length === 4 && /^\d{4}$/.test(pin)) state.adminPin = pin;
+      state.shopInfo.addonConfig = JSON.stringify({
+        friedChili: document.getElementById('s_addon_chili').checked,
+        cucumber: document.getElementById('s_addon_cucumber').checked,
+        sauceCup: document.getElementById('s_addon_sauceCup').checked
+      });
       document.getElementById('shopNameHeader').textContent = state.shopInfo.name;
       schedulePush();
       alert('บันทึกการตั้งค่าแล้ว');
