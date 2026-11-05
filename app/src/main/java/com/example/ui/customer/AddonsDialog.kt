@@ -517,7 +517,33 @@ fun AddonsDialog(viewModel: MainViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Action buttons
+                val shopInfo by viewModel.shopInfo.collectAsState()
+                val showScan = shopInfo.showScanPayment
+
+                // Cash payment
+                Button(
+                    onClick = {
+                        val finalOptions = tempAddons.copy(comment = tempComment)
+                        viewModel.setAddonOptions(finalOptions)
+                        viewModel.setFulfillment(tempFulfillment)
+                        if (tempFulfillment == FulfillmentType.DELIVERY) {
+                            viewModel.setDeliveryAddress(tempAddress)
+                        }
+                        viewModel.confirmCashOrder()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Text(text = "💵 เงินสด", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (showScan) {
+// Action buttons
                 Button(
                     onClick = {
                         val finalOptions = tempAddons.copy(comment = tempComment)
@@ -536,6 +562,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
                         .testTag("confirm_addons_proceed_button")
                 ) {
                     Text(text = "ไปที่หน้าชำระเงิน (PromptPay QR) >", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
                 }
             }
         }

@@ -28,7 +28,7 @@ data class ShopInfo(
     val rewardDescription: String = "ฟรี! ชุดลูกชิ้นรวมมิตร 1 ชุด",
 val addonConfig: String = "", // JSON: {"friedChili":true,"cucumber":true,"sauceCup":true}
 val showScanPayment: Boolean = true,
-val promptPayQrUri: String? = null
+val promptPayQrUri: String? = null,
     // Shop Logo Customization
     val logoType: LogoType = LogoType.PRESET,
     val logoUri: String? = null,

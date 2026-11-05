@@ -276,6 +276,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isPaymentModalOpen.value = true
     }
 
+    fun confirmCashOrder() {
+        _isSlipAttached.value = false
+        _slipImageUri.value = null
+        confirmOrderAndSubmit()
+    }
+
     fun closePaymentModal() {
         _isPaymentModalOpen.value = false
     }

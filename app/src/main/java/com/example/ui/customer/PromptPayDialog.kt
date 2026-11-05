@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import coil.compose.AsyncImage
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -137,11 +138,19 @@ fun PromptPayDialog(viewModel: MainViewModel) {
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // PromptPay QR Code with precise amount
-                PromptPayQrView(
-                    promptPayNumber = shopInfo.promptPayNumber,
-                    amount = cartSummary.totalAmount,
-                    sizeDp = 180.dp
-                )
+                if (!shopInfo.promptPayQrUri.isNullOrBlank()) {
+                    AsyncImage(
+                        model = shopInfo.promptPayQrUri,
+                        contentDescription = "PromptPay QR",
+                        modifier = Modifier.size(180.dp)
+                    )
+                } else {
+                    PromptPayQrView(
+                        promptPayNumber = shopInfo.promptPayNumber,
+                        amount = cartSummary.totalAmount,
+                        sizeDp = 180.dp
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
