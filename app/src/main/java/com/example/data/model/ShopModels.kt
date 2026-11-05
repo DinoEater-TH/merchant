@@ -95,7 +95,8 @@ data class AddonOptions(
     val cucumber: Boolean = true,
     val sauceCup: Boolean = true,
     val sauceChoice: SauceChoice = SauceChoice.MIXED,
-    val comment: String = ""
+    val comment: String = "",
+val selectedAddons: List<String> = emptyList()
 )
 
 enum class FulfillmentType(val title: String) {

@@ -51,6 +51,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +71,8 @@ import com.example.data.model.FulfillmentType
 import com.example.data.model.SauceChoice
 import com.example.data.model.SkewerOption
 import com.example.ui.MainViewModel
+import org.json.JSONArray
+import org.json.JSONObject
 import com.example.ui.theme.ChiliRed
 import com.example.ui.theme.CucumberGreen
 import com.example.ui.theme.OrangePrimary
@@ -337,40 +341,34 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = tempAddons.friedChili,
-                        onCheckedChange = { tempAddons = tempAddons.copy(friedChili = it) },
-                        colors = CheckboxDefaults.colors(checkedColor = OrangePrimary)
-                    )
-                    Text(text = "🌶️ รับพริกทอดกรอบ", fontSize = 13.sp)
+                // Dynamic addon options from admin config
+                val addonItems = remember(shopInfo.addonConfig) {
+                    parseAddonItems(shopInfo.addonConfig)
                 }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = tempAddons.cucumber,
-                        onCheckedChange = { tempAddons = tempAddons.copy(cucumber = it) },
-                        colors = CheckboxDefaults.colors(checkedColor = OrangePrimary)
-                    )
-                    Text(text = "🥒 รับแตงกวาสดกรอบ", fontSize = 13.sp)
+                val selectedAddons = remember { mutableStateListOf<String>() }
+                // initialize selected from tempAddons.selectedAddons
+                androidx.compose.runtime.LaunchedEffect(addonItems, tempAddons) {
+                    selectedAddons.clear()
+                    selectedAddons.addAll(tempAddons.selectedAddons)
+                    // default legacy addons
+                    if (tempAddons.friedChili && !selectedAddons.contains("chili")) selectedAddons.add("chili")
+                    if (tempAddons.cucumber && !selectedAddons.contains("cucumber")) selectedAddons.add("cucumber")
+                    if (tempAddons.sauceCup && !selectedAddons.contains("sauceCup")) selectedAddons.add("sauceCup")
                 }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = tempAddons.sauceCup,
-                        onCheckedChange = { tempAddons = tempAddons.copy(sauceCup = it) },
-                        colors = CheckboxDefaults.colors(checkedColor = OrangePrimary)
-                    )
-                    Text(text = "🥣 รับถ้วยน้ำจิ้มแยก", fontSize = 13.sp)
+                addonItems.filter { it.enabled }.forEach { item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = selectedAddons.contains(item.id),
+                            onCheckedChange = { checked ->
+                                if (checked) selectedAddons.add(item.id) else selectedAddons.remove(item.id)
+                            },
+                            colors = CheckboxDefaults.colors(checkedColor = OrangePrimary)
+                        )
+                        Text(text = item.name, fontSize = 13.sp)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -523,7 +521,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 // Cash payment
                 Button(
                     onClick = {
-                        val finalOptions = tempAddons.copy(comment = tempComment)
+                        val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList())
                         viewModel.setAddonOptions(finalOptions)
                         viewModel.setFulfillment(tempFulfillment)
                         if (tempFulfillment == FulfillmentType.DELIVERY) {
@@ -546,7 +544,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
 // Action buttons
                 Button(
                     onClick = {
-                        val finalOptions = tempAddons.copy(comment = tempComment)
+                        val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList())
                         viewModel.setAddonOptions(finalOptions)
                         viewModel.setFulfillment(tempFulfillment)
                         if (tempFulfillment == FulfillmentType.DELIVERY) {
@@ -566,5 +564,25 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 }
             }
         }
+    }
+}
+data class AddonItem(val id: String, val name: String, val enabled: Boolean = true)
+
+fun parseAddonItems(config: String): List<AddonItem> {
+    if (config.isBlank()) return listOf(
+        AddonItem("chili", "???????", true),
+        AddonItem("cucumber", "??????", true),
+        AddonItem("sauceCup", "???????????", true)
+    )
+    return try {
+        val arr = JSONArray(config)
+        val list = mutableListOf<AddonItem>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            list.add(AddonItem(o.optString("id", "addon_$i"), o.optString("name", "????????"), o.optBoolean("enabled", true)))
+        }
+        if (list.isEmpty()) listOf(AddonItem("chili", "???????", true), AddonItem("cucumber", "??????", true), AddonItem("sauceCup", "???????????", true)) else list
+    } catch (e: Exception) {
+        listOf(AddonItem("chili", "???????", true), AddonItem("cucumber", "??????", true), AddonItem("sauceCup", "???????????", true))
     }
 }
