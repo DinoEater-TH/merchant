@@ -1,3 +1,21 @@
+# Android / Gradle
+*.iml
+.gradle/
+.kotlin/
+/local.properties
+local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+/app/build
+.externalNativeBuild
+.cxx
+debug.keystore
+my-upload-key.jks
+*.jks
+*.keystore
+
 # Dependencies
 node_modules/
 vendor/
@@ -30,9 +48,7 @@ temp/
 
 # IDE & OS
 .vscode/
-.idea/
 *.swp
-.DS_Store
 Thumbs.db
 
 # Test & coverage
@@ -44,3 +60,6 @@ coverage/
 *.zip
 *.7z
 .cache/
+
+# AI Studio local artifacts
+.aistudio/

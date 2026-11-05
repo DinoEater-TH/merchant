@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ร้านลูกชิ้นนายเอ็ด - ระบบจัดการร้านค้า (Admin)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
+
+  <!-- PIN Protection Overlay -->
+  <div id="pinOverlay" class="fixed inset-0 bg-gray-900/90 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center space-y-4 shadow-2xl">
+      <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto text-xl">🔒</div>
+      <h2 class="font-bold text-base">ระบบจัดการร้านค้า</h2>
+      <p class="text-xs text-gray-500">ใส่รหัส PIN 4 หลัก (รหัสเริ่มต้น: 1234)</p>
+      
+      <div class="flex justify-center space-x-3 my-2" id="pinDots">
+        <span class="w-3.5 h-3.5 rounded-full bg-gray-200"></span>
+        <span class="w-3.5 h-3.5 rounded-full bg-gray-200"></span>
+        <span class="w-3.5 h-3.5 rounded-full bg-gray-200"></span>
+        <span class="w-3.5 h-3.5 rounded-full bg-gray-200"></span>
+      </div>
+      <div id="pinError" class="text-xs text-red-500 font-bold hidden">รหัส PIN ไม่ถูกต้อง (ลอง 1234)</div>
+
+      <!-- Keypad -->
+      <div class="grid grid-cols-3 gap-2 text-sm font-bold">
+        <button onclick="pressPin('1')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">1</button>
+        <button onclick="pressPin('2')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">2</button>
+        <button onclick="pressPin('3')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">3</button>
+        <button onclick="pressPin('4')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">4</button>
+        <button onclick="pressPin('5')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">5</button>
+        <button onclick="pressPin('6')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">6</button>
+        <button onclick="pressPin('7')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">7</button>
+        <button onclick="pressPin('8')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">8</button>
+        <button onclick="pressPin('9')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">9</button>
+        <button onclick="clearPin()" class="p-3 bg-gray-100 text-gray-500 rounded-xl">C</button>
+        <button onclick="pressPin('0')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">0</button>
+        <button onclick="delPin()" class="p-3 bg-gray-100 text-gray-500 rounded-xl">⌫</button>
+      </div>
+
+      <a href="index.html" class="block text-xs text-gray-400 hover:text-gray-600 pt-2">กลับหน้าลูกค้า</a>
+    </div>
+  </div>
+
+  <!-- Main Dashboard Container -->
+  <div id="mainDashboard" class="hidden max-w-lg mx-auto pb-24">
+    <!-- Top Header -->
+    <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-20">
+      <div>
+        <h1 class="text-base font-bold text-gray-800">🍢 จัดการร้านลูกชิ้นนายเอ็ด</h1>
+        <p class="text-xs text-green-600 font-bold">● อัปเดตสด Real-time</p>
+      </div>
+      <a href="index.html" class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-full font-medium hover:bg-gray-50">
+        &larr; หน้าร้าน
+      </a>
+    </header>
+
+    <!-- Nav Tabs -->
+    <nav class="bg-white border-b flex justify-around text-xs font-bold text-gray-600">
+      <button onclick="switchTab('orders')" id="tabBtn_orders" class="tab-btn py-3 border-b-2 border-orange-600 text-orange-600">📋 ออเดอร์</button>
+      <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn py-3 border-b-2 border-transparent">💳 POS แต้ม</button>
+      <button onclick="switchTab('inventory')" id="tabBtn_inventory" class="tab-btn py-3 border-b-2 border-transparent">📦 สต็อก</button>
+      <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn py-3 border-b-2 border-transparent">📊 จุดคุ้มทุน</button>
+    </nav>
+
+    <!-- Tab 1: Orders -->
+    <section id="tab_orders" class="p-4 space-y-3">
+      <div class="flex justify-between items-center">
+        <h2 class="text-sm font-bold text-gray-800">รายการออเดอร์เข้าใหม่</h2>
+        <span class="text-xs text-gray-500" id="orderCountText">ทั้งหมด 1 รายการ</span>
+      </div>
+
+      <div id="adminOrdersList" class="space-y-3">
+        <!-- Card 1 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-orange-600 text-sm">#ORD-101</span>
+            <span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5 rounded-full">กำลังทอด</span>
+          </div>
+          <div class="text-xs text-gray-500">เวลา 12:00 | ลูกค้า: 081-234-5678 (🛵 จัดส่ง)</div>
+          <div class="text-xs font-bold text-gray-700">📍 บ้านเลขที่ 12/3 ซอยมิตรภาพ 14</div>
+          <div class="border-t pt-2 text-xs space-y-1">
+            <div class="flex justify-between font-bold"><span>• ลูกชิ้นเอ็นเนื้อ x5</span> <span>฿50</span></div>
+          </div>
+          <!-- Highlights -->
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs space-y-0.5">
+            <div>🍡 เสียบไม้ | น้ำจิ้ม: ผสม 2 อย่าง | ผัก: พริกทอด, แตงกวา, ถ้วย</div>
+            <div class="font-extrabold text-red-600">💬 หมายเหตุ: "ขอทอดกรอบๆ แยกน้ำจิ้ม"</div>
+          </div>
+          <div class="flex justify-between items-center pt-2 text-xs">
+            <span class="font-bold">ยอดสุทธิ: <strong class="text-orange-600 text-sm">฿45</strong> (โอนแล้ว ✅)</span>
+            <button onclick="printSlipMock('ORD-101')" class="border border-gray-300 text-gray-700 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-gray-50">🖨️ พิมพ์สลิป</button>
+          </div>
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="alert('เปลี่ยนสถานะเป็น: เสร็จแล้ว พร้อมส่ง')" class="bg-green-600 text-white py-2 rounded-xl text-xs font-bold">เสร็จแล้ว (แจ้งลูกค้า)</button>
+            <button onclick="alert('ปิดออเดอร์')" class="bg-orange-600 text-white py-2 rounded-xl text-xs font-bold">จัดส่งแล้ว / รับแล้ว</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: POS Stamp -->
+    <section id="tab_pos" class="p-4 space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
+        <h2 class="text-sm font-bold">ระบบ POS เพิ่มแต้มหน้าร้าน</h2>
+        <div class="flex space-x-2">
+          <input type="text" id="posPhoneInput" value="081-234-5678" placeholder="พิมพ์เบอร์โทรลูกค้า" class="flex-1 text-xs p-2.5 border rounded-lg">
+          <button onclick="addPosStamp()" class="bg-orange-600 text-white font-bold px-4 rounded-lg text-xs">+1 แต้ม</button>
+        </div>
+        <div class="bg-orange-50 border border-orange-200 p-3 rounded-xl text-xs flex justify-between items-center">
+          <div>
+            <div class="font-bold">ลูกค้า: 081-234-5678</div>
+            <div class="text-orange-700">สะสมปัจจุบัน: <strong>7/10 แต้ม</strong></div>
+          </div>
+          <button onclick="alert('แลกฟรี 1 ชุดเรียบร้อย (-10 แต้ม)')" class="bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg font-bold">แลกฟรี (10 แต้ม)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Smart Inventory -->
+    <section id="tab_inventory" class="p-4 space-y-3 hidden">
+      <div class="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border">
+        <div>
+          <h2 class="text-sm font-bold">📦 คลังสินค้า & สต็อก</h2>
+          <p class="text-[11px] text-gray-500">ตัดสต็อกอัตโนมัติเมื่อสั่งซื้อ</p>
+        </div>
+        <button onclick="alert('คืนค่าสต็อกตั้งต้นสำเร็จเรียบร้อย (One-Click Reset) 🔄')" class="bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
+          One-Click Reset
+        </button>
+      </div>
+
+      <div class="space-y-2 text-xs" id="adminInventoryList">
+        <!-- Rendered items -->
+        <div class="bg-white rounded-xl p-3 border shadow-sm flex justify-between items-center">
+          <div>
+            <div class="font-bold text-sm">🍢 ลูกชิ้นเอ็นเนื้อ</div>
+            <div class="text-gray-500">ราคา ฿10 (ต้นทุน ฿5.5) • คงเหลือ 50 ไม้</div>
+          </div>
+          <div class="flex space-x-1">
+            <button class="bg-green-100 text-green-800 px-2 py-1 rounded font-bold">🟢 ขายปกติ</button>
+            <button class="bg-gray-100 text-gray-500 px-2 py-1 rounded">🟡 หมด</button>
+            <button class="bg-gray-100 text-gray-500 px-2 py-1 rounded">🔴 ซ่อน</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-3 border shadow-sm flex justify-between items-center">
+          <div>
+            <div class="font-bold text-sm">🌭 ไส้กรอกแดงในตำนาน</div>
+            <div class="text-gray-500">ราคา ฿10 (ต้นทุน ฿4.8) • คงเหลือ 60 ไม้</div>
+          </div>
+          <div class="flex space-x-1">
+            <button class="bg-green-100 text-green-800 px-2 py-1 rounded font-bold">🟢 ขายปกติ</button>
+            <button class="bg-gray-100 text-gray-500 px-2 py-1 rounded">🟡 หมด</button>
+            <button class="bg-gray-100 text-gray-500 px-2 py-1 rounded">🔴 ซ่อน</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Break-even Analytics -->
+    <section id="tab_analytics" class="p-4 space-y-4 hidden">
+      <!-- Hero Break-even -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
+        <h2 class="text-sm font-bold text-gray-800">📈 วิเคราะห์จุดคุ้มทุน (Break-even Point)</h2>
+        <div>
+          <div class="text-xs text-gray-500">ต้องขายอย่างน้อย:</div>
+          <div class="text-3xl font-extrabold text-orange-600">278 <span class="text-xs font-bold text-gray-700">ไม้ / เดือน</span></div>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+          <div class="bg-orange-600 h-2.5 rounded-full" style="width: 38%"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-500">
+          <span>ขายแล้ว 105 ไม้</span>
+          <span>38% สู่จุดคุ้มทุน</span>
+        </div>
+      </div>
+
+      <!-- Gas tank cycle -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-xs">🔥 แก๊สหุงต้ม (Gas Cycle):</span>
+          <span class="text-xs text-green-600 font-bold">คงเหลือ 72% (~11 วัน)</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-amber-500 h-2 rounded-full" style="width: 72%"></div>
+        </div>
+      </div>
+
+      <!-- Smart Advice -->
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1.5 text-xs">
+        <div class="font-bold text-orange-800 flex items-center space-x-1">
+          <span>💡</span> <span>คำแนะนำอัจฉริยะ (Smart Advice)</span>
+        </div>
+        <div>• ลูกชิ้นเอ็นเนื้อ และ ไส้กรอกแดง ให้ Margin กำไรสูงสุด ควรกดแนะนำบนหน้าแรก</div>
+        <div>• ยอดสะสมแต้มช่วยกระตุ้นยอดซื้อซ้ำได้มากกว่า 35%</div>
+      </div>
+
+      <!-- Hidden costs log -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border space-y-2">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-xs">บันทึกต้นทุนแฝงเดือนนี้</h3>
+          <span class="text-xs font-bold text-red-600">รวม ฿1,330</span>
+        </div>
+        <div class="space-y-1.5 text-xs text-gray-600">
+          <div class="flex justify-between"><span>เติมแก๊สหุงต้ม 15 กก.</span> <span class="font-bold">฿390</span></div>
+          <div class="flex justify-between"><span>น้ำมันปาล์มทอด 2 ปี๊บ</span> <span class="font-bold">฿540</span></div>
+          <div class="flex justify-between"><span>ถุงพลาสติก + ไม้เสียบ</span> <span class="font-bold">฿220</span></div>
+          <div class="flex justify-between"><span>พริกสด + แตงกวาเคียง</span> <span class="font-bold">฿180</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let currentPin = '';
+
+    function pressPin(d) {
+      if (currentPin.length < 4) {
+        currentPin += d;
+        updateDots();
+        if (currentPin.length === 4) {
+          if (currentPin === '1234') {
+            document.getElementById('pinOverlay').classList.add('hidden');
+            document.getElementById('mainDashboard').classList.remove('hidden');
+          } else {
+            document.getElementById('pinError').classList.remove('hidden');
+            currentPin = '';
+            setTimeout(updateDots, 300);
+          }
+        }
+      }
+    }
+
+    function clearPin() {
+      currentPin = '';
+      updateDots();
+      document.getElementById('pinError').classList.add('hidden');
+    }
+
+    function delPin() {
+      if (currentPin.length > 0) {
+        currentPin = currentPin.slice(0, -1);
+        updateDots();
+      }
+    }
+
+    function updateDots() {
+      const dots = document.querySelectorAll('#pinDots span');
+      dots.forEach((dot, idx) => {
+        dot.className = idx < currentPin.length ? 'w-3.5 h-3.5 rounded-full bg-orange-600' : 'w-3.5 h-3.5 rounded-full bg-gray-200';
+      });
+    }
+
+    function switchTab(tab) {
+      ['orders', 'pos', 'inventory', 'analytics'].forEach(t => {
+        document.getElementById(`tab_${t}`).classList.add('hidden');
+        document.getElementById(`tabBtn_${t}`).className = 'tab-btn py-3 border-b-2 border-transparent text-gray-600';
+      });
+      document.getElementById(`tab_${tab}`).classList.remove('hidden');
+      document.getElementById(`tabBtn_${tab}`).className = 'tab-btn py-3 border-b-2 border-orange-600 text-orange-600 font-bold';
+    }
+
+    function addPosStamp() {
+      const phone = document.getElementById('posPhoneInput').value;
+      alert(`เพิ่มแต้มให้เบอร์ ${phone} เรียบร้อย (+1 แต้ม)`);
+    }
+
+    function printSlipMock(orderId) {
+      alert(`สั่งพิมพ์ใบเสร็จออเดอร์ #${orderId} เรียบร้อย`);
+    }
+  </script>
+</body>
+</html>
