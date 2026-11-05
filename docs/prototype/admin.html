@@ -3,32 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ร้านลูกชิ้นนายเอ็ด - ระบบจัดการร้านค้า (Admin)</title>
+  <title>ร้านลูกชิ้นนายเอ็ด - ระบบบริหารร้าน (Web Admin)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Prompt', sans-serif; }
   </style>
+  <!-- Firebase SDK (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen">
-
-  <!-- PIN Protection Overlay -->
+  <!-- PIN overlay -->
   <div id="pinOverlay" class="fixed inset-0 bg-gray-900/90 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center space-y-4 shadow-2xl">
-      <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto text-xl">🔒</div>
-      <h2 class="font-bold text-base">ระบบจัดการร้านค้า</h2>
-      <p class="text-xs text-gray-500">ใส่รหัส PIN 4 หลัก (รหัสเริ่มต้น: 1234)</p>
-      
-      <div class="flex justify-center space-x-3 my-2" id="pinDots">
-        <span class="w-3.5 h-3.5 rounded-full bg-gray-200"></span>
-        <span class="w-3.5 h-3.5 rounded-full bg-gray-200"></span>
-        <span class="w-3.5 h-3.5 rounded-full bg-gray-200"></span>
-        <span class="w-3.5 h-3.5 rounded-full bg-gray-200"></span>
+      <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto text-xl">🔐</div>
+      <h2 class="font-bold text-base">ระบบบริหารร้านค้า</h2>
+      <p class="text-xs text-gray-500">ใส่ PIN 4 หลัก (ค่าเริ่มต้น: 1234)</p>
+      <div id="pinDots" class="flex justify-center space-x-3 py-2">
+        <div class="w-3 h-3 rounded-full bg-gray-200"></div>
+        <div class="w-3 h-3 rounded-full bg-gray-200"></div>
+        <div class="w-3 h-3 rounded-full bg-gray-200"></div>
+        <div class="w-3 h-3 rounded-full bg-gray-200"></div>
       </div>
-      <div id="pinError" class="text-xs text-red-500 font-bold hidden">รหัส PIN ไม่ถูกต้อง (ลอง 1234)</div>
-
-      <!-- Keypad -->
-      <div class="grid grid-cols-3 gap-2 text-sm font-bold">
+      <div id="pinError" class="text-red-500 text-xs hidden">PIN ไม่ถูกต้อง</div>
+      <div class="grid grid-cols-3 gap-2">
         <button onclick="pressPin('1')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">1</button>
         <button onclick="pressPin('2')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">2</button>
         <button onclick="pressPin('3')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">3</button>
@@ -42,25 +42,20 @@
         <button onclick="pressPin('0')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">0</button>
         <button onclick="delPin()" class="p-3 bg-gray-100 text-gray-500 rounded-xl">⌫</button>
       </div>
-
-      <a href="index.html" class="block text-xs text-gray-400 hover:text-gray-600 pt-2">กลับหน้าลูกค้า</a>
+      <p id="syncStatus" class="text-[10px] text-gray-400">กำลังเชื่อมต่อ Firebase...</p>
     </div>
   </div>
 
-  <!-- Main Dashboard Container -->
-  <div id="mainDashboard" class="hidden max-w-lg mx-auto pb-24">
-    <!-- Top Header -->
-    <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-20">
+  <!-- Main dashboard -->
+  <div id="mainDashboard" class="hidden">
+    <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center">
       <div>
-        <h1 class="text-base font-bold text-gray-800">🍢 จัดการร้านลูกชิ้นนายเอ็ด</h1>
-        <p class="text-xs text-green-600 font-bold">● อัปเดตสด Real-time</p>
+        <h1 class="font-bold text-base">ระบบบริหารร้านค้า (Web Admin)</h1>
+        <p id="shopNameHeader" class="text-xs text-gray-500"></p>
       </div>
-      <a href="index.html" class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-full font-medium hover:bg-gray-50">
-        &larr; หน้าร้าน
-      </a>
+      <button onclick="exitAdmin()" class="text-xs bg-gray-100 px-3 py-1.5 rounded-lg">กลับหน้าร้าน</button>
     </header>
 
-    <!-- Nav Tabs -->
     <nav class="bg-white border-b flex justify-around text-xs font-bold text-gray-600">
       <button onclick="switchTab('orders')" id="tabBtn_orders" class="tab-btn py-3 border-b-2 border-orange-600 text-orange-600">📋 ออเดอร์</button>
       <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn py-3 border-b-2 border-transparent">💳 POS แต้ม</button>
@@ -69,222 +64,249 @@
       <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn py-3 border-b-2 border-transparent">⚙️ ตั้งค่า</button>
     </nav>
 
-    <!-- Tab 1: Orders -->
+    <!-- Orders -->
     <section id="tab_orders" class="p-4 space-y-3">
-      <div class="flex justify-between items-center">
-        <h2 class="text-sm font-bold text-gray-800">รายการออเดอร์เข้าใหม่</h2>
-        <span class="text-xs text-gray-500" id="orderCountText">ทั้งหมด 1 รายการ</span>
-      </div>
-
-      <div id="adminOrdersList" class="space-y-3">
-        <!-- Card 1 -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-2">
-          <div class="flex justify-between items-center">
-            <span class="font-bold text-orange-600 text-sm">#ORD-101</span>
-            <span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5 rounded-full">กำลังทอด</span>
-          </div>
-          <div class="text-xs text-gray-500">เวลา 12:00 | ลูกค้า: 081-234-5678 (🛵 จัดส่ง)</div>
-          <div class="text-xs font-bold text-gray-700">📍 บ้านเลขที่ 12/3 ซอยมิตรภาพ 14</div>
-          <div class="border-t pt-2 text-xs space-y-1">
-            <div class="flex justify-between font-bold"><span>• ลูกชิ้นเอ็นเนื้อ x5</span> <span>฿50</span></div>
-          </div>
-          <!-- Highlights -->
-          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs space-y-0.5">
-            <div>🍡 เสียบไม้ | น้ำจิ้ม: ผสม 2 อย่าง | ผัก: พริกทอด, แตงกวา, ถ้วย</div>
-            <div class="font-extrabold text-red-600">💬 หมายเหตุ: "ขอทอดกรอบๆ แยกน้ำจิ้ม"</div>
-          </div>
-          <div class="flex justify-between items-center pt-2 text-xs">
-            <span class="font-bold">ยอดสุทธิ: <strong class="text-orange-600 text-sm">฿45</strong> (โอนแล้ว ✅)</span>
-            <button onclick="printSlipMock('ORD-101')" class="border border-gray-300 text-gray-700 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-gray-50">🖨️ พิมพ์สลิป</button>
-          </div>
-          <!-- Action Buttons -->
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="alert('เปลี่ยนสถานะเป็น: เสร็จแล้ว พร้อมส่ง')" class="bg-green-600 text-white py-2 rounded-xl text-xs font-bold">เสร็จแล้ว (แจ้งลูกค้า)</button>
-            <button onclick="alert('ปิดออเดอร์')" class="bg-orange-600 text-white py-2 rounded-xl text-xs font-bold">จัดส่งแล้ว / รับแล้ว</button>
-          </div>
-        </div>
-      </div>
+      <div id="ordersList" class="space-y-3"></div>
     </section>
 
-    <!-- Tab 2: POS Stamp -->
+    <!-- POS -->
     <section id="tab_pos" class="p-4 space-y-4 hidden">
-      <div class="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
-        <h2 class="text-sm font-bold">ระบบ POS เพิ่มแต้มหน้าร้าน</h2>
-        <div class="flex space-x-2">
-          <input type="text" id="posPhoneInput" value="081-234-5678" placeholder="พิมพ์เบอร์โทรลูกค้า" class="flex-1 text-xs p-2.5 border rounded-lg">
-          <button onclick="addPosStamp()" class="bg-orange-600 text-white font-bold px-4 rounded-lg text-xs">+1 แต้ม</button>
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+        <h3 class="font-bold text-base">POS เพิ่มแต้มหน้าร้าน</h3>
+        <input id="posPhoneInput" type="text" placeholder="เบอร์โทรศัพท์ลูกค้า" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <div class="flex gap-2">
+          <button onclick="addPosStamp()" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-lg text-sm">+1 แต้ม</button>
+          <button onclick="redeemPosReward()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm">แลกรางวัล (10 แต้ม)</button>
         </div>
-        <div class="bg-orange-50 border border-orange-200 p-3 rounded-xl text-xs flex justify-between items-center">
-          <div>
-            <div class="font-bold">ลูกค้า: 081-234-5678</div>
-            <div class="text-orange-700">สะสมปัจจุบัน: <strong>7/10 แต้ม</strong></div>
-          </div>
-          <button onclick="alert('แลกฟรี 1 ชุดเรียบร้อย (-10 แต้ม)')" class="bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg font-bold">แลกฟรี (10 แต้ม)</button>
-        </div>
+        <div id="posResult" class="text-sm text-gray-600"></div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm">
+        <h3 class="font-bold text-sm mb-2">สมาชิก</h3>
+        <div id="usersList" class="space-y-2 text-sm"></div>
       </div>
     </section>
 
-    <!-- Tab 3: Smart Inventory -->
-    <section id="tab_inventory" class="p-4 space-y-3 hidden">
-      <div class="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border">
-        <div>
-          <h2 class="text-sm font-bold">📦 คลังสินค้า & สต็อก</h2>
-          <p class="text-[11px] text-gray-500">ตัดสต็อกอัตโนมัติเมื่อสั่งซื้อ</p>
-        </div>
-        <button onclick="alert('คืนค่าสต็อกตั้งต้นสำเร็จเรียบร้อย (One-Click Reset) 🔄')" class="bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
-          One-Click Reset
-        </button>
-      </div>
-
-      <div class="space-y-2 text-xs" id="adminInventoryList">
-        <!-- Rendered items -->
-        <div class="bg-white rounded-xl p-3 border shadow-sm flex justify-between items-center">
-          <div>
-            <div class="font-bold text-sm">🍢 ลูกชิ้นเอ็นเนื้อ</div>
-            <div class="text-gray-500">ราคา ฿10 (ต้นทุน ฿5.5) • คงเหลือ 50 ไม้</div>
-          </div>
-          <div class="flex space-x-1">
-            <button class="bg-green-100 text-green-800 px-2 py-1 rounded font-bold">🟢 ขายปกติ</button>
-            <button class="bg-gray-100 text-gray-500 px-2 py-1 rounded">🟡 หมด</button>
-            <button class="bg-gray-100 text-gray-500 px-2 py-1 rounded">🔴 ซ่อน</button>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl p-3 border shadow-sm flex justify-between items-center">
-          <div>
-            <div class="font-bold text-sm">🌭 ไส้กรอกแดงในตำนาน</div>
-            <div class="text-gray-500">ราคา ฿10 (ต้นทุน ฿4.8) • คงเหลือ 60 ไม้</div>
-          </div>
-          <div class="flex space-x-1">
-            <button class="bg-green-100 text-green-800 px-2 py-1 rounded font-bold">🟢 ขายปกติ</button>
-            <button class="bg-gray-100 text-gray-500 px-2 py-1 rounded">🟡 หมด</button>
-            <button class="bg-gray-100 text-gray-500 px-2 py-1 rounded">🔴 ซ่อน</button>
-          </div>
+    <!-- Inventory -->
+    <section id="tab_inventory" class="p-4 space-y-4 hidden">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-base">📦 สต็อก & เมนู</h3>
+        <div class="flex gap-2">
+          <button onclick="addMenuItem()" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">+ เพิ่มเมนู</button>
+          <button onclick="oneClickReset()" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">One-Click Reset</button>
         </div>
       </div>
+      <div id="inventoryList" class="space-y-3"></div>
     </section>
 
-    <!-- Tab 4: Break-even Analytics -->
+    <!-- Analytics -->
     <section id="tab_analytics" class="p-4 space-y-4 hidden">
-      <!-- Hero Break-even -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
-        <h2 class="text-sm font-bold text-gray-800">📈 วิเคราะห์จุดคุ้มทุน (Break-even Point)</h2>
-        <div>
-          <div class="text-xs text-gray-500">ต้องขายอย่างน้อย:</div>
-          <div class="text-3xl font-extrabold text-orange-600">278 <span class="text-xs font-bold text-gray-700">ไม้ / เดือน</span></div>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-2.5">
-          <div class="bg-orange-600 h-2.5 rounded-full" style="width: 38%"></div>
-        </div>
-        <div class="flex justify-between text-xs text-gray-500">
-          <span>ขายแล้ว 105 ไม้</span>
-          <span>38% สู่จุดคุ้มทุน</span>
-        </div>
+      <div id="analyticsSummary" class="grid grid-cols-2 gap-3"></div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">ต้นทุนแฝง</h3>
+        <div id="hiddenCostsList" class="space-y-1 text-sm"></div>
+        <button onclick="addHiddenCost()" class="mt-2 bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold">+ เพิ่มต้นทุนแฝง</button>
       </div>
-
-      <!-- Gas tank cycle -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm border space-y-2">
-        <div class="flex justify-between items-center">
-          <span class="font-bold text-xs">🔥 แก๊สหุงต้ม (Gas Cycle):</span>
-          <span class="text-xs text-green-600 font-bold">คงเหลือ 72% (~11 วัน)</span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-2">
-          <div class="bg-amber-500 h-2 rounded-full" style="width: 72%"></div>
-        </div>
-      </div>
-
-      <!-- Smart Advice -->
-      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1.5 text-xs">
-        <div class="font-bold text-orange-800 flex items-center space-x-1">
-          <span>💡</span> <span>คำแนะนำอัจฉริยะ (Smart Advice)</span>
-        </div>
-        <div>• ลูกชิ้นเอ็นเนื้อ และ ไส้กรอกแดง ให้ Margin กำไรสูงสุด ควรกดแนะนำบนหน้าแรก</div>
-        <div>• ยอดสะสมแต้มช่วยกระตุ้นยอดซื้อซ้ำได้มากกว่า 35%</div>
-      </div>
-
-      <!-- Hidden costs log -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm border space-y-2">
-        <div class="flex justify-between items-center">
-          <h3 class="font-bold text-xs">บันทึกต้นทุนแฝงเดือนนี้</h3>
-          <span class="text-xs font-bold text-red-600">รวม ฿1,330</span>
-        </div>
-        <div class="space-y-1.5 text-xs text-gray-600">
-          <div class="flex justify-between"><span>เติมแก๊สหุงต้ม 15 กก.</span> <span class="font-bold">฿390</span></div>
-          <div class="flex justify-between"><span>น้ำมันปาล์มทอด 2 ปี๊บ</span> <span class="font-bold">฿540</span></div>
-          <div class="flex justify-between"><span>ถุงพลาสติก + ไม้เสียบ</span> <span class="font-bold">฿220</span></div>
-          <div class="flex justify-between"><span>พริกสด + แตงกวาเคียง</span> <span class="font-bold">฿180</span></div>
-        </div>
-      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-1 text-sm" id="adviceBox"></div>
     </section>
 
-    <!-- Tab 5: Settings -->
+    <!-- Settings -->
     <section id="tab_settings" class="p-4 space-y-4 hidden">
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3">
         <h3 class="font-bold text-base">⚙️ ตั้งค่าร้านค้า</h3>
         <div>
           <label class="text-xs text-gray-500">ชื่อร้าน</label>
-          <input id="shopNameInput" type="text" value="ร้านลูกชิ้นนายเอ็ด" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <input id="s_name" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
         <div>
           <label class="text-xs text-gray-500">หมายเลข PromptPay</label>
-          <input id="promptPayInput" type="text" value="081-234-5678" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <input id="s_promptPay" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
         <div>
           <label class="text-xs text-gray-500">ค่าส่ง (บาท)</label>
-          <input id="deliveryFeeInput" type="number" value="15" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <input id="s_deliveryFee" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">ครบ (บาท) ลด</label>
+          <div class="flex gap-2">
+            <input id="s_minDiscount" type="number" class="w-1/2 border rounded-lg px-3 py-2 text-sm" placeholder="ยอดขั้นต่ำ">
+            <input id="s_discountAmount" type="number" class="w-1/2 border rounded-lg px-3 py-2 text-sm" placeholder="ส่วนลด">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">ส่งฟรีเมื่อครบ (บาท)</label>
+          <input id="s_freeDelivery" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">แต้มแลกรางวัล</label>
+          <input id="s_stamps" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
         <div>
           <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
-          <input id="adminPinInput" type="text" value="1234" maxlength="4" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <input id="s_pin" maxlength="4" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
-        <button onclick="alert('บันทึกการตั้งค่าแล้ว (ต้นแบบ)')" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกการตั้งค่า</button>
-      </div>
-      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-        หมายเหตุ: หน้านี้เป็นต้นแบบ (prototype) การบันทึกจริงทำในแอป Android แท็บ ⚙️ ตั้งค่า
+        <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกการตั้งค่า</button>
       </div>
     </section>
   </div>
 
   <script>
-    let currentPin = '';
+    // ---------- State ----------
+    const DEFAULT_STATE = {
+      shopInfo: {
+        name: "ร้านลูกชิ้นนายเอ็ด",
+        slogan: "ลูกชิ้นทอดในตำนาน",
+        promptPayNumber: "081-234-5678",
+        promptPayName: "นายเอ็ด ลูกชิ้นทอด",
+        address: "ตลาดโต้รุ่ง ถ.มิตรภาพ",
+        openingHours: "10:00 - 20:30 น.",
+        isOpen: true,
+        deliveryFee: 15,
+        minOrderForDiscount: 50,
+        discountAmount: 5,
+        minOrderForFreeDelivery: 120,
+        stampsRequiredForReward: 10,
+        rewardDescription: "ฟรี! ชุดลูกชิ้นรวมมิตร 1 ชุด",
+        logoType: "EMOJI",
+        logoEmoji: "🍢",
+        stampEmoji: "🍢"
+      },
+      categories: [
+        { id: "all", name: "ทั้งหมด", sort: 0, iconEmoji: "🥢" },
+        { id: "cat_1", name: "ลูกชิ้นทอด", sort: 1, iconEmoji: "🍢" },
+        { id: "cat_2", name: "ลูกชิ้นปิ้ง/นึ่ง", sort: 2, iconEmoji: "🍡" },
+        { id: "cat_3", name: "ชุดสุดคุ้ม Combo", sort: 3, iconEmoji: "⭐" },
+        { id: "cat_4", name: "เครื่องดื่ม & เคียง", sort: 4, iconEmoji: "🥤" }
+      ],
+      menuItems: [
+        { id: "item_01", name: "ลูกชิ้นเอ็นเนื้อ", categoryId: "cat_1", price: 10, directCost: 5.5, status: "ACTIVE", stockQty: 50, defaultResetQty: 50, isBestseller: true, emoji: "🍢", description: "เอ็นเนื้อแท้" },
+        { id: "item_02", name: "ลูกชิ้นหมูล้วนแท้", categoryId: "cat_1", price: 10, directCost: 5.0, status: "ACTIVE", stockQty: 50, defaultResetQty: 50, isBestseller: true, emoji: "🍡", description: "หมูบดเนียนนุ่ม" },
+        { id: "item_03", name: "ไส้กรอกแดงในตำนาน", categoryId: "cat_1", price: 10, directCost: 4.8, status: "ACTIVE", stockQty: 60, defaultResetQty: 60, isBestseller: true, emoji: "🌭", description: "ไส้กรอกแดง" }
+      ],
+      orders: [],
+      users: {},
+      hiddenCosts: [],
+      currentCustomerPhone: "",
+      currentActiveOrderId: null,
+      adminPin: "1234"
+    };
 
+    let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    let currentPin = '';
+    let lastPushed = null;
+    let lastApplied = null;
+    let applyingRemote = false;
+    let pushTimer = null;
+
+    // ---------- Firebase ----------
+    const firebaseConfig = {
+      apiKey: "AIzaSyDXwT0Zs0E0ZCXUljcduH2aIvh0ntHPtLY",
+      authDomain: "dinoeater-merchant.firebaseapp.com",
+      databaseURL: "https://dinoeater-merchant-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "dinoeater-merchant",
+      storageBucket: "dinoeater-merchant.firebasestorage.app",
+      messagingSenderId: "610225727771",
+      appId: "1:610225727771:web:b96a291908dc40376ccbbe"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const STATE_REF = db.ref('shops/dinoeater-merchant/state');
+
+    function setStatus(msg) { document.getElementById('syncStatus').textContent = msg; }
+
+    function schedulePush() {
+      if (applyingRemote) return;
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(pushState, 400);
+    }
+
+    function pushState() {
+      if (applyingRemote) return;
+      const toPush = {
+        shopInfo: state.shopInfo,
+        categories: state.categories,
+        menuItems: state.menuItems,
+        orders: state.orders,
+        users: state.users,
+        hiddenCosts: state.hiddenCosts,
+        currentCustomerPhone: '',
+        currentActiveOrderId: null,
+        adminPin: ''
+      };
+      const json = JSON.stringify(toPush);
+      if (json === lastPushed || json === lastApplied) return;
+      lastPushed = json;
+      STATE_REF.set(json).catch(e => { console.error(e); setStatus('Push error: ' + e.message); });
+    }
+
+    function applyRemote(parsed) {
+      applyingRemote = true;
+      state.shopInfo = parsed.shopInfo || state.shopInfo;
+      state.categories = parsed.categories || state.categories;
+      state.menuItems = parsed.menuItems || state.menuItems;
+      state.orders = parsed.orders || state.orders;
+      state.users = parsed.users || state.users;
+      state.hiddenCosts = parsed.hiddenCosts || state.hiddenCosts;
+      applyingRemote = false;
+    }
+
+    function startSync() {
+      STATE_REF.on('value', snap => {
+        const val = snap.val();
+        if (val == null) { pushState(); return; }
+        const json = (typeof val === 'string') ? val : JSON.stringify(val);
+        if (json === lastPushed || json === lastApplied) return;
+        let parsed;
+        try { parsed = (typeof val === 'string') ? JSON.parse(val) : val; }
+        catch (e) { return; }
+        lastApplied = json;
+        applyRemote(parsed);
+        renderAll();
+        setStatus('เชื่อมต่อ Firebase แล้ว');
+      }, err => {
+        setStatus('Firebase error: ' + err.message);
+      });
+    }
+
+    auth.signInAnonymously().then(() => {
+      setStatus('เชื่อมต่อ Firebase แล้ว');
+      startSync();
+    }).catch(e => {
+      setStatus('Auth error: ' + e.message);
+    });
+
+    // ---------- PIN ----------
     function pressPin(d) {
       if (currentPin.length < 4) {
         currentPin += d;
         updateDots();
         if (currentPin.length === 4) {
-          if (currentPin === '1234') {
-            document.getElementById('pinOverlay').classList.add('hidden');
-            document.getElementById('mainDashboard').classList.remove('hidden');
-          } else {
-            document.getElementById('pinError').classList.remove('hidden');
-            currentPin = '';
-            setTimeout(updateDots, 300);
-          }
+          setTimeout(checkPin, 150);
         }
       }
     }
-
-    function clearPin() {
-      currentPin = '';
-      updateDots();
-      document.getElementById('pinError').classList.add('hidden');
+    function clearPin() { currentPin = ''; updateDots(); document.getElementById('pinError').classList.add('hidden'); }
+    function delPin() { if (currentPin.length > 0) { currentPin = currentPin.slice(0, -1); updateDots(); } }
+    function updateDots() {
+      const dots = document.querySelectorAll('#pinDots div');
+      dots.forEach((d, i) => { d.className = 'w-3 h-3 rounded-full ' + (i < currentPin.length ? 'bg-orange-600' : 'bg-gray-200'); });
     }
-
-    function delPin() {
-      if (currentPin.length > 0) {
-        currentPin = currentPin.slice(0, -1);
+    function checkPin() {
+      if (currentPin === (state.adminPin || '1234')) {
+        document.getElementById('pinOverlay').classList.add('hidden');
+        document.getElementById('mainDashboard').classList.remove('hidden');
+        document.getElementById('shopNameHeader').textContent = state.shopInfo.name;
+        renderAll();
+      } else {
+        document.getElementById('pinError').classList.remove('hidden');
+        currentPin = '';
         updateDots();
       }
     }
 
-    function updateDots() {
-      const dots = document.querySelectorAll('#pinDots span');
-      dots.forEach((dot, idx) => {
-        dot.className = idx < currentPin.length ? 'w-3.5 h-3.5 rounded-full bg-orange-600' : 'w-3.5 h-3.5 rounded-full bg-gray-200';
-      });
-    }
+    function exitAdmin() { window.location.href = 'index.html'; }
 
+    // ---------- Tabs ----------
     function switchTab(tab) {
       ['orders', 'pos', 'inventory', 'analytics', 'settings'].forEach(t => {
         document.getElementById(`tab_${t}`).classList.add('hidden');
@@ -292,15 +314,226 @@
       });
       document.getElementById(`tab_${tab}`).classList.remove('hidden');
       document.getElementById(`tabBtn_${tab}`).className = 'tab-btn py-3 border-b-2 border-orange-600 text-orange-600 font-bold';
+      renderAll();
+    }
+
+    // ---------- Orders ----------
+    function renderOrders() {
+      const el = document.getElementById('ordersList');
+      if (!el) return;
+      const orders = (state.orders || []).slice().sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+      if (orders.length === 0) { el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">ยังไม่มีออเดอร์</p>'; return; }
+      el.innerHTML = orders.map(o => `
+        <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-sm">${o.id}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full ${statusColor(o.status)}">${statusTitle(o.status)}</span>
+          </div>
+          <div class="text-xs text-gray-500">${o.customerPhone || 'Guest'} • ${o.fulfillment === 'DELIVERY' ? 'จัดส่ง' : 'รับเอง'} • ${o.timestamp}</div>
+          <div class="text-xs">${(o.items || []).map(i => `${i.name} x${i.quantity}`).join(', ')}</div>
+          ${o.comment ? `<div class="text-xs text-orange-600">หมายเหตุ: ${o.comment}</div>` : ''}
+          <div class="flex gap-2 flex-wrap">
+            ${o.status === 'PENDING' ? `<button onclick="setStatusOrder('${o.id}','COOKING')" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-xs">เริ่มทำ</button>` : ''}
+            ${o.status === 'COOKING' ? `<button onclick="setStatusOrder('${o.id}','READY')" class="bg-green-500 text-white px-3 py-1 rounded-lg text-xs">เสร็จแล้ว</button>` : ''}
+            ${o.status === 'READY' ? `<button onclick="setStatusOrder('${o.id}','COMPLETED')" class="bg-gray-500 text-white px-3 py-1 rounded-lg text-xs">ปิดงาน</button>` : ''}
+            <button onclick="printSlipMock('${o.id}')" class="border border-gray-300 text-gray-700 px-3 py-1 rounded-lg text-xs">พิมพ์</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function statusTitle(s) {
+      return ({ PENDING: 'รอดำเนินการ', COOKING: 'กำลังทำ', READY: 'เสร็จแล้ว', COMPLETED: 'สำเร็จ', CANCELLED: 'ยกเลิก' })[s] || s;
+    }
+    function statusColor(s) {
+      return ({ PENDING: 'bg-yellow-100 text-yellow-700', COOKING: 'bg-blue-100 text-blue-700', READY: 'bg-green-100 text-green-700', COMPLETED: 'bg-gray-100 text-gray-600', CANCELLED: 'bg-red-100 text-red-700' })[s] || 'bg-gray-100';
+    }
+
+    function setStatusOrder(id, newStatus) {
+      const o = (state.orders || []).find(x => x.id === id);
+      if (o) { o.status = newStatus; renderOrders(); schedulePush(); }
+    }
+
+    function printSlipMock(orderId) { alert('สั่งพิมพ์ใบเสร็จ ' + orderId); }
+
+    // ---------- POS ----------
+    function renderUsers() {
+      const el = document.getElementById('usersList');
+      if (!el) return;
+      const users = state.users || {};
+      const keys = Object.keys(users);
+      if (keys.length === 0) { el.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีสมาชิก</p>'; return; }
+      el.innerHTML = keys.map(phone => {
+        const u = users[phone];
+        return `<div class="flex justify-between items-center border-b py-1"><span>${phone}</span><span class="font-bold text-orange-600">${u.stamps || 0} แต้ม</span></div>`;
+      }).join('');
     }
 
     function addPosStamp() {
-      const phone = document.getElementById('posPhoneInput').value;
-      alert(`เพิ่มแต้มให้เบอร์ ${phone} เรียบร้อย (+1 แต้ม)`);
+      const phone = document.getElementById('posPhoneInput').value.trim();
+      if (!phone) { document.getElementById('posResult').textContent = 'กรุณาใส่เบอร์โทร'; return; }
+      if (!state.users) state.users = {};
+      if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: '', stamps: 0, totalOrders: 0, lastOrder: null };
+      state.users[phone].stamps = (state.users[phone].stamps || 0) + 1;
+      renderUsers();
+      schedulePush();
+      document.getElementById('posResult').textContent = `เพิ่มแต้มให้ ${phone} แล้ว (รวม ${state.users[phone].stamps} แต้ม)`;
     }
 
-    function printSlipMock(orderId) {
-      alert(`สั่งพิมพ์ใบเสร็จออเดอร์ #${orderId} เรียบร้อย`);
+    function redeemPosReward() {
+      const phone = document.getElementById('posPhoneInput').value.trim();
+      if (!phone || !state.users || !state.users[phone]) { document.getElementById('posResult').textContent = 'ไม่พบสมาชิก'; return; }
+      const cost = state.shopInfo.stampsRequiredForReward || 10;
+      if ((state.users[phone].stamps || 0) < cost) { document.getElementById('posResult').textContent = 'แต้มไม่พอ'; return; }
+      state.users[phone].stamps -= cost;
+      renderUsers();
+      schedulePush();
+      document.getElementById('posResult').textContent = `แลกรางวัลให้ ${phone} แล้ว`;
+    }
+
+    // ---------- Inventory ----------
+    function renderInventory() {
+      const el = document.getElementById('inventoryList');
+      if (!el) return;
+      const items = state.menuItems || [];
+      if (items.length === 0) { el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">ยังไม่มีเมนู</p>'; return; }
+      el.innerHTML = items.map(item => `
+        <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">${item.emoji || '🍢'}</span>
+              <div>
+                <div class="font-bold text-sm">${item.name}</div>
+                <div class="text-xs text-gray-500">฿${item.price} (ต้นทุน ฿${item.directCost}) • สต็อก ${item.stockQty}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button onclick="changeStock('${item.id}', -5)" class="w-7 h-7 bg-gray-100 rounded-full text-sm">-</button>
+              <span class="font-bold px-2 ${item.stockQty === 0 ? 'text-red-500' : ''}">${item.stockQty}</span>
+              <button onclick="changeStock('${item.id}', 5)" class="w-7 h-7 bg-orange-100 text-orange-600 rounded-full text-sm">+</button>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="setItemStatus('${item.id}','ACTIVE')" class="px-2 py-1 rounded text-xs ${item.status==='ACTIVE'?'bg-green-100 text-green-700 font-bold':'bg-gray-100'}">🟢 ขายปกติ</button>
+            <button onclick="setItemStatus('${item.id}','OUT_OF_STOCK')" class="px-2 py-1 rounded text-xs ${item.status==='OUT_OF_STOCK'?'bg-yellow-100 text-yellow-700 font-bold':'bg-gray-100'}">🟡 สินค้าหมด</button>
+            <button onclick="setItemStatus('${item.id}','HIDDEN')" class="px-2 py-1 rounded text-xs ${item.status==='HIDDEN'?'bg-red-100 text-red-700 font-bold':'bg-gray-100'}">🔴 ซ่อน</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function changeStock(id, delta) {
+      const item = (state.menuItems || []).find(x => x.id === id);
+      if (!item) return;
+      item.stockQty = Math.max(0, (item.stockQty || 0) + delta);
+      if (item.stockQty === 0) item.status = 'OUT_OF_STOCK';
+      renderInventory();
+      schedulePush();
+    }
+    function setItemStatus(id, status) {
+      const item = (state.menuItems || []).find(x => x.id === id);
+      if (!item) return;
+      item.status = status;
+      renderInventory();
+      schedulePush();
+    }
+    function oneClickReset() {
+      (state.menuItems || []).forEach(item => { item.stockQty = item.defaultResetQty || item.stockQty; if (item.stockQty > 0 && item.status === 'OUT_OF_STOCK') item.status = 'ACTIVE'; });
+      renderInventory();
+      schedulePush();
+      alert('รีเซ็ตสต็อกเรียบร้อย');
+    }
+    function addMenuItem() {
+      const name = prompt('ชื่อเมนู');
+      if (!name) return;
+      const category = prompt('หมวดหมู่ (cat_1, cat_2, cat_3, cat_4)', 'cat_1') || 'cat_1';
+      const price = parseFloat(prompt('ราคาขาย (บาท)', '10')) || 0;
+      const cost = parseFloat(prompt('ต้นทุนตรง (บาท)', '5')) || 0;
+      const stock = parseInt(prompt('สต็อกเริ่มต้น', '30')) || 0;
+      const emoji = prompt('อีโมจิ', '🍢') || '🍢';
+      const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: '' };
+      if (!state.menuItems) state.menuItems = [];
+      state.menuItems.push(item);
+      renderInventory();
+      schedulePush();
+    }
+
+    // ---------- Analytics ----------
+    function renderAnalytics() {
+      const orders = (state.orders || []).filter(o => o.status !== 'CANCELLED');
+      let revenue = 0, directCost = 0, units = 0;
+      orders.forEach(o => { revenue += (o.totalAmount || 0); (o.items || []).forEach(i => { units += (i.quantity || 0); directCost += (i.directCost || 0) * (i.quantity || 0); }); });
+      const hidden = (state.hiddenCosts || []).reduce((s, c) => s + (c.amount || 0), 0);
+      const avgPrice = units > 0 ? revenue / units : 10;
+      const avgCost = units > 0 ? directCost / units : 5.2;
+      const margin = Math.max(1, avgPrice - avgCost);
+      const beUnits = margin > 0 ? Math.ceil(hidden / margin) : 0;
+      const progress = beUnits > 0 ? Math.min(100, Math.round(units / beUnits * 100)) : 100;
+      document.getElementById('analyticsSummary').innerHTML = `
+        <div class="bg-white rounded-2xl p-4 shadow-sm"><div class="text-xs text-gray-500">รายได้</div><div class="text-xl font-bold text-orange-600">฿${revenue.toFixed(0)}</div></div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm"><div class="text-xs text-gray-500">ต้นทุนแฝง</div><div class="text-xl font-bold text-red-500">฿${hidden.toFixed(0)}</div></div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm"><div class="text-xs text-gray-500">ออเดอร์</div><div class="text-xl font-bold">${orders.length}</div></div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm"><div class="text-xs text-gray-500">จุดคุ้มทุน</div><div class="text-xl font-bold">${beUnits} ไม้ (${progress}%)</div></div>
+      `;
+      const hc = document.getElementById('hiddenCostsList');
+      if (hc) {
+        if ((state.hiddenCosts || []).length === 0) hc.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีต้นทุนแฝง</p>';
+        else hc.innerHTML = (state.hiddenCosts || []).map(c => `<div class="flex justify-between"><span>${c.itemName}</span><span class="font-bold">฿${(c.amount||0).toFixed(0)}</span></div>`).join('');
+      }
+      const advice = document.getElementById('adviceBox');
+      if (advice) {
+        const adv = [];
+        if (avgPrice < 12) adv.push('💡 แนะนำจัดชุด Combo เพื่อเพิ่มยอดขายต่อออเดอร์');
+        if (progress < 100) adv.push('📈 ยังไม่ถึงจุดคุ้มทุน ลองเพิ่มโปรโมชั่น');
+        adv.push('🔥 ลูกชิ้นเอ็นเนื้อและไส้กรอกแดงให้ margin ดี');
+        advice.innerHTML = '<div class="font-bold mb-1">คำแนะนำ</div>' + adv.map(a => `<div class="text-xs">${a}</div>`).join('');
+      }
+    }
+
+    function addHiddenCost() {
+      const name = prompt('ชื่อต้นทุนแฝง', 'เติมแก๊สหุงต้ม');
+      if (!name) return;
+      const amount = parseFloat(prompt('จำนวนเงิน (บาท)', '390')) || 0;
+      const cat = prompt('หมวดหมู่ (utilities/supplies/oil_gas/rent)', 'utilities') || 'utilities';
+      if (!state.hiddenCosts) state.hiddenCosts = [];
+      state.hiddenCosts.unshift({ id: 'cost_' + Date.now(), date: new Date().toISOString().slice(0, 10), category: cat, itemName: name, amount, notes: '' });
+      renderAnalytics();
+      schedulePush();
+    }
+
+    // ---------- Settings ----------
+    function renderSettings() {
+      const s = state.shopInfo || {};
+      document.getElementById('s_name').value = s.name || '';
+      document.getElementById('s_promptPay').value = s.promptPayNumber || '';
+      document.getElementById('s_deliveryFee').value = s.deliveryFee ?? 15;
+      document.getElementById('s_minDiscount').value = s.minOrderForDiscount ?? 50;
+      document.getElementById('s_discountAmount').value = s.discountAmount ?? 5;
+      document.getElementById('s_freeDelivery').value = s.minOrderForFreeDelivery ?? 120;
+      document.getElementById('s_stamps').value = s.stampsRequiredForReward ?? 10;
+      document.getElementById('s_pin').value = state.adminPin || '1234';
+    }
+    function saveSettings() {
+      state.shopInfo.name = document.getElementById('s_name').value.trim() || state.shopInfo.name;
+      state.shopInfo.promptPayNumber = document.getElementById('s_promptPay').value.trim() || state.shopInfo.promptPayNumber;
+      state.shopInfo.deliveryFee = parseFloat(document.getElementById('s_deliveryFee').value) || state.shopInfo.deliveryFee;
+      state.shopInfo.minOrderForDiscount = parseFloat(document.getElementById('s_minDiscount').value) || state.shopInfo.minOrderForDiscount;
+      state.shopInfo.discountAmount = parseFloat(document.getElementById('s_discountAmount').value) || state.shopInfo.discountAmount;
+      state.shopInfo.minOrderForFreeDelivery = parseFloat(document.getElementById('s_freeDelivery').value) || state.shopInfo.minOrderForFreeDelivery;
+      state.shopInfo.stampsRequiredForReward = parseInt(document.getElementById('s_stamps').value) || state.shopInfo.stampsRequiredForReward;
+      const pin = document.getElementById('s_pin').value.trim();
+      if (pin.length === 4 && /^\d{4}$/.test(pin)) state.adminPin = pin;
+      document.getElementById('shopNameHeader').textContent = state.shopInfo.name;
+      schedulePush();
+      alert('บันทึกการตั้งค่าแล้ว');
+    }
+
+    function renderAll() {
+      renderOrders();
+      renderUsers();
+      renderInventory();
+      renderAnalytics();
+      renderSettings();
     }
   </script>
 </body>
