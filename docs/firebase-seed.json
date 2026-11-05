@@ -1,0 +1,114 @@
+{
+  "shop_info": {
+    "name": "ร้านลูกชิ้น DinoEater",
+    "logo_url": "https://via.placeholder.com/150",
+    "promptpay_number": "0812345678"
+  },
+  "categories": [
+    { "id": "cat_1", "name": "ลูกชิ้นทอด", "sort": 1 },
+    { "id": "cat_2", "name": "เครื่องดื่ม", "sort": 2 },
+    { "id": "cat_3", "name": "ของทานเล่น", "sort": 3 }
+  ],
+  "menu_items": {
+    "item_01": {
+      "name": "ลูกชิ้นเอ็นเนื้อ",
+      "category_id": "cat_1",
+      "price": 10,
+      "direct_cost": 5.5,
+      "status": "active",
+      "stock_qty": 50,
+      "default_reset_qty": 50,
+      "is_bestseller": true
+    },
+    "item_02": {
+      "name": "ลูกชิ้นปลา",
+      "category_id": "cat_1",
+      "price": 8,
+      "direct_cost": 4.0,
+      "status": "active",
+      "stock_qty": 60,
+      "default_reset_qty": 60,
+      "is_bestseller": true
+    },
+    "item_03": {
+      "name": "ลูกชิ้นหมู",
+      "category_id": "cat_1",
+      "price": 8,
+      "direct_cost": 4.5,
+      "status": "active",
+      "stock_qty": 40,
+      "default_reset_qty": 40,
+      "is_bestseller": false
+    },
+    "item_04": {
+      "name": "น้ำコーラ",
+      "category_id": "cat_2",
+      "price": 15,
+      "direct_cost": 8.0,
+      "status": "active",
+      "stock_qty": 30,
+      "default_reset_qty": 30,
+      "is_bestseller": false
+    },
+    "item_05": {
+      "name": "น้ำเปล่า",
+      "category_id": "cat_2",
+      "price": 10,
+      "direct_cost": 5.0,
+      "status": "active",
+      "stock_qty": 50,
+      "default_reset_qty": 50,
+      "is_bestseller": false
+    },
+    "item_06": {
+      "name": "ไส้กรอกทอด",
+      "category_id": "cat_3",
+      "price": 15,
+      "direct_cost": 9.0,
+      "status": "active",
+      "stock_qty": 25,
+      "default_reset_qty": 25,
+      "is_bestseller": false
+    }
+  },
+  "users": {
+    "0812345678": {
+      "stamps": 7,
+      "total_orders": 7,
+      "last_order": {
+        "items": [{ "name": "ลูกชิ้นเอ็นเนื้อ", "qty": 5 }],
+        "total": 50
+      }
+    }
+  },
+  "orders": {},
+  "hidden_costs_log": [
+    {
+      "date": "2026-11-06",
+      "category": "utilities",
+      "item_name": "เติมแก๊สหุงต้ม 15 กก.",
+      "amount": 390
+    },
+    {
+      "date": "2026-11-06",
+      "category": "packaging",
+      "item_name": "ถุงพลาสติก 100 ใบ",
+      "amount": 50
+    }
+  ],
+  "promotions": {
+    "promo_1": {
+      "name": "ซื้อครบ 50 บาท ลด 5 บาท",
+      "min_amount": 50,
+      "discount": 5,
+      "active": true
+    },
+    "promo_2": {
+      "name": "ซื้อครบ 120 บาท ส่งฟรี",
+      "min_amount": 120,
+      "discount": 0,
+      "free_delivery": true,
+      "active": true
+    }
+  }
+}
