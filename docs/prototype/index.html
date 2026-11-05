@@ -206,9 +206,14 @@
         <div class="border-t pt-1.5 flex justify-between font-extrabold text-sm text-orange-600"><span>ยอดสุทธิชำระ:</span> <span id="modalNetTotal">฿0</span></div>
       </div>
 
-      <button onclick="goToPaymentModal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
-        ไปที่หน้าชำระเงิน (PromptPay QR) &gt;
-      </button>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="confirmCashOrder()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
+          💵 ชำระเงินสด
+        </button>
+        <button onclick="goToPaymentModal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
+          📱 สแกน PromptPay
+        </button>
+      </div>
     </div>
   </div>
 
@@ -531,6 +536,16 @@
       updateCartSummary();
       renderMenu();
 
+      const orderAlert = document.getElementById('activeOrderAlert');
+      orderAlert.classList.remove('hidden');
+      openTrackerModal();
+    }
+
+    function confirmCashOrder() {
+      closeAddonsModal();
+      cart = {};
+      updateCartSummary();
+      renderMenu();
       const orderAlert = document.getElementById('activeOrderAlert');
       orderAlert.classList.remove('hidden');
       openTrackerModal();
