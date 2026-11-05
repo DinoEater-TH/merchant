@@ -154,12 +154,9 @@
     <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-2xl">
       <h3 class="font-bold text-base">เพิ่มเมนูใหม่</h3>
       <input id="m_name" placeholder="ชื่อเมนู" class="w-full border rounded-lg px-3 py-2 text-sm">
-      <select id="m_category" class="w-full border rounded-lg px-3 py-2 text-sm">
-        <option value="cat_1">cat_1 ลูกชิ้นทอด</option>
-        <option value="cat_2">cat_2 ลูกชิ้นปิ้ง/นึ่ง</option>
-        <option value="cat_3">cat_3 ชุดสุดคุ้ม Combo</option>
-        <option value="cat_4">cat_4 เครื่องดื่ม & เคียง</option>
-      </select>
+      <input id="m_category" list="categoryList" placeholder="หมวดหมู่ (เลือกหรือพิมพ์ใหม่)" class="w-full border rounded-lg px-3 py-2 text-sm">
+      <datalist id="categoryList"></datalist>
+      <input type="file" id="m_image" accept="image/*" class="w-full text-sm">
       <div class="flex gap-2">
         <input id="m_price" type="number" placeholder="ราคาขาย (บาท)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
         <input id="m_cost" type="number" placeholder="ต้นทุนตรง (บาท)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
@@ -428,7 +425,7 @@
         <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
-              <span class="text-2xl">${item.emoji || '🍢'}</span>
+              ${item.imageUrl ? `<img src="${item.imageUrl}" class="w-12 h-12 rounded-lg object-cover">` : `<span class="text-2xl">${item.emoji || '🍢'}</span>`}
               <div>
                 <div class="font-bold text-sm">${item.name}</div>
                 <div class="text-xs text-gray-500">฿${item.price} (ต้นทุน ฿${item.directCost}) • สต็อก ${item.stockQty}</div>
@@ -479,24 +476,43 @@
       document.getElementById('m_stock').value = '30';
       document.getElementById('m_emoji').value = '🍢';
       document.getElementById('m_desc').value = '';
+      document.getElementById('m_image').value = '';
+      const dl = document.getElementById('categoryList');
+      dl.innerHTML = (state.categories || []).map(c => `<option value="${c.id}">${c.name || c.id}</option>`).join('');
       document.getElementById('addMenuModal').classList.remove('hidden');
     }
     function closeAddMenuModal() { document.getElementById('addMenuModal').classList.add('hidden'); }
     function saveMenuItem() {
       const name = document.getElementById('m_name').value.trim();
       if (!name) { alert('กรุณาใส่ชื่อเมนู'); return; }
-      const category = document.getElementById('m_category').value;
+      const category = document.getElementById('m_category').value.trim() || 'cat_1';
       const price = parseFloat(document.getElementById('m_price').value) || 0;
       const cost = parseFloat(document.getElementById('m_cost').value) || 0;
       const stock = parseInt(document.getElementById('m_stock').value) || 0;
       const emoji = document.getElementById('m_emoji').value.trim() || '🍢';
       const desc = document.getElementById('m_desc').value.trim();
-      const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: desc };
-      if (!state.menuItems) state.menuItems = [];
-      state.menuItems.push(item);
-      renderInventory();
-      schedulePush();
-      closeAddMenuModal();
+      const file = document.getElementById('m_image').files[0];
+
+      const doSave = (imageUrl) => {
+        if (!(state.categories || []).some(c => c.id === category)) {
+          if (!state.categories) state.categories = [];
+          state.categories.push({ id: category, name: category, sort: state.categories.length + 1, iconEmoji: '🍽️' });
+        }
+        const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null };
+        if (!state.menuItems) state.menuItems = [];
+        state.menuItems.push(item);
+        renderInventory();
+        schedulePush();
+        closeAddMenuModal();
+      };
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => doSave(e.target.result);
+        reader.readAsDataURL(file);
+      } else {
+        doSave(null);
+      }
     }
 
     // ---------- Analytics ----------
