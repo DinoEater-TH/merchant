@@ -22,7 +22,7 @@ class ExampleUnitTest {
         val repo = MeatballRepository()
         assertTrue(repo.menuItems.value.isNotEmpty())
         assertTrue(repo.categories.value.isNotEmpty())
-        assertEquals("ร้านลูกชิ้นนายเอ็ด", repo.shopInfo.value.name)
+        assertEquals("DinoEater ลูกชิ้นทอด", repo.shopInfo.value.name)
     }
 
     @Test
