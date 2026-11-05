@@ -6,31 +6,20 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Set of Material typography styles to start with
-val Typography =
-  Typography(
-    bodyLarge =
-      TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp,
-      )
-    /* Other default text styles to override
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    )
-    */
-  )
+val Typography = Typography().copy(
+    displayLarge = Typography().displayLarge.copy(fontFamily = PromptFontFamily),
+    displayMedium = Typography().displayMedium.copy(fontFamily = PromptFontFamily),
+    displaySmall = Typography().displaySmall.copy(fontFamily = PromptFontFamily),
+    headlineLarge = Typography().headlineLarge.copy(fontFamily = PromptFontFamily),
+    headlineMedium = Typography().headlineMedium.copy(fontFamily = PromptFontFamily),
+    headlineSmall = Typography().headlineSmall.copy(fontFamily = PromptFontFamily),
+    titleLarge = Typography().titleLarge.copy(fontFamily = PromptFontFamily),
+    titleMedium = Typography().titleMedium.copy(fontFamily = PromptFontFamily),
+    titleSmall = Typography().titleSmall.copy(fontFamily = PromptFontFamily),
+    bodyLarge = Typography().bodyLarge.copy(fontFamily = PromptFontFamily),
+    bodyMedium = Typography().bodyMedium.copy(fontFamily = PromptFontFamily),
+    bodySmall = Typography().bodySmall.copy(fontFamily = PromptFontFamily),
+    labelLarge = Typography().labelLarge.copy(fontFamily = PromptFontFamily),
+    labelMedium = Typography().labelMedium.copy(fontFamily = PromptFontFamily),
+    labelSmall = Typography().labelSmall.copy(fontFamily = PromptFontFamily)
+)
