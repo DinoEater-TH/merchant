@@ -149,6 +149,33 @@
     </section>
   </div>
 
+  <!-- Add Menu Modal -->
+  <div id="addMenuModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-2xl">
+      <h3 class="font-bold text-base">เพิ่มเมนูใหม่</h3>
+      <input id="m_name" placeholder="ชื่อเมนู" class="w-full border rounded-lg px-3 py-2 text-sm">
+      <select id="m_category" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <option value="cat_1">cat_1 ลูกชิ้นทอด</option>
+        <option value="cat_2">cat_2 ลูกชิ้นปิ้ง/นึ่ง</option>
+        <option value="cat_3">cat_3 ชุดสุดคุ้ม Combo</option>
+        <option value="cat_4">cat_4 เครื่องดื่ม & เคียง</option>
+      </select>
+      <div class="flex gap-2">
+        <input id="m_price" type="number" placeholder="ราคาขาย (บาท)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+        <input id="m_cost" type="number" placeholder="ต้นทุนตรง (บาท)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div class="flex gap-2">
+        <input id="m_stock" type="number" placeholder="สต็อกเริ่มต้น" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+        <input id="m_emoji" placeholder="อีโมจิ" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <input id="m_desc" placeholder="คำอธิบาย" class="w-full border rounded-lg px-3 py-2 text-sm">
+      <div class="flex gap-2 pt-1">
+        <button onclick="saveMenuItem()" class="bg-orange-600 text-white flex-1 py-2 rounded-lg text-sm font-bold">บันทึก</button>
+        <button onclick="closeAddMenuModal()" class="bg-gray-200 text-gray-700 flex-1 py-2 rounded-lg text-sm font-bold">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ---------- State ----------
     const DEFAULT_STATE = {
@@ -443,19 +470,33 @@
       schedulePush();
       alert('รีเซ็ตสต็อกเรียบร้อย');
     }
-    function addMenuItem() {
-      const name = prompt('ชื่อเมนู');
-      if (!name) return;
-      const category = prompt('หมวดหมู่ (cat_1, cat_2, cat_3, cat_4)', 'cat_1') || 'cat_1';
-      const price = parseFloat(prompt('ราคาขาย (บาท)', '10')) || 0;
-      const cost = parseFloat(prompt('ต้นทุนตรง (บาท)', '5')) || 0;
-      const stock = parseInt(prompt('สต็อกเริ่มต้น', '30')) || 0;
-      const emoji = prompt('อีโมจิ', '🍢') || '🍢';
-      const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: '' };
+    function addMenuItem() { openAddMenuModal(); }
+    function openAddMenuModal() {
+      document.getElementById('m_name').value = '';
+      document.getElementById('m_category').value = 'cat_1';
+      document.getElementById('m_price').value = '';
+      document.getElementById('m_cost').value = '';
+      document.getElementById('m_stock').value = '30';
+      document.getElementById('m_emoji').value = '🍢';
+      document.getElementById('m_desc').value = '';
+      document.getElementById('addMenuModal').classList.remove('hidden');
+    }
+    function closeAddMenuModal() { document.getElementById('addMenuModal').classList.add('hidden'); }
+    function saveMenuItem() {
+      const name = document.getElementById('m_name').value.trim();
+      if (!name) { alert('กรุณาใส่ชื่อเมนู'); return; }
+      const category = document.getElementById('m_category').value;
+      const price = parseFloat(document.getElementById('m_price').value) || 0;
+      const cost = parseFloat(document.getElementById('m_cost').value) || 0;
+      const stock = parseInt(document.getElementById('m_stock').value) || 0;
+      const emoji = document.getElementById('m_emoji').value.trim() || '🍢';
+      const desc = document.getElementById('m_desc').value.trim();
+      const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: desc };
       if (!state.menuItems) state.menuItems = [];
       state.menuItems.push(item);
       renderInventory();
       schedulePush();
+      closeAddMenuModal();
     }
 
     // ---------- Analytics ----------
