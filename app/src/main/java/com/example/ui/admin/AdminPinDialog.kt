@@ -44,8 +44,10 @@ import com.example.ui.theme.OrangePrimary
 @Composable
 fun AdminPinDialog(viewModel: MainViewModel) {
     val isOpen by viewModel.isPinDialogOpen.collectAsState()
+    val adminPin by viewModel.adminPin.collectAsState()
     if (!isOpen) return
 
+    val pinLength = adminPin.length.coerceIn(4, 8)
     var pinInput by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
@@ -81,7 +83,7 @@ fun AdminPinDialog(viewModel: MainViewModel) {
                     fontSize = 17.sp
                 )
                 Text(
-                    text = "ใส่รหัส PIN 4 หลัก (รหัสเริ่มต้น: 1234)",
+                    text = "ใส่รหัส PIN ${pinLength} หลัก (รหัสเริ่มต้น: ${adminPin})",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -93,7 +95,7 @@ fun AdminPinDialog(viewModel: MainViewModel) {
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    for (i in 0 until 4) {
+                    for (i in 0 until pinLength) {
                         val isFilled = i < pinInput.length
                         Surface(
                             shape = CircleShape,
@@ -140,13 +142,13 @@ fun AdminPinDialog(viewModel: MainViewModel) {
                                             "C" -> pinInput = ""
                                             "DEL" -> if (pinInput.isNotEmpty()) pinInput = pinInput.dropLast(1)
                                             else -> {
-                                                if (pinInput.length < 4) {
+                                                if (pinInput.length < pinLength) {
                                                     val next = pinInput + digit
                                                     pinInput = next
-                                                    if (next.length == 4) {
+                                                    if (next.length == pinLength) {
                                                         val success = viewModel.verifyPin(next)
                                                         if (!success) {
-                                                            errorMessage = "รหัส PIN ไม่ถูกต้อง (ลอง 1234)"
+                                                            errorMessage = "รหัส PIN ไม่ถูกต้อง"
                                                             pinInput = ""
                                                         }
                                                     }

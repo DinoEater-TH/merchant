@@ -798,7 +798,7 @@ fun SettingsView(viewModel: MainViewModel) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Lock, contentDescription = null, tint = OrangePrimary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "4. ความปลอดภัย (PIN 4 หลัก)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(text = "4. ความปลอดภัย (PIN (4-8 หลัก))", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
