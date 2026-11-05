@@ -66,6 +66,7 @@
       <button onclick="switchTab('inventory')" id="tabBtn_inventory" class="tab-btn py-3 border-b-2 border-transparent">📦 สต็อก</button>
       <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn py-3 border-b-2 border-transparent">📊 จุดคุ้มทุน</button>
       <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn py-3 border-b-2 border-transparent">⚙️ ตั้งค่า</button>
+      <button onclick="switchTab('promotions')" id="tabBtn_promotions" class="tab-btn py-3 border-b-2 border-transparent">🎁 โปรโมชั่น</button>
     </nav>
 
     <!-- Orders -->
@@ -125,25 +126,7 @@
           <label class="text-xs text-gray-500">หมายเลข PromptPay</label>
           <input id="s_promptPay" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
-        <div>
-          <label class="text-xs text-gray-500">ค่าส่ง (บาท)</label>
-          <input id="s_deliveryFee" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div>
-          <label class="text-xs text-gray-500">ครบ (บาท) ลด</label>
-          <div class="flex gap-2">
-            <input id="s_minDiscount" type="number" class="w-1/2 border rounded-lg px-3 py-2 text-sm" placeholder="ยอดขั้นต่ำ">
-            <input id="s_discountAmount" type="number" class="w-1/2 border rounded-lg px-3 py-2 text-sm" placeholder="ส่วนลด">
-          </div>
-        </div>
-        <div>
-          <label class="text-xs text-gray-500">ส่งฟรีเมื่อครบ (บาท)</label>
-          <input id="s_freeDelivery" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div>
-          <label class="text-xs text-gray-500">แต้มแลกรางวัล</label>
-          <input id="s_stamps" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
-        </div>
+        <!-- Promotions moved to dedicated tab -->
         <div>
           <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
           <input id="s_pin" maxlength="4" class="w-full border rounded-lg px-3 py-2 text-sm">
@@ -158,6 +141,37 @@
       </div>
     </section>
   </div>
+
+  <!-- Tab: Promotions -->
+  <section id="tab_promotions" class="p-4 space-y-4 hidden">
+    <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+      <h3 class="font-bold text-base">🎁 โปรโมชั่น & แต้มสะสม</h3>
+      <div>
+        <label class="text-xs text-gray-500">ค่าส่ง (บาท)</label>
+        <input id="s_deliveryFee" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">ครบ (บาท) จึงลด</label>
+        <div class="flex gap-2">
+          <input id="s_minDiscount" type="number" class="w-1/2 border rounded-lg px-3 py-2 text-sm" placeholder="ยอดขั้นต่ำ">
+          <input id="s_discountAmount" type="number" class="w-1/2 border rounded-lg px-3 py-2 text-sm" placeholder="ส่วนลด">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">ส่งฟรีเมื่อครบ (บาท)</label>
+        <input id="s_freeDelivery" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">แต้มแลกรางวัล</label>
+        <input id="s_stamps" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">คำอธิบายรางวัล</label>
+        <input id="s_rewardDesc" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกโปรโมชั่น</button>
+    </div>
+  </section>
 
   <!-- Add Menu Modal -->
   <div id="addMenuModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
@@ -341,7 +355,7 @@
 
     // ---------- Tabs ----------
     function switchTab(tab) {
-      ['orders', 'pos', 'inventory', 'analytics', 'settings'].forEach(t => {
+      ['orders', 'pos', 'inventory', 'analytics', 'settings', 'promotions'].forEach(t => {
         document.getElementById(`tab_${t}`).classList.add('hidden');
         document.getElementById(`tabBtn_${t}`).className = 'tab-btn py-3 border-b-2 border-transparent text-gray-600';
       });
@@ -577,7 +591,8 @@
       document.getElementById('s_discountAmount').value = s.discountAmount ?? 5;
       document.getElementById('s_freeDelivery').value = s.minOrderForFreeDelivery ?? 120;
       document.getElementById('s_stamps').value = s.stampsRequiredForReward ?? 10;
-      document.getElementById('s_pin').value = state.adminPin || '1234';
+      document.getElementById('s_rewardDesc').value = s.rewardDescription || '';
+      document.getElementById('s_pin').value = state.adminPin || '09286840';
       let cfg = {};
       try { cfg = JSON.parse(s.addonConfig || '{}'); } catch (e) { cfg = {}; }
       document.getElementById('s_addon_chili').checked = cfg.friedChili !== false;
@@ -592,7 +607,9 @@
       state.shopInfo.discountAmount = parseFloat(document.getElementById('s_discountAmount').value) || state.shopInfo.discountAmount;
       state.shopInfo.minOrderForFreeDelivery = parseFloat(document.getElementById('s_freeDelivery').value) || state.shopInfo.minOrderForFreeDelivery;
       state.shopInfo.stampsRequiredForReward = parseInt(document.getElementById('s_stamps').value) || state.shopInfo.stampsRequiredForReward;
+      state.shopInfo.rewardDescription = document.getElementById('s_rewardDesc').value.trim() || state.shopInfo.rewardDescription;
       const pin = document.getElementById('s_pin').value.trim();
+      if (pin.length === 8 && /^\d{8}$/.test(pin)) state.adminPin = pin;
       if (pin.length === 4 && /^\d{4}$/.test(pin)) state.adminPin = pin;
       state.shopInfo.addonConfig = JSON.stringify({
         friedChili: document.getElementById('s_addon_chili').checked,

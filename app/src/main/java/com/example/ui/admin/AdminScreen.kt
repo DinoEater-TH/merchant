@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -154,6 +155,18 @@ fun AdminScreen(viewModel: MainViewModel) {
                     ),
                     modifier = Modifier.testTag("nav_admin_settings")
                 )
+                NavigationBarItem(
+                    selected = selectedTab == 5,
+                    onClick = { viewModel.setAdminTab(5) },
+                    icon = { Icon(Icons.Default.LocalOffer, contentDescription = "โปรโมชั่น") },
+                    label = { Text("โปรโมชั่น", fontSize = 10.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = OrangePrimary,
+                        selectedTextColor = OrangePrimary,
+                        indicatorColor = Color(0xFFFFF3E0)
+                    ),
+                    modifier = Modifier.testTag("nav_admin_promotions")
+                )
             }
         }
     ) { innerPadding ->
@@ -168,6 +181,7 @@ fun AdminScreen(viewModel: MainViewModel) {
                 2 -> InventoryView(viewModel = viewModel)
                 3 -> AnalyticsView(viewModel = viewModel)
                 4 -> SettingsView(viewModel = viewModel)
+        5 -> PromotionView(viewModel = viewModel)
             }
         }
     }
