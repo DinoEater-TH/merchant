@@ -403,6 +403,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.updateItemStock(itemId, stock)
     }
 
+    fun addOrUpdateMenuItem(item: MenuItem) {
+        repository.addOrUpdateMenuItem(item)
+    }
+
     fun oneClickStockReset() {
         repository.oneClickStockReset()
         SoundHelper.playStampSuccessSound(getApplication())

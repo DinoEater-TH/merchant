@@ -32,12 +32,18 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,6 +65,7 @@ import java.util.Locale
 fun InventoryView(viewModel: MainViewModel) {
     val menuItems by viewModel.menuItems.collectAsState()
     val context = LocalContext.current
+    var showAddDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -91,18 +98,28 @@ fun InventoryView(viewModel: MainViewModel) {
                     )
                 }
 
-                Button(
-                    onClick = {
-                        viewModel.oneClickStockReset()
-                        Toast.makeText(context, "รีเซ็ตสต็อกเป็นค่าเริ่มต้นประจำวันเรียบร้อย! 🔄", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.testTag("one_click_stock_reset_button")
-                ) {
-                    Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "One-Click Reset", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { showAddDialog = true },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "เพิ่มเมนู", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.oneClickStockReset()
+                            Toast.makeText(context, "รีเซ็ตสต็อกเป็นค่าเริ่มต้นประจำวันเรียบร้อย! 🔄", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.testTag("one_click_stock_reset_button")
+                    ) {
+                        Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "One-Click Reset", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -119,6 +136,17 @@ fun InventoryView(viewModel: MainViewModel) {
                     onStockChange = { newStock -> viewModel.updateItemStock(item.id, newStock) }
                 )
             }
+        }
+
+        if (showAddDialog) {
+            AddMenuItemDialog(
+                onDismiss = { showAddDialog = false },
+                onSave = { item ->
+                    viewModel.addOrUpdateMenuItem(item)
+                    showAddDialog = false
+                    Toast.makeText(context, "เพิ่มเมนู ${item.name} แล้ว", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
     }
 }
@@ -219,6 +247,66 @@ fun InventoryItemCard(
             }
         }
     }
+}
+
+@Composable
+fun AddMenuItemDialog(
+    onDismiss: () -> Unit,
+    onSave: (MenuItem) -> Unit
+) {
+    var id by remember { mutableStateOf("item_${System.currentTimeMillis()}") }
+    var name by remember { mutableStateOf("") }
+    var categoryId by remember { mutableStateOf("cat_1") }
+    var price by remember { mutableStateOf("") }
+    var directCost by remember { mutableStateOf("") }
+    var stockQty by remember { mutableStateOf("30") }
+    var defaultResetQty by remember { mutableStateOf("30") }
+    var emoji by remember { mutableStateOf("🍢") }
+    var description by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("เพิ่มเมนูใหม่", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("ชื่อเมนู") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = categoryId, onValueChange = { categoryId = it }, label = { Text("หมวดหมู่ (cat_1, cat_2, ...)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("ราคาขาย (บาท)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = directCost, onValueChange = { directCost = it }, label = { Text("ต้นทุนตรง (บาท)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = stockQty, onValueChange = { stockQty = it }, label = { Text("สต็อกเริ่มต้น") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = defaultResetQty, onValueChange = { defaultResetQty = it }, label = { Text("สต็อก reset รายวัน") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = emoji, onValueChange = { emoji = it }, label = { Text("อีโมจิ") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("คำอธิบาย") }, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val p = price.toDoubleOrNull() ?: 0.0
+                val c = directCost.toDoubleOrNull() ?: 0.0
+                val s = stockQty.toIntOrNull() ?: 0
+                val r = defaultResetQty.toIntOrNull() ?: s
+                if (name.isBlank()) return@TextButton
+                onSave(
+                    MenuItem(
+                        id = id,
+                        name = name.trim(),
+                        categoryId = categoryId.trim().ifBlank { "cat_1" },
+                        price = p,
+                        directCost = c,
+                        status = ItemStatus.ACTIVE,
+                        stockQty = s,
+                        defaultResetQty = r,
+                        isBestseller = false,
+                        emoji = emoji.ifBlank { "🍢" },
+                        description = description.trim()
+                    )
+                )
+            }) { Text("บันทึก") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("ยกเลิก") }
+        }
+    )
 }
 
 @Composable
