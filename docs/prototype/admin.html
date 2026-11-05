@@ -101,6 +101,15 @@
         </div>
       </div>
       <div id="inventoryList" class="space-y-3"></div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">ตัวเลือกเสริมที่ลูกค้าเห็น</h3>
+        <div id="addonAdminList" class="space-y-1"></div>
+        <div class="flex gap-2 mt-2">
+          <input id="newAddonName" placeholder="เพิ่มรายการใหม่" class="flex-1 border rounded-lg px-3 py-2 text-sm">
+          <button onclick="addAddonOption()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
+        </div>
+      </div>
     </section>
 
     <!-- Analytics -->
@@ -136,14 +145,7 @@
           <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
           <input id="s_pin" maxlength="8" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
-        <div class="border-t pt-2">
-          <label class="text-xs font-bold text-gray-700">ตัวเลือกเสริมที่ลูกค้าเห็น</label>
-          <div id="addonAdminList" class="space-y-1 mt-1"></div>
-          <div class="flex gap-2 mt-2">
-            <input id="newAddonName" placeholder="เพิ่มรายการใหม่" class="flex-1 border rounded-lg px-3 py-2 text-sm">
-            <button onclick="addAddonOption()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
-          </div>
-        </div>
+        <!-- Addon options moved to inventory tab -->
         <div class="border-t pt-2">
           <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_showScan"> แสดงปุ่มสแกน PromptPay ให้ลูกค้า</label>
           <label class="text-xs text-gray-500 mt-2 block">อัปโหลดรูป QR Code ของร้าน</label>
@@ -638,6 +640,7 @@
         <div class="flex items-center gap-2 text-sm">
           <input type="checkbox" ${it.enabled ? 'checked' : ''} onchange="toggleAddon(${idx}, this.checked)">
           <span class="flex-1">${it.name}</span>
+          <button onclick="editAddon(${idx})" class="text-blue-500 text-xs">แก้ไข</button>
           <button onclick="removeAddon(${idx})" class="text-red-500 text-xs">ลบ</button>
         </div>
       `).join('');
@@ -645,6 +648,14 @@
     function toggleAddon(idx, checked) {
       if (window.addonAdminItems && window.addonAdminItems[idx]) {
         window.addonAdminItems[idx].enabled = checked;
+      }
+    }
+    function editAddon(idx) {
+      if (!window.addonAdminItems || !window.addonAdminItems[idx]) return;
+      const newName = prompt('แก้ไขชื่อตัวเลือกเสริม:', window.addonAdminItems[idx].name);
+      if (newName && newName.trim()) {
+        window.addonAdminItems[idx].name = newName.trim();
+        renderAddonAdminList();
       }
     }
     function removeAddon(idx) {
@@ -715,6 +726,7 @@ function finishSaveSettings() {
       renderInventory();
       renderAnalytics();
       renderSettings();
+      renderAddonAdminList();
     }
   </script>
 </body>
