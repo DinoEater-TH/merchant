@@ -816,11 +816,27 @@
     }
 
     function promptChangePhone() {
-      const p = prompt('กรุณาใส่เบอร์โทรศัพท์สำหรับสะสมแต้ม:', customerPhone);
-      if (p) {
-        customerPhone = p;
-        document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${p}`;
-        document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${p}`;
+      const p = prompt('กรุณาใส่เบอร์โทรศัพท์สำหรับสะสมแต้ม (ต้องตรงกับบัญชีสมาชิก):', customerPhone);
+      if (!p) return;
+      const phone = p.trim();
+      if (!/^0\\d{9}$/.test(phone)) { alert('เบอร์โทรไม่ถูกต้อง (ตัวอย่าง 0812345678)'); return; }
+      const name = prompt('ชื่อ (ไม่จำเป็นต้องกรอก):', '') || '';
+      // match existing member if present
+      const rs = window.remoteState;
+      if (rs && rs.users && rs.users[phone]) {
+        const u = rs.users[phone];
+        customerPhone = phone;
+        document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${u.name || name || phone}`;
+        document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${phone}`;
+        alert(`เข้าสู่ระบบสมาชิก ${u.name || phone} เรียบร้อย`);
+      } else {
+        // create new member locally (will sync if connected)
+        if (!window.customerMembers) window.customerMembers = {};
+        window.customerMembers[phone] = { phoneNumber: phone, name: name.trim(), stamps: 0, totalOrders: 0 };
+        customerPhone = phone;
+        document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${name.trim() || phone}`;
+        document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${phone}`;
+        alert(`สร้างบัญชีสมาชิก ${name.trim() || phone} เรียบร้อย`);
       }
     }
 
@@ -839,6 +855,7 @@
           const val = snap.val();
           const json = (typeof val === 'string') ? val : JSON.stringify(val);
           const parsed = JSON.parse(json);
+          window.remoteState = parsed;
           let cfg = parsed.shopInfo && parsed.shopInfo.addonConfig;
           if (typeof cfg === 'string') { try { cfg = JSON.parse(cfg); } catch(e){ cfg = {}; } }
           window.addonConfig = cfg || {};

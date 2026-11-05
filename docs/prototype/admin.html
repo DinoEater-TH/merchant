@@ -164,8 +164,7 @@
       <datalist id="categoryList"></datalist>
       <input type="file" id="m_image" accept="image/*" class="w-full text-sm">
       <div class="flex gap-2">
-        <input id="m_price" type="number" placeholder="ราคาขาย (บาท)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
-        <input id="m_cost" type="number" placeholder="ต้นทุนตรง (บาท)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+        <input id="m_price" type="number" placeholder="ราคาขาย (บาท)" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <div class="flex gap-2">
         <input id="m_stock" type="number" placeholder="สต็อกเริ่มต้น" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
@@ -493,7 +492,7 @@
       if (!name) { alert('กรุณาใส่ชื่อเมนู'); return; }
       const category = document.getElementById('m_category').value.trim() || 'cat_1';
       const price = parseFloat(document.getElementById('m_price').value) || 0;
-      const cost = parseFloat(document.getElementById('m_cost').value) || 0;
+      const cost = 0;
       const stock = parseInt(document.getElementById('m_stock').value) || 0;
       const emoji = document.getElementById('m_emoji').value.trim() || '🍢';
       const desc = document.getElementById('m_desc').value.trim();
