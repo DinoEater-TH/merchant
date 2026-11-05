@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "610225727771",
+    "firebase_url": "https://dinoeater-merchant-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "dinoeater-merchant",
+    "storage_bucket": "dinoeater-merchant.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:610225727771:android:55ab12f0911c36986ccbbe",
+        "android_client_info": {
+          "package_name": "com.aistudio.applet.csmhfz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXDtzXDIlTTvkM3w-q8q8WiTekhQQwxVA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:610225727771:android:c35aa552a82ad12d6ccbbe",
+        "android_client_info": {
+          "package_name": "com.dinoeater.merchant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXDtzXDIlTTvkM3w-q8q8WiTekhQQwxVA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

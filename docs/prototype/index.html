@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DinoEater ลูกชิ้นทอด - สั่งอาหารออนไลน์</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Prompt', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-amber-50 text-gray-800 min-h-screen pb-28">
+
+  <!-- Header -->
+  <header class="bg-white shadow-sm sticky top-0 z-30 px-4 py-3 flex justify-between items-center">
+    <div>
+      <div class="flex items-center space-x-2">
+        <h1 id="shopTitle" class="text-lg font-bold text-orange-600 flex items-center gap-2"><span id="shopLogo" class="text-2xl">🍢</span><span id="shopNameText">DinoEater ลูกชิ้นทอด</span></h1>
+        <span id="shopStatus" class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">● เปิดบริการ</span>
+      </div>
+      <p id="shopAddress" class="text-xs text-gray-500">ตลาดโต้รุ่ง ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น</p>
+    </div>
+    <a href="admin.html" class="border border-orange-500 text-orange-600 text-xs px-3 py-1.5 rounded-full font-medium flex items-center space-x-1 hover:bg-orange-50">
+      <span>🔒 จัดการร้าน</span>
+    </a>
+  </header>
+
+  <!-- Member Loyalty Card -->
+  <div class="max-w-md mx-auto px-4 mt-3">
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-orange-100">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-lg">🍢</div>
+          <div>
+            <h2 id="memberPhoneDisplay" class="font-bold text-sm hidden">สมาชิก: 084-611-2419</h2>
+            <p class="text-xs text-gray-500">สะสมครบ 10 แต้ม ฟรี 1 ชุดทันที!</p>
+          </div>
+        </div>
+        <button onclick="promptChangePhone()" class="text-xs text-orange-600 font-bold hover:underline">เข้าสู่ระบบ/สมัครสมาชิก</button>
+      </div>
+
+      <!-- Consumption Stats Row -->
+      <div class="mt-3 bg-amber-50/70 border border-amber-200/60 rounded-xl p-2.5 flex justify-between items-center text-center">
+        <div>
+          <div class="text-[10px] text-gray-500">ยอดบริโภคสะสม</div>
+          <div class="text-xs font-extrabold text-orange-600">฿<span id="consumptionTotalSpent">230</span></div>
+        </div>
+        <div class="w-px h-6 bg-amber-200"></div>
+        <div>
+          <div class="text-[10px] text-gray-500">สั่งซื้อแล้ว</div>
+          <div class="text-xs font-bold text-gray-800"><span id="consumptionTotalOrders">4</span> ครั้ง</div>
+        </div>
+        <div class="w-px h-6 bg-amber-200"></div>
+        <div>
+          <div class="text-[10px] text-gray-500">รวมลูกชิ้น</div>
+          <div class="text-xs font-bold text-gray-800"><span id="consumptionTotalSticks">22</span> ไม้</div>
+        </div>
+      </div>
+
+      <!-- 10 Stamps Progress -->
+      <div class="grid grid-cols-10 gap-1.5 mt-3" id="stampsContainer">
+        <!-- Stamp circles generated via JS -->
+      </div>
+      <div class="flex justify-between items-center mt-2.5 text-xs">
+        <span id="stampsCountText" class="text-orange-600 font-bold">สะสมแล้ว 7/10 แต้ม</span>
+        <div class="flex space-x-1.5">
+          <button onclick="openOrderHistoryModal()" class="text-xs bg-orange-100 text-orange-800 border border-orange-200 px-2 py-1 rounded-lg font-bold hover:bg-orange-200 flex items-center space-x-1">
+            <span>📜 ประวัติสั่งซื้อ</span>
+          </button>
+          <button onclick="reorderPrevious()" class="text-xs bg-orange-50 border border-orange-200 text-orange-700 px-2 py-1 rounded-lg font-medium hover:bg-orange-100">🔁 สั่งซ้ำ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Promotion Ticker -->
+  <div class="max-w-md mx-auto px-4 mt-2">
+    <div class="bg-orange-100 text-orange-800 rounded-xl px-3 py-2 text-xs font-medium flex items-center space-x-1.5">
+      <span>🎁</span>
+      <span>โปรสุดคุ้ม: ซื้อครบ 50.- ลด 5.- | ซื้อครบ 120.- ส่งฟรีทั่วเมือง</span>
+    </div>
+  </div>
+
+  <!-- Active Order Alert (if any) -->
+  <div id="activeOrderAlert" class="max-w-md mx-auto px-4 mt-2 hidden">
+    <div onclick="openTrackerModal()" class="bg-amber-100 border border-amber-300 rounded-xl p-3 flex justify-between items-center cursor-pointer hover:bg-amber-200 transition">
+      <div class="flex items-center space-x-2">
+        <span class="text-xl">🛵</span>
+        <div>
+          <div class="text-xs font-bold text-gray-800">สถานะออเดอร์ #<span id="activeOrderId">ORD-101</span></div>
+          <div id="activeOrderStatusText" class="text-xs font-extrabold text-red-600">กำลังทอดร้อนๆ...</div>
+        </div>
+      </div>
+      <span class="bg-orange-600 text-white text-xs px-2.5 py-1 rounded-lg font-bold">ติดตามสด &gt;</span>
+    </div>
+  </div>
+
+  <!-- Categories Horizontal Scroll -->
+  <div class="max-w-md mx-auto px-4 mt-3">
+    <div class="flex space-x-2 overflow-x-auto no-scrollbar py-1" id="categoryTabs">
+      <button onclick="filterCategory('all')" class="cat-btn bg-orange-600 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap shadow-sm">ทั้งหมด</button>
+      <button onclick="filterCategory('cat_1')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">🍢 ลูกชิ้นทอด</button>
+      <button onclick="filterCategory('cat_2')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">🍡 ลูกชิ้นปิ้ง/นึ่ง</button>
+      <button onclick="filterCategory('cat_3')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">⭐ ชุดสุดคุ้ม Combo</button>
+      <button onclick="filterCategory('cat_4')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">🥤 เครื่องดื่ม</button>
+    </div>
+  </div>
+
+  <!-- Menu Item List -->
+  <main class="max-w-md mx-auto px-4 mt-3 space-y-3" id="menuList">
+    <!-- Items rendered dynamically -->
+  </main>
+
+  <!-- Sticky Bottom Cart Summary -->
+  <div id="cartBar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl p-4 z-20 hidden">
+    <div class="max-w-md mx-auto flex justify-between items-center">
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="bg-orange-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold" id="cartItemCount">0</span>
+          <span class="text-xl font-extrabold text-orange-600">฿<span id="cartTotalText">0</span></span>
+        </div>
+        <div id="cartDiscountText" class="text-xs text-green-600 font-medium hidden">ประหยัด ฿5 จากโปรโมชั่น!</div>
+      </div>
+      <button onclick="openAddonsModal()" class="bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-md transition flex items-center space-x-1.5">
+        <span>สั่งซื้อเลย</span>
+        <span>&gt;</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 1: Addons & Fulfillment Modal -->
+  <div id="addonsModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-5 space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="font-bold text-base text-gray-800">🍢 ตัวเลือกการรับสินค้าและเครื่องเคียง</h3>
+        <button onclick="closeAddonsModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <!-- Fulfillment Switch -->
+      <div>
+        <label class="block text-xs font-bold text-gray-700 mb-2">1. รูปแบบการรับสินค้า</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnFulfillDelivery" onclick="setFulfillment('delivery')" class="border-2 border-orange-500 bg-orange-50 text-orange-700 p-3 rounded-xl text-xs font-bold flex flex-col items-center">
+            <span class="text-xl">🛵</span>
+            <span class="mt-1">จัดส่งตามที่อยู่</span>
+          </button>
+          <button id="btnFulfillPickup" onclick="setFulfillment('pickup')" class="border border-gray-200 text-gray-600 p-3 rounded-xl text-xs font-bold flex flex-col items-center">
+            <span class="text-xl">🏪</span>
+            <span class="mt-1">มารับเองหน้าร้าน</span>
+          </button>
+        </div>
+
+        <div id="deliveryInputSection" class="mt-3">
+          <input type="text" id="deliveryAddressInput" value="บ้านเลขที่ 12/3 ซอยมิตรภาพ 14" class="w-full text-xs p-2.5 border rounded-lg" placeholder="ระบุบ้านเลขที่ / ซอย / จุดสังเกต">
+          <button onclick="openGpsMap()" id="gpsBtn" class="mt-2 w-full border border-orange-300 text-orange-600 text-xs py-2 rounded-lg font-medium hover:bg-orange-50 flex items-center justify-center space-x-1">
+            <span>📍 กดเพื่อส่งพิกัด GPS ปัจจุบัน</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Skewer Preference -->
+      <div>
+        <label class="block text-xs font-bold text-gray-700 mb-1.5">2. รูปแบบการใส่ไม้</label>
+        <div class="space-y-1.5 text-xs">
+          <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="skewerOpt" value="skewered" checked class="accent-orange-600"> <span>🍢 เสียบไม้</span></label>
+          <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="skewerOpt" value="in_bag" class="accent-orange-600"> <span>🛍️ ใส่ถุง (ไม่เสียบไม้)</span></label>
+          <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="skewerOpt" value="separate" class="accent-orange-600"> <span>🥢 รับไม้เสียบแยก</span></label>
+        </div>
+      </div>
+
+      <!-- Condiments Checkboxes -->
+      <div>
+        <label class="block text-xs font-bold text-gray-700 mb-1.5">3. เครื่องเคียงและถ้วยน้ำจิ้ม (ฟรี)</label>
+        <div id="addonOptionsContainer" class="space-y-1.5 text-xs">
+          <!-- rendered dynamically from addonConfig -->
+        </div>
+      </div>
+
+
+      <!-- Comment Field -->
+      <div>
+        <label class="block text-xs font-bold text-gray-700 mb-1">5. หมายเหตุเพิ่มเติมถึงร้าน</label>
+        <input type="text" id="orderCommentInput" placeholder="" class="w-full text-xs p-2.5 border rounded-lg">
+      </div>
+
+      <!-- Net breakdown -->
+      <div class="bg-gray-50 rounded-xl p-3 text-xs space-y-1">
+        <div class="flex justify-between"><span>ยอดรวมสินค้า:</span> <span id="modalSubtotal">฿0</span></div>
+        <div class="flex justify-between text-green-600" id="modalDiscountRow"><span>ส่วนลดโปรโมชั่น:</span> <span id="modalDiscount">-฿0</span></div>
+        <div class="flex justify-between" id="modalDeliveryRow"><span>ค่าจัดส่ง:</span> <span id="modalDelivery">฿0</span></div>
+        <div class="border-t pt-1.5 flex justify-between font-extrabold text-sm text-orange-600"><span>ยอดสุทธิชำระ:</span> <span id="modalNetTotal">฿0</span></div>
+      </div>
+
+      <div id="paymentButtons" class="grid grid-cols-2 gap-2">
+        <button onclick="confirmCashOrder()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
+          💵 ชำระเงินสด
+        </button>
+        <button id="scanPayBtn" onclick="goToPaymentModal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
+          📱 สแกน PromptPay
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: PromptPay Payment Modal -->
+  <div id="paymentModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 text-center space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-sm text-gray-800">ชำระผ่าน พร้อมเพย์ (PromptPay)</h3>
+        <button onclick="closePaymentModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <!-- PromptPay Visual QR -->
+      <div class="bg-blue-900 rounded-xl p-3 inline-block">
+        <div class="bg-white p-2 rounded-lg">
+          <img id="promptPayQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY_0846112419" alt="PromptPay QR" class="w-44 h-44 mx-auto">
+        </div>
+      </div>
+
+      <div>
+        <p class="text-xs text-gray-500">ยอดที่ต้องชำระ</p>
+        <p class="text-2xl font-extrabold text-orange-600">฿<span id="promptPayAmount">0</span></p>
+      </div>
+
+      <div class="bg-gray-100 rounded-lg p-2.5 flex justify-between items-center text-xs">
+        <div class="text-left">
+          <div class="text-gray-500">เบอร์พร้อมเพย์:</div>
+          <div class="font-bold text-sm">084-611-2419</div>
+        </div>
+        <button onclick="copyPromptPayNumber()" class="bg-white border text-orange-600 px-2 py-1 rounded font-medium hover:bg-gray-50">คัดลอก</button>
+      </div>
+
+
+      <button onclick="confirmOrder()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
+        ยืนยันการชำระเงินและส่งออเดอร์
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 3: Order Tracker Modal -->
+  <div id="trackerModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-base text-gray-800">🛵 ติดตามออเดอร์ #<span id="trackerOrderId">ORD-101</span></h3>
+        <button onclick="closeTrackerModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="text-center p-4 bg-orange-50 rounded-xl">
+        <div id="trackerStatusIcon" class="text-4xl mb-2">🍳</div>
+        <div id="trackerStatusText" class="font-extrabold text-orange-600 text-base">กำลังปรุงทอดร้อนๆ กรอบๆ...</div>
+      </div>
+
+      <!-- Stepper -->
+      <div class="flex justify-between text-xs text-center">
+        <div class="w-1/3 text-orange-600 font-bold">● รับออเดอร์แล้ว</div>
+        <div class="w-1/3 text-orange-600 font-bold">● กำลังทอด</div>
+        <div class="w-1/3 text-gray-400 font-medium">○ เสร็จแล้ว</div>
+      </div>
+
+      <div class="bg-gray-50 p-3 rounded-lg text-xs space-y-1">
+        <div class="font-bold text-gray-700">รายการที่สั่ง:</div>
+        <div id="trackerItemsList">• ลูกชิ้นเอ็นเนื้อ x5</div>
+        <div class="text-gray-500" id="trackerOptionsText">- เสียบไม้, รับพริกทอด, แตงกวา, ถ้วยน้ำจิ้ม</div>
+        <div class="text-red-500 font-bold" id="trackerCommentText">💬 หมายเหตุ: "ขอทอดกรอบๆ แยกน้ำจิ้ม"</div>
+      </div>
+
+      <button onclick="closeTrackerModal()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs">
+        ปิดหน้าต่าง
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 4: Order History & Consumption Modal -->
+  <div id="orderHistoryModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full max-h-[88vh] overflow-y-auto p-5 space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-sm">📋</div>
+          <div>
+            <h3 class="font-bold text-base text-gray-800">ประวัติการสั่งซื้อและการบริโภค</h3>
+            <p class="text-xs text-gray-500" id="historyPhoneSubtext">เบอร์: 084-611-2419</p>
+          </div>
+        </div>
+        <button onclick="closeOrderHistoryModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <!-- Consumption Summary Card -->
+      <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-3.5">
+        <div class="flex justify-between items-center mb-2">
+          <div class="text-xs font-bold text-orange-800 flex items-center space-x-1">
+            <span>📊</span>
+            <span>สรุปยอดการบริโภคสะสม</span>
+          </div>
+          <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">ประหยัดโปร ฿15</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-white rounded-lg p-2 border border-amber-100">
+            <div class="text-[10px] text-gray-500">ยอดบริโภคสุทธิ</div>
+            <div class="text-sm font-extrabold text-orange-600">฿<span id="histModalTotalSpent">230</span></div>
+          </div>
+          <div class="bg-white rounded-lg p-2 border border-amber-100">
+            <div class="text-[10px] text-gray-500">สั่งสำเร็จแล้ว</div>
+            <div class="text-sm font-bold text-gray-800"><span id="histModalTotalOrders">4</span> ครั้ง</div>
+          </div>
+          <div class="bg-white rounded-lg p-2 border border-amber-100">
+            <div class="text-[10px] text-gray-500">ลูกชิ้นทั้งหมด</div>
+            <div class="text-sm font-bold text-gray-800"><span id="histModalTotalSticks">22</span> ไม้</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Buttons -->
+      <div class="flex space-x-1.5 overflow-x-auto pb-1 text-xs">
+        <button onclick="filterHistory('all')" id="btnHistFilterAll" class="bg-orange-600 text-white px-3 py-1.5 rounded-full font-bold whitespace-nowrap">ทั้งหมด (<span id="countHistAll">5</span>)</button>
+        <button onclick="filterHistory('completed')" id="btnHistFilterCompleted" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium whitespace-nowrap">สำเร็จแล้ว (<span id="countHistCompleted">3</span>)</button>
+        <button onclick="filterHistory('active')" id="btnHistFilterActive" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium whitespace-nowrap">กำลังดำเนินการ (<span id="countHistActive">1</span>)</button>
+        <button onclick="filterHistory('cancelled')" id="btnHistFilterCancelled" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium whitespace-nowrap">ยกเลิก (<span id="countHistCancelled">1</span>)</button>
+      </div>
+
+      <!-- Orders List Container -->
+      <div id="historyOrdersList" class="space-y-3">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- GPS Map Modal -->
+  <div id="gpsMapModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-lg p-4 space-y-3 shadow-2xl">
+      <h3 class="font-bold text-base">เลือกพิกัดจากแผนที่</h3>
+      <div id="map" class="w-full h-64 rounded-lg border"></div>
+      <p id="selectedCoords" class="text-xs text-gray-600">ยังไม่ได้เลือก</p>
+      <div class="flex gap-2">
+        <button onclick="useSelectedCoords()" class="bg-orange-600 text-white flex-1 py-2 rounded-lg text-sm font-bold">ใช้พิกัดนี้</button>
+        <button onclick="closeGpsMap()" class="bg-gray-200 text-gray-700 flex-1 py-2 rounded-lg text-sm font-bold">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // In-memory State
+    let cart = {};
+    let fulfillment = 'delivery';
+    let customerPhone = '084-611-2419';
+    let stamps = 7;
+    let activeOrder = {
+      id: 'ORD-101',
+      status: 'cooking',
+      total: 45
+    };
+
+    const menu = [
+      { id: 'item_01', cat: 'cat_1', name: 'ลูกชิ้นเอ็นเนื้อ', price: 10, stock: 50, bestseller: true, emoji: '🍢', desc: 'เอ็นเนื้อแท้ กรุบกรอบ ทอดพองกำลังดี' },
+      { id: 'item_02', cat: 'cat_1', name: 'ลูกชิ้นหมูล้วนแท้', price: 10, stock: 50, bestseller: true, emoji: '🍡', desc: 'หมูบดเนียนนุ่ม ไม่ผสมแป้งเยอะ ทอดไม่อมน้ำมัน' },
+      { id: 'item_03', cat: 'cat_1', name: 'ไส้กรอกแดงในตำนาน', price: 10, stock: 60, bestseller: true, emoji: '🌭', desc: 'ไส้กรอกแดงวัยเด็ก ทอดกรอบบั้งสวย น้ำจิ้มเข้าเนื้อ' },
+      { id: 'item_04', cat: 'cat_2', name: 'ลูกชิ้นปลากรายเยาวราช', price: 12, stock: 40, bestseller: false, emoji: '🍥', desc: 'เนื้อปลากรายนวดฟู เด้งสู้ฟัน ราดซีฟู้ดเข้ากันมาก' },
+      { id: 'item_05', cat: 'cat_1', name: 'ลูกชิ้นกุ้งทอดทรงเครื่อง', price: 15, stock: 35, bestseller: false, emoji: '🦐', desc: 'เนื้อกุ้งหอมละมุน ทอดสีเหลืองทองหอมฟุ้ง' },
+      { id: 'item_06', cat: 'cat_1', name: 'เกี๊ยวกรอบทอดไส้หมู', price: 10, stock: 45, bestseller: true, emoji: '🥟', desc: 'แผ่นเกี๊ยวทอดกรอบสะท้านฟัน จิ้มน้ำจิ้มมะขามฟินเว่อร์' },
+      { id: 'item_07', cat: 'cat_3', name: 'ชุดคอมโบรวมมิตร 6 ไม้', price: 55, stock: 25, bestseller: true, emoji: '⭐', desc: 'เอ็นเนื้อ 2, หมู 2, ไส้กรอกแดง 1, เกี๊ยว 1 (ประหยัด 5.-)' },
+      { id: 'item_08', cat: 'cat_3', name: 'ชุดปาร์ตี้อิ่มจุก 12 ไม้', price: 99, stock: 15, bestseller: false, emoji: '🎉', desc: 'รวมลูกชิ้นครบทุกแบบ 12 ไม้ ผักสดจุใจ (ประหยัด 21.-)' },
+      { id: 'item_09', cat: 'cat_4', name: 'ชาดำเย็นโบราณ / ชามะนาว', price: 20, stock: 30, bestseller: false, emoji: '🧋', desc: 'ชาต้มสดหอมกรุ่น เย็นชื่นใจ ดับกระหาย' },
+      { id: 'item_10', cat: 'cat_4', name: 'โค้กเย็นฉ่ำ (กระป๋อง)', price: 15, stock: 40, bestseller: false, emoji: '🥤', desc: 'โค้กแช่เย็นเจี๊ยบ ดื่มคู่ลูกชิ้นทอดแก้เลี่ยน' }
+    ];
+
+    function renderStamps() {
+      const container = document.getElementById('stampsContainer');
+      container.innerHTML = '';
+      for (let i = 1; i <= 10; i++) {
+        const isStamped = i <= stamps;
+        const div = document.createElement('div');
+        div.className = `w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isStamped ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-400 border border-gray-200'}`;
+        div.textContent = isStamped ? '🍢' : i;
+        container.appendChild(div);
+      }
+      document.getElementById('stampsCountText').textContent = `สะสมแล้ว ${stamps}/10 แต้ม`;
+    }
+
+    function renderMenu(catFilter = 'all') {
+      const list = document.getElementById('menuList');
+      list.innerHTML = '';
+      const filtered = catFilter === 'all' ? menu : menu.filter(m => m.cat === catFilter);
+
+      filtered.forEach(item => {
+        const qty = cart[item.id] || 0;
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center justify-between';
+        card.innerHTML = `
+          <div class="flex items-center space-x-3 flex-1 pr-2">
+            <div class="w-14 h-14 bg-amber-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">${item.emoji}</div>
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <span class="font-bold text-sm text-gray-800">${item.name}</span>
+                ${item.bestseller ? '<span class="bg-red-500 text-white text-[10px] px-1.5 py-0.2 rounded font-bold">ขายดี 🔥</span>' : ''}
+              </div>
+              <p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p>
+              <div class="flex items-center space-x-2 mt-1">
+                <span class="font-extrabold text-orange-600 text-base">฿${item.price}</span>
+                <span class="text-[11px] text-gray-400">คงเหลือ ${item.stock} ไม้</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            ${qty > 0 ? `<button onclick="updateQty('${item.id}', -1)" class="w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center">-</button><span class="font-bold text-sm px-1">${qty}</span>` : ''}
+            <button onclick="updateQty('${item.id}', 1)" class="w-8 h-8 rounded-full bg-orange-600 text-white font-bold flex items-center justify-center shadow-sm">+</button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function updateQty(id, delta) {
+      cart[id] = (cart[id] || 0) + delta;
+      if (cart[id] <= 0) delete cart[id];
+      updateCartSummary();
+      renderMenu();
+    }
+
+    function updateCartSummary() {
+      let count = 0;
+      let subtotal = 0;
+      for (const [id, qty] of Object.entries(cart)) {
+        const item = menu.find(m => m.id === id);
+        if (item) {
+          count += qty;
+          subtotal += item.price * qty;
+        }
+      }
+
+      const cartBar = document.getElementById('cartBar');
+      if (count > 0) {
+        cartBar.classList.remove('hidden');
+        document.getElementById('cartItemCount').textContent = count;
+
+        let discount = subtotal >= 50 ? 5 : 0;
+        let deliveryFee = fulfillment === 'delivery' ? (subtotal >= 120 ? 0 : 15) : 0;
+        let total = Math.max(0, subtotal - discount + deliveryFee);
+
+        document.getElementById('cartTotalText').textContent = total;
+        const discText = document.getElementById('cartDiscountText');
+        if (discount > 0) {
+          discText.classList.remove('hidden');
+        } else {
+          discText.classList.add('hidden');
+        }
+      } else {
+        cartBar.classList.add('hidden');
+      }
+    }
+
+    function filterCategory(catId) {
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.className = 'cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap';
+      });
+      event.target.className = 'cat-btn bg-orange-600 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap shadow-sm';
+      renderMenu(catId);
+    }
+
+    function openAddonsModal() {
+      let subtotal = 0;
+      for (const [id, qty] of Object.entries(cart)) {
+        const item = menu.find(m => m.id === id);
+        if (item) subtotal += item.price * qty;
+      }
+      let discount = subtotal >= 50 ? 5 : 0;
+      let deliveryFee = fulfillment === 'delivery' ? (subtotal >= 120 ? 0 : 15) : 0;
+      let net = Math.max(0, subtotal - discount + deliveryFee);
+
+      document.getElementById('modalSubtotal').textContent = `฿${subtotal}`;
+      document.getElementById('modalDiscount').textContent = `-฿${discount}`;
+      document.getElementById('modalDelivery').textContent = deliveryFee === 0 ? 'ฟรี (ซื้อครบ 120.-)' : `฿${deliveryFee}`;
+      document.getElementById('modalNetTotal').textContent = `฿${net}`;
+
+      // Render addon options from manager config
+      const container = document.getElementById('addonOptionsContainer');
+      if (container) {
+        let items = window.addonConfig;
+        if (typeof items === 'string') { try { items = JSON.parse(items || '[]'); } catch(e){ items = []; } }
+        if (!Array.isArray(items) || items.length === 0) {
+          items = [
+            { id: 'chili', name: 'พริกทอดกรอบ', enabled: true },
+            { id: 'cucumber', name: 'แตงกวาสดกรอบ', enabled: true },
+            { id: 'sauceCup', name: 'ถ้วยน้ำจิ้มแยก', enabled: true }
+          ];
+        }
+        const enabledItems = items.filter(i => i.enabled !== false);
+        container.innerHTML = enabledItems.map(i => `
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" checked class="accent-orange-600" data-addon="${i.id}">
+            <span>${i.name}</span>
+          </label>
+        `).join('') || '<p class="text-xs text-gray-400">ไม่มีตัวเลือกเสริม</p>';
+      }
+
+      // scan payment visibility
+      const scanBtn = document.getElementById('scanPayBtn');
+      const si = (window.remoteState && window.remoteState.shopInfo) ? window.remoteState.shopInfo : {};
+      if (scanBtn) scanBtn.style.display = (si.showScanPayment === false) ? 'none' : '';
+
+      document.getElementById('addonsModal').classList.remove('hidden');
+    }
+
+    function closeAddonsModal() {
+      document.getElementById('addonsModal').classList.add('hidden');
+    }
+
+    function setFulfillment(type) {
+      fulfillment = type;
+      const btnDel = document.getElementById('btnFulfillDelivery');
+      const btnPick = document.getElementById('btnFulfillPickup');
+      const inputSection = document.getElementById('deliveryInputSection');
+
+      if (type === 'delivery') {
+        btnDel.className = 'border-2 border-orange-500 bg-orange-50 text-orange-700 p-3 rounded-xl text-xs font-bold flex flex-col items-center';
+        btnPick.className = 'border border-gray-200 text-gray-600 p-3 rounded-xl text-xs font-bold flex flex-col items-center';
+        inputSection.classList.remove('hidden');
+      } else {
+        btnPick.className = 'border-2 border-orange-500 bg-orange-50 text-orange-700 p-3 rounded-xl text-xs font-bold flex flex-col items-center';
+        btnDel.className = 'border border-gray-200 text-gray-600 p-3 rounded-xl text-xs font-bold flex flex-col items-center';
+        inputSection.classList.add('hidden');
+      }
+      openAddonsModal(); // Refresh calculation
+    }
+
+    let mapInstance = null;
+    let selectedMarker = null;
+    let selectedLat = null;
+    let selectedLng = null;
+
+    function openGpsMap() {
+      document.getElementById('gpsMapModal').classList.remove('hidden');
+      setTimeout(() => {
+        const startView = (lat, lng) => {
+          if (!mapInstance) {
+            mapInstance = L.map('map').setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapInstance);
+            mapInstance.on('click', e => {
+              selectedLat = e.latlng.lat;
+              selectedLng = e.latlng.lng;
+              if (selectedMarker) mapInstance.removeLayer(selectedMarker);
+              selectedMarker = L.marker([selectedLat, selectedLng]).addTo(mapInstance);
+              document.getElementById('selectedCoords').textContent = `เลือกแล้ว: ${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
+            });
+          } else {
+            mapInstance.setView([lat, lng], 15);
+            mapInstance.invalidateSize();
+          }
+          if (selectedMarker) mapInstance.removeLayer(selectedMarker);
+          selectedMarker = L.marker([lat, lng]).addTo(mapInstance);
+          selectedLat = lat; selectedLng = lng;
+          document.getElementById('selectedCoords').textContent = `ตำแหน่งปัจจุบัน: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        };
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(pos => startView(pos.coords.latitude, pos.coords.longitude), () => startView(16.4421, 102.8358));
+        } else {
+          startView(16.4421, 102.8358);
+        }
+      }, 200);
+    }
+    function closeGpsMap() { document.getElementById('gpsMapModal').classList.add('hidden'); }
+    function useSelectedCoords() {
+      if (selectedLat == null) { alert('กรุณาคลิกบนแผนที่เพื่อเลือกพิกัด'); return; }
+      const coords = `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
+      document.getElementById('gpsBtn').innerHTML = `📍 พิกัด ${coords} (แนบแล้ว ✅)`;
+      document.getElementById('gpsBtn').className = 'mt-2 w-full bg-green-50 border border-green-400 text-green-700 text-xs py-2 rounded-lg font-bold flex items-center justify-center space-x-1';
+      closeGpsMap();
+    }
+    function captureGps() { openGpsMap(); }
+
+    function goToPaymentModal() {
+      closeAddonsModal();
+      let net = document.getElementById('modalNetTotal').textContent.replace('฿', '');
+      document.getElementById('promptPayAmount').textContent = net;
+      const si = (window.remoteState && window.remoteState.shopInfo) ? window.remoteState.shopInfo : {};
+      const qrImg = document.getElementById('promptPayQrImg');
+      if (si.promptPayQrUri) qrImg.src = si.promptPayQrUri;
+      else qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY_${si.promptPayNumber || '0846112419'}_${net}`;
+      document.getElementById('paymentModal').classList.remove('hidden');
+    }
+
+    function closePaymentModal() {
+      document.getElementById('paymentModal').classList.add('hidden');
+    }
+
+    function copyPromptPayNumber() {
+      navigator.clipboard.writeText('0846112419');
+      alert('คัดลอกเบอร์พร้อมเพย์ 0846112419 เรียบร้อย');
+    }
+
+    function toggleSlip() {
+      alert('จำลองแนบสลิปเรียบร้อยแล้ว');
+    }
+
+    function confirmOrder() {
+      closePaymentModal();
+      cart = {};
+      updateCartSummary();
+      renderMenu();
+
+      const orderAlert = document.getElementById('activeOrderAlert');
+      orderAlert.classList.remove('hidden');
+      openTrackerModal();
+    }
+
+    function confirmCashOrder() {
+      closeAddonsModal();
+      cart = {};
+      updateCartSummary();
+      renderMenu();
+      const orderAlert = document.getElementById('activeOrderAlert');
+      orderAlert.classList.remove('hidden');
+      openTrackerModal();
+    }
+
+    function openTrackerModal() {
+      document.getElementById('trackerModal').classList.remove('hidden');
+    }
+
+    function closeTrackerModal() {
+      document.getElementById('trackerModal').classList.add('hidden');
+    }
+
+    function reorderPrevious() {
+      cart = { 'item_01': 3, 'item_03': 2 };
+      updateCartSummary();
+      renderMenu();
+      openAddonsModal();
+    }
+
+    // Past Orders History
+    let pastOrders = [
+      {
+        id: 'ORD-101',
+        time: '2026-11-04 12:00',
+        status: 'cooking',
+        statusLabel: '🍳 กำลังทอดร้อนๆ',
+        statusClass: 'bg-amber-100 text-amber-800',
+        items: [{ name: 'ลูกชิ้นเอ็นเนื้อ', qty: 5, price: 10 }],
+        subtotal: 50,
+        discount: 5,
+        total: 45,
+        options: '🍢 เสียบไม้ • น้ำจิ้มผสม 2 อย่าง • รับพริกทอด, แตงกวา'
+      },
+      {
+        id: 'ORD-098',
+        time: '2026-11-03 18:45',
+        status: 'completed',
+        statusLabel: '✅ สำเร็จแล้ว',
+        statusClass: 'bg-green-100 text-green-800',
+        items: [
+          { name: 'ลูกชิ้นหมูล้วนแท้', qty: 3, price: 10 },
+          { name: 'ไส้กรอกแดงในตำนาน', qty: 3, price: 10 }
+        ],
+        subtotal: 60,
+        discount: 5,
+        total: 55,
+        options: '🍢 เสียบไม้ • น้ำจิ้มมะขามโบราณ • พริกทอด'
+      },
+      {
+        id: 'ORD-089',
+        time: '2026-11-01 12:30',
+        status: 'completed',
+        statusLabel: '✅ สำเร็จแล้ว',
+        statusClass: 'bg-green-100 text-green-800',
+        items: [
+          { name: 'ชุดคอมโบรวมมิตร 6 ไม้', qty: 1, price: 55 },
+          { name: 'ชาดำเย็นโบราณ', qty: 1, price: 20 }
+        ],
+        subtotal: 75,
+        discount: 5,
+        total: 70,
+        options: '🛍️ ใส่ถุง • น้ำจิ้มผสม 2 อย่าง • แตงกวาสด'
+      },
+      {
+        id: 'ORD-075',
+        time: '2026-10-29 19:15',
+        status: 'completed',
+        statusLabel: '✅ สำเร็จแล้ว',
+        statusClass: 'bg-green-100 text-green-800',
+        items: [
+          { name: 'เกี๊ยวกรอบทอดไส้หมู', qty: 3, price: 10 },
+          { name: 'ลูกชิ้นเอ็นเนื้อ', qty: 2, price: 10 }
+        ],
+        subtotal: 50,
+        discount: 5,
+        total: 45,
+        options: '🍢 เสียบไม้ • น้ำจิ้มซีฟู้ดมะนาวสด'
+      },
+      {
+        id: 'ORD-063',
+        time: '2026-10-24 16:00',
+        status: 'cancelled',
+        statusLabel: '❌ ยกเลิก',
+        statusClass: 'bg-red-100 text-red-800',
+        items: [
+          { name: 'ลูกชิ้นปลากรายเยาวราช', qty: 2, price: 12 },
+          { name: 'โค้กเย็นฉ่ำ', qty: 1, price: 15 }
+        ],
+        subtotal: 39,
+        discount: 0,
+        total: 54,
+        options: '🥢 รับไม้เสียบแยก • น้ำจิ้มมะขาม'
+      }
+    ];
+
+    let currentHistoryFilter = 'all';
+
+    function openOrderHistoryModal() {
+      updateConsumptionMetrics();
+      renderOrderHistory();
+      document.getElementById('orderHistoryModal').classList.remove('hidden');
+    }
+
+    function closeOrderHistoryModal() {
+      document.getElementById('orderHistoryModal').classList.add('hidden');
+    }
+
+    function filterHistory(filter) {
+      currentHistoryFilter = filter;
+      const buttons = ['all', 'completed', 'active', 'cancelled'];
+      buttons.forEach(b => {
+        const btn = document.getElementById(`btnHistFilter${b.charAt(0).toUpperCase() + b.slice(1)}`);
+        if (btn) {
+          if (b === filter) {
+            btn.className = 'bg-orange-600 text-white px-3 py-1.5 rounded-full font-bold whitespace-nowrap';
+          } else {
+            btn.className = 'bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium whitespace-nowrap';
+          }
+        }
+      });
+      renderOrderHistory();
+    }
+
+    function updateConsumptionMetrics() {
+      const validOrders = pastOrders.filter(o => o.status !== 'cancelled');
+      let totalSpent = 0;
+      let totalSticks = 0;
+      validOrders.forEach(o => {
+        totalSpent += o.total;
+        o.items.forEach(i => totalSticks += i.qty);
+      });
+
+      document.getElementById('consumptionTotalSpent').textContent = totalSpent;
+      document.getElementById('consumptionTotalOrders').textContent = validOrders.length;
+      document.getElementById('consumptionTotalSticks').textContent = totalSticks;
+
+      document.getElementById('histModalTotalSpent').textContent = totalSpent;
+      document.getElementById('histModalTotalOrders').textContent = pastOrders.filter(o => o.status === 'completed').length;
+      document.getElementById('histModalTotalSticks').textContent = totalSticks;
+
+      document.getElementById('countHistAll').textContent = pastOrders.length;
+      document.getElementById('countHistCompleted').textContent = pastOrders.filter(o => o.status === 'completed').length;
+      document.getElementById('countHistActive').textContent = pastOrders.filter(o => o.status === 'cooking' || o.status === 'pending').length;
+      document.getElementById('countHistCancelled').textContent = pastOrders.filter(o => o.status === 'cancelled').length;
+    }
+
+    function renderOrderHistory() {
+      const list = document.getElementById('historyOrdersList');
+      list.innerHTML = '';
+
+      let filtered = pastOrders;
+      if (currentHistoryFilter === 'completed') {
+        filtered = pastOrders.filter(o => o.status === 'completed');
+      } else if (currentHistoryFilter === 'active') {
+        filtered = pastOrders.filter(o => o.status === 'cooking' || o.status === 'pending');
+      } else if (currentHistoryFilter === 'cancelled') {
+        filtered = pastOrders.filter(o => o.status === 'cancelled');
+      }
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="text-center py-8 text-gray-400 text-xs font-medium">ไม่พบประวัติการสั่งซื้อในหมวดนี้</div>';
+        return;
+      }
+
+      filtered.forEach(order => {
+        const card = document.createElement('div');
+        card.className = 'border border-gray-100 rounded-xl p-3 bg-white shadow-sm hover:shadow transition';
+        const itemsHtml = order.items.map(it => `<div class="flex justify-between text-xs text-gray-700"><span>• ${it.name} x${it.qty}</span><span class="font-medium">฿${it.price * it.qty}</span></div>`).join('');
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center mb-1.5">
+            <div>
+              <span class="font-bold text-sm text-gray-800">#${order.id}</span>
+              <span class="text-[11px] text-gray-400 ml-1.5">${order.time}</span>
+            </div>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${order.statusClass}">${order.statusLabel}</span>
+          </div>
+          <div class="space-y-1 py-1.5 border-t border-b border-gray-100 my-1">
+            ${itemsHtml}
+          </div>
+          <div class="text-[11px] text-gray-500 mb-2">${order.options}</div>
+          <div class="flex justify-between items-center pt-1">
+            <div>
+              <span class="text-xs text-gray-500">ยอดรวม: </span>
+              <span class="text-sm font-extrabold text-orange-600">฿${order.total}</span>
+            </div>
+            <button onclick="reorderPastOrder('${order.id}')" class="bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1">
+              <span>🔁 สั่งซ้ำ</span>
+            </button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function reorderPastOrder(orderId) {
+      const order = pastOrders.find(o => o.id === orderId);
+      if (order) {
+        cart = {};
+        if (order.id === 'ORD-101') cart['item_01'] = 5;
+        else if (order.id === 'ORD-098') { cart['item_02'] = 3; cart['item_03'] = 3; }
+        else if (order.id === 'ORD-089') { cart['item_07'] = 1; cart['item_09'] = 1; }
+        else if (order.id === 'ORD-075') { cart['item_06'] = 3; cart['item_01'] = 2; }
+        else cart['item_01'] = 2;
+
+        closeOrderHistoryModal();
+        updateCartSummary();
+        renderMenu();
+        openAddonsModal();
+      }
+    }
+
+    function promptChangePhone() {
+      const p = prompt('กรุณาใส่เบอร์โทรศัพท์สำหรับสะสมแต้ม (ต้องตรงกับบัญชีสมาชิก):', customerPhone);
+      if (!p) return;
+      const phone = p.trim();
+      if (!/^0\\d{9}$/.test(phone)) { alert('เบอร์โทรไม่ถูกต้อง (ตัวอย่าง 0846112419)'); return; }
+      const name = prompt('ชื่อ (ไม่จำเป็นต้องกรอก):', '') || '';
+      // match existing member if present
+      const rs = window.remoteState;
+      if (rs && rs.users && rs.users[phone]) {
+        const u = rs.users[phone];
+        customerPhone = phone;
+        document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${u.name || name || phone}`;
+        document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${phone}`;
+        alert(`เข้าสู่ระบบสมาชิก ${u.name || phone} เรียบร้อย`);
+      } else {
+        // create new member locally (will sync if connected)
+        if (!window.customerMembers) window.customerMembers = {};
+        window.customerMembers[phone] = { phoneNumber: phone, name: name.trim(), stamps: 0, totalOrders: 0 };
+        customerPhone = phone;
+        document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${name.trim() || phone}`;
+        document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${phone}`;
+        alert(`สร้างบัญชีสมาชิก ${name.trim() || phone} เรียบร้อย`);
+      }
+    }
+
+    // Firebase addon config
+    window.addonConfig = {};
+    try {
+      const fbConfig = {
+        apiKey: "AIzaSyDXwT0Zs0E0ZCXUljcduH2aIvh0ntHPtLY",
+        authDomain: "dinoeater-merchant.firebaseapp.com",
+        databaseURL: "https://dinoeater-merchant-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "dinoeater-merchant"
+      };
+      firebase.initializeApp(fbConfig);
+      firebase.auth().signInAnonymously().then(() => {
+        firebase.database().ref('shops/dinoeater-merchant/state').once('value').then(snap => {
+          const val = snap.val();
+          const json = (typeof val === 'string') ? val : JSON.stringify(val);
+          const parsed = JSON.parse(json);
+          window.remoteState = parsed;
+          const si = parsed.shopInfo || {};
+          const nameEl = document.getElementById('shopNameText');
+          if (nameEl) nameEl.textContent = si.name || 'DinoEater ลูกชิ้นทอด';
+          const logoEl = document.getElementById('shopLogo');
+          if (logoEl) {
+            if (si.logoUri) logoEl.innerHTML = `<img src="${si.logoUri}" class="w-8 h-8 rounded-full object-cover">`;
+            else logoEl.textContent = si.logoEmoji || '🍢';
+          }
+          const addrEl = document.getElementById('shopAddress');
+          if (addrEl) addrEl.textContent = si.address || addrEl.textContent;
+          const statusEl = document.getElementById('shopStatus');
+          if (statusEl) {
+            if (si.isOpen === false) { statusEl.textContent = '● ปิดบริการ'; statusEl.className = 'bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-medium'; }
+            else { statusEl.textContent = '● เปิดบริการ'; statusEl.className = 'bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium'; }
+          }
+          let cfg = parsed.shopInfo && parsed.shopInfo.addonConfig;
+          if (typeof cfg === 'string') { try { cfg = JSON.parse(cfg); } catch(e){ cfg = {}; } }
+          window.addonConfig = cfg || {};
+        }).catch(()=>{});
+      }).catch(()=>{});
+    } catch (e) { console.error(e); }
+
+    // Init
+    renderStamps();
+    renderMenu();
+    updateConsumptionMetrics();
+  </script>
+</body>
+</html>
