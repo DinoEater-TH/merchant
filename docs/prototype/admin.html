@@ -144,6 +144,12 @@
             <button onclick="addAddonOption()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
           </div>
         </div>
+        <div class="border-t pt-2">
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_showScan"> แสดงปุ่มสแกน PromptPay ให้ลูกค้า</label>
+          <label class="text-xs text-gray-500 mt-2 block">อัปโหลดรูป QR Code ของร้าน</label>
+          <input type="file" id="s_qr" accept="image/*" class="w-full text-sm">
+          <div id="qrPreview" class="mt-2"></div>
+        </div>
         <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกการตั้งค่า</button>
       </div>
     </section>
@@ -222,7 +228,9 @@
         rewardDescription: "ฟรี! ชุดลูกชิ้นรวมมิตร 1 ชุด",
         logoType: "EMOJI",
         logoEmoji: "🍢",
-        stampEmoji: "🍢"
+        stampEmoji: "🍢",
+        showScanPayment: true,
+        promptPayQrUri: null
       },
       categories: [
         { id: "all", name: "ทั้งหมด", sort: 0, iconEmoji: "🥢" },
@@ -605,6 +613,12 @@
       document.getElementById('s_stamps').value = s.stampsRequiredForReward ?? 10;
       document.getElementById('s_rewardDesc').value = s.rewardDescription || '';
       document.getElementById('s_pin').value = state.adminPin || '09286840';
+      document.getElementById('s_showScan').checked = (s.showScanPayment !== false);
+      const qrPreview = document.getElementById('qrPreview');
+      if (qrPreview) {
+        if (s.promptPayQrUri) qrPreview.innerHTML = `<img src="${s.promptPayQrUri}" class="w-32 h-32 object-contain border rounded">`;
+        else qrPreview.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีรูป QR</p>';
+      }
       let items = [];
       try { items = JSON.parse(s.addonConfig || '[]'); } catch (e) { items = []; }
       if (!Array.isArray(items) || items.length === 0) {
@@ -650,19 +664,33 @@
     }
 
 function saveSettings() {
-      const file = document.getElementById('s_logo').files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = e => {
+      const logoFile = document.getElementById('s_logo').files[0];
+      const qrFile = document.getElementById('s_qr').files[0];
+      const afterLogo = () => {
+        if (qrFile) {
+          const r2 = new FileReader();
+          r2.onload = e => {
+            state.shopInfo.promptPayQrUri = e.target.result;
+            finishSaveSettings();
+          };
+          r2.readAsDataURL(qrFile);
+        } else {
+          finishSaveSettings();
+        }
+      };
+      if (logoFile) {
+        const r1 = new FileReader();
+        r1.onload = e => {
           state.shopInfo.logoType = 'CUSTOM_IMAGE';
           state.shopInfo.logoUri = e.target.result;
-          finishSaveSettings();
+          afterLogo();
         };
-        reader.readAsDataURL(file);
+        r1.readAsDataURL(logoFile);
       } else {
-        finishSaveSettings();
+        afterLogo();
       }
-    }    function finishSaveSettings() {
+    }
+function finishSaveSettings() {
       state.shopInfo.name = document.getElementById('s_name').value.trim() || state.shopInfo.name;
       state.shopInfo.promptPayNumber = document.getElementById('s_promptPay').value.trim() || state.shopInfo.promptPayNumber;
       state.shopInfo.deliveryFee = parseFloat(document.getElementById('s_deliveryFee').value) || state.shopInfo.deliveryFee;
@@ -674,6 +702,7 @@ function saveSettings() {
       const pin = document.getElementById('s_pin').value.trim();
       if (pin.length === 8 && /^\d{8}$/.test(pin)) state.adminPin = pin;
       if (pin.length === 4 && /^\d{4}$/.test(pin)) state.adminPin = pin;
+      state.shopInfo.showScanPayment = document.getElementById('s_showScan').checked;
       state.shopInfo.addonConfig = JSON.stringify(window.addonAdminItems || []);
       document.getElementById('shopNameHeader').textContent = state.shopInfo.name;
       schedulePush();

@@ -209,11 +209,11 @@
         <div class="border-t pt-1.5 flex justify-between font-extrabold text-sm text-orange-600"><span>ยอดสุทธิชำระ:</span> <span id="modalNetTotal">฿0</span></div>
       </div>
 
-      <div class="grid grid-cols-2 gap-2">
+      <div id="paymentButtons" class="grid grid-cols-2 gap-2">
         <button onclick="confirmCashOrder()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
           💵 ชำระเงินสด
         </button>
-        <button onclick="goToPaymentModal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
+        <button id="scanPayBtn" onclick="goToPaymentModal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
           📱 สแกน PromptPay
         </button>
       </div>
@@ -248,13 +248,6 @@
         <button onclick="copyPromptPayNumber()" class="bg-white border text-orange-600 px-2 py-1 rounded font-medium hover:bg-gray-50">คัดลอก</button>
       </div>
 
-      <div onclick="toggleSlip()" id="slipUploadBox" class="border border-green-500 bg-green-50 p-2.5 rounded-xl flex items-center space-x-2 text-left cursor-pointer">
-        <span class="text-green-600 text-xl">✅</span>
-        <div class="text-xs">
-          <div class="font-bold text-green-800">แนบสลิปเรียบร้อยแล้ว (Slip_Verified.jpg)</div>
-          <div class="text-gray-500">ยอดเงินตรงกับระบบ</div>
-        </div>
-      </div>
 
       <button onclick="confirmOrder()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md text-sm">
         ยืนยันการชำระเงินและส่งออเดอร์
@@ -516,6 +509,11 @@
         `).join('') || '<p class="text-xs text-gray-400">ไม่มีตัวเลือกเสริม</p>';
       }
 
+      // scan payment visibility
+      const scanBtn = document.getElementById('scanPayBtn');
+      const si = (window.remoteState && window.remoteState.shopInfo) ? window.remoteState.shopInfo : {};
+      if (scanBtn) scanBtn.style.display = (si.showScanPayment === false) ? 'none' : '';
+
       document.getElementById('addonsModal').classList.remove('hidden');
     }
 
@@ -549,18 +547,30 @@
     function openGpsMap() {
       document.getElementById('gpsMapModal').classList.remove('hidden');
       setTimeout(() => {
-        if (!mapInstance) {
-          mapInstance = L.map('map').setView([16.4421, 102.8358], 13);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapInstance);
-          mapInstance.on('click', e => {
-            selectedLat = e.latlng.lat;
-            selectedLng = e.latlng.lng;
-            if (selectedMarker) mapInstance.removeLayer(selectedMarker);
-            selectedMarker = L.marker([selectedLat, selectedLng]).addTo(mapInstance);
-            document.getElementById('selectedCoords').textContent = `เลือกแล้ว: ${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
-          });
+        const startView = (lat, lng) => {
+          if (!mapInstance) {
+            mapInstance = L.map('map').setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapInstance);
+            mapInstance.on('click', e => {
+              selectedLat = e.latlng.lat;
+              selectedLng = e.latlng.lng;
+              if (selectedMarker) mapInstance.removeLayer(selectedMarker);
+              selectedMarker = L.marker([selectedLat, selectedLng]).addTo(mapInstance);
+              document.getElementById('selectedCoords').textContent = `เลือกแล้ว: ${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
+            });
+          } else {
+            mapInstance.setView([lat, lng], 15);
+            mapInstance.invalidateSize();
+          }
+          if (selectedMarker) mapInstance.removeLayer(selectedMarker);
+          selectedMarker = L.marker([lat, lng]).addTo(mapInstance);
+          selectedLat = lat; selectedLng = lng;
+          document.getElementById('selectedCoords').textContent = `ตำแหน่งปัจจุบัน: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        };
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(pos => startView(pos.coords.latitude, pos.coords.longitude), () => startView(16.4421, 102.8358));
         } else {
-          mapInstance.invalidateSize();
+          startView(16.4421, 102.8358);
         }
       }, 200);
     }
@@ -578,7 +588,10 @@
       closeAddonsModal();
       let net = document.getElementById('modalNetTotal').textContent.replace('฿', '');
       document.getElementById('promptPayAmount').textContent = net;
-      document.getElementById('promptPayQrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY_0846112419_${net}`;
+      const si = (window.remoteState && window.remoteState.shopInfo) ? window.remoteState.shopInfo : {};
+      const qrImg = document.getElementById('promptPayQrImg');
+      if (si.promptPayQrUri) qrImg.src = si.promptPayQrUri;
+      else qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY_${si.promptPayNumber || '0846112419'}_${net}`;
       document.getElementById('paymentModal').classList.remove('hidden');
     }
 
