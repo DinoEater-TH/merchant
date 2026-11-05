@@ -407,6 +407,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.addOrUpdateMenuItem(item)
     }
 
+    fun moveMenuItem(itemId: String, direction: Int) {
+        repository.moveMenuItem(itemId, direction)
+    }
+
     fun oneClickStockReset() {
         repository.oneClickStockReset()
         SoundHelper.playStampSuccessSound(getApplication())

@@ -115,11 +115,12 @@ fun CustomerScreen(viewModel: MainViewModel) {
     val activeOrder = orders.find { it.id == activeOrderId && it.status != OrderStatus.COMPLETED && it.status != OrderStatus.CANCELLED }
 
     val filteredItems = remember(menuItems, selectedCategory) {
-        if (selectedCategory == "all") {
+        val base = if (selectedCategory == "all") {
             menuItems.filter { it.status != ItemStatus.HIDDEN }
         } else {
             menuItems.filter { it.categoryId == selectedCategory && it.status != ItemStatus.HIDDEN }
         }
+        base.sortedWith(compareBy({ it.sortOrder }, { it.id }))
     }
 
     Scaffold(

@@ -805,7 +805,7 @@ fun SettingsView(viewModel: MainViewModel) {
 
                     OutlinedTextField(
                         value = pinText,
-                        onValueChange = { if (it.length <= 4) pinText = it },
+                        onValueChange = { if (it.length <= 8) pinText = it },
                         label = { Text("รหัส PIN เข้าหน้าจัดการร้าน") },
                         modifier = Modifier.fillMaxWidth()
                     )

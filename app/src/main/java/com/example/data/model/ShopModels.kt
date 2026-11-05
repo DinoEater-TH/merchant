@@ -15,7 +15,7 @@ enum class StampIconType {
 data class ShopInfo(
     val name: String = "ร้านลูกชิ้นนายเอ็ด",
     val slogan: String = "ลูกชิ้นทอดในตำนาน น้ำจิ้มมะขามรสเด็ด กรอบนอกนุ่มใน",
-    val promptPayNumber: String = "081-234-5678",
+    val promptPayNumber: String = "084-611-2419",
     val promptPayName: String = "นายเอ็ด ลูกชิ้นทอด",
     val address: String = "ตลาดโต้รุ่ง ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น",
     val openingHours: String = "10:00 - 20:30 น. (เปิดทุกวัน)",
@@ -63,7 +63,9 @@ data class MenuItem(
     val defaultResetQty: Int = 50,
     val isBestseller: Boolean = false,
     val emoji: String = "🍢",
-    val description: String = ""
+    val description: String = "",
+val imageUrl: String? = null,
+val sortOrder: Int = 0
 )
 
 data class CartItem(

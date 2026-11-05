@@ -155,7 +155,7 @@ class MeatballRepository(context: Context? = null) {
     companion object {
         private const val PREFS_NAME = "meatball_shop_state"
         private const val KEY_STATE = "state_json"
-        private const val DEFAULT_ADMIN_PIN = "1234"
+        private const val DEFAULT_ADMIN_PIN = "09286840"
     }
 
     private fun defaultCategories(): List<Category> = listOf(
@@ -301,7 +301,7 @@ class MeatballRepository(context: Context? = null) {
                 description = "โค้กแช่เย็นเจี๊ยบ ดื่มคู่ลูกชิ้นทอดแก้เลี่ยน"
             )
         )
-        _menuItems.value = initialMenu
+        _menuItems.value = initialMenu.mapIndexed { index, item -> item.copy(sortOrder = index) }
 
         val sampleOrder = Order(
             id = "ORD-101",
@@ -579,7 +579,27 @@ class MeatballRepository(context: Context? = null) {
         persistState()
     }
 
-    fun addOrUpdateMenuItem(item: MenuItem) {
+    fun moveMenuItem(itemId: String, direction: Int) {
+        val items = _menuItems.value.toMutableList()
+        val targetIndex = items.indexOfFirst { it.id == itemId }
+        if (targetIndex == -1) return
+        val targetItem = items[targetIndex]
+        val sameCategory = items.filter { it.categoryId == targetItem.categoryId }.sortedBy { it.sortOrder }
+        val pos = sameCategory.indexOfFirst { it.id == itemId }
+        val newPos = pos + direction
+        if (newPos < 0 || newPos >= sameCategory.size) return
+        val otherItem = sameCategory[newPos]
+        _menuItems.value = items.map { item ->
+            when (item.id) {
+                targetItem.id -> item.copy(sortOrder = otherItem.sortOrder)
+                otherItem.id -> item.copy(sortOrder = targetItem.sortOrder)
+                else -> item
+            }
+        }
+        persistState()
+    }
+
+fun addOrUpdateMenuItem(item: MenuItem) {
         val current = _menuItems.value.toMutableList()
         val index = current.indexOfFirst { it.id == item.id }
         if (index != -1) {
@@ -632,7 +652,7 @@ class MeatballRepository(context: Context? = null) {
     }
 
     fun setAdminPin(pin: String) {
-        if (pin.length == 4 && pin.all { it.isDigit() }) {
+        if (pin.length in 4..8 && pin.all { it.isDigit() }) {
             _adminPin.value = pin
             persistState()
         }

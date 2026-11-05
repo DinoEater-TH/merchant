@@ -133,7 +133,8 @@ fun InventoryView(viewModel: MainViewModel) {
                 InventoryItemCard(
                     item = item,
                     onStatusChange = { newStatus -> viewModel.updateItemStatus(item.id, newStatus) },
-                    onStockChange = { newStock -> viewModel.updateItemStock(item.id, newStock) }
+                    onStockChange = { newStock -> viewModel.updateItemStock(item.id, newStock) },
+                    onMove = { dir -> viewModel.moveMenuItem(item.id, dir) }
                 )
             }
         }
@@ -155,7 +156,8 @@ fun InventoryView(viewModel: MainViewModel) {
 fun InventoryItemCard(
     item: MenuItem,
     onStatusChange: (ItemStatus) -> Unit,
-    onStockChange: (Int) -> Unit
+    onStockChange: (Int) -> Unit,
+    onMove: (Int) -> Unit = {}
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -170,6 +172,15 @@ fun InventoryItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(onClick = { onMove(-1) }, modifier = Modifier.size(20.dp)) {
+                            Text("↑", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(onClick = { onMove(1) }, modifier = Modifier.size(20.dp)) {
+                            Text("↓", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(text = item.emoji, fontSize = 24.sp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {

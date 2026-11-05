@@ -40,7 +40,7 @@
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-lg">🍢</div>
           <div>
-            <h2 id="memberPhoneDisplay" class="font-bold text-sm">สมาชิก: 081-234-5678</h2>
+            <h2 id="memberPhoneDisplay" class="font-bold text-sm">สมาชิก: 084-611-2419</h2>
             <p class="text-xs text-gray-500">สะสมครบ 10 แต้ม ฟรี 1 ชุดทันที!</p>
           </div>
         </div>
@@ -233,7 +233,7 @@
       <!-- PromptPay Visual QR -->
       <div class="bg-blue-900 rounded-xl p-3 inline-block">
         <div class="bg-white p-2 rounded-lg">
-          <img id="promptPayQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY_0812345678" alt="PromptPay QR" class="w-44 h-44 mx-auto">
+          <img id="promptPayQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY_0846112419" alt="PromptPay QR" class="w-44 h-44 mx-auto">
         </div>
       </div>
 
@@ -245,7 +245,7 @@
       <div class="bg-gray-100 rounded-lg p-2.5 flex justify-between items-center text-xs">
         <div class="text-left">
           <div class="text-gray-500">เบอร์พร้อมเพย์:</div>
-          <div class="font-bold text-sm">081-234-5678</div>
+          <div class="font-bold text-sm">084-611-2419</div>
         </div>
         <button onclick="copyPromptPayNumber()" class="bg-white border text-orange-600 px-2 py-1 rounded font-medium hover:bg-gray-50">คัดลอก</button>
       </div>
@@ -305,7 +305,7 @@
           <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-sm">📋</div>
           <div>
             <h3 class="font-bold text-base text-gray-800">ประวัติการสั่งซื้อและการบริโภค</h3>
-            <p class="text-xs text-gray-500" id="historyPhoneSubtext">เบอร์: 081-234-5678</p>
+            <p class="text-xs text-gray-500" id="historyPhoneSubtext">เบอร์: 084-611-2419</p>
           </div>
         </div>
         <button onclick="closeOrderHistoryModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
@@ -368,7 +368,7 @@
     // In-memory State
     let cart = {};
     let fulfillment = 'delivery';
-    let customerPhone = '081-234-5678';
+    let customerPhone = '084-611-2419';
     let stamps = 7;
     let activeOrder = {
       id: 'ORD-101',
@@ -569,7 +569,7 @@
       closeAddonsModal();
       let net = document.getElementById('modalNetTotal').textContent.replace('฿', '');
       document.getElementById('promptPayAmount').textContent = net;
-      document.getElementById('promptPayQrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY_0812345678_${net}`;
+      document.getElementById('promptPayQrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY_0846112419_${net}`;
       document.getElementById('paymentModal').classList.remove('hidden');
     }
 
@@ -578,8 +578,8 @@
     }
 
     function copyPromptPayNumber() {
-      navigator.clipboard.writeText('0812345678');
-      alert('คัดลอกเบอร์พร้อมเพย์ 0812345678 เรียบร้อย');
+      navigator.clipboard.writeText('0846112419');
+      alert('คัดลอกเบอร์พร้อมเพย์ 0846112419 เรียบร้อย');
     }
 
     function toggleSlip() {
@@ -819,7 +819,7 @@
       const p = prompt('กรุณาใส่เบอร์โทรศัพท์สำหรับสะสมแต้ม (ต้องตรงกับบัญชีสมาชิก):', customerPhone);
       if (!p) return;
       const phone = p.trim();
-      if (!/^0\\d{9}$/.test(phone)) { alert('เบอร์โทรไม่ถูกต้อง (ตัวอย่าง 0812345678)'); return; }
+      if (!/^0\\d{9}$/.test(phone)) { alert('เบอร์โทรไม่ถูกต้อง (ตัวอย่าง 0846112419)'); return; }
       const name = prompt('ชื่อ (ไม่จำเป็นต้องกรอก):', '') || '';
       // match existing member if present
       const rs = window.remoteState;
