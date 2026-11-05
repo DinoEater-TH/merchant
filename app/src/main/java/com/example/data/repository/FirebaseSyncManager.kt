@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.data.model.ShopInfo
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.squareup.moshi.Moshi
@@ -47,6 +48,8 @@ class FirebaseSyncManager(
     fun start() {
         scope.launch {
             try {
+                _status.value = "กำลังลงชื่อเข้าใช้ Firebase..."
+                FirebaseAuth.getInstance().signInAnonymously().await()
                 _status.value = "กำลังเชื่อมต่อ Firebase..."
                 observeRemote()
                 observeLocal()

@@ -168,12 +168,14 @@ docs/
 ## ข้อจำกัดที่ทราบ
 
 - **ซิงก์ผ่าน Firebase Realtime Database:** ข้อมูลร้าน/เมนู/ออเดอร์/สมาชิก/ต้นทุนแฝง แชร์ข้ามอุปกรณ์แบบ real-time ด้วย last-write-wins
-- **กฎความปลอดภัยปัจจุบันเปิดกว้าง (demo):** `database.rules.json` อนุญาต read/write ทุกคน — ต้องปรับเป็น authenticated rules ก่อนใช้งานจริง
-- **ไม่มีการยืนยันตัวตน:** ยังไม่ได้เปิด Firebase Authentication; ทุก client สามารถเขียนข้อมูลได้
+- **กฎความปลอดภัย:** `database.rules.json` ต้องการ `auth != null` และแอป sign in แบบ anonymous อัตโนมัติ
+- **เว็บต้นแบบ:** deploy ที่ Firebase Hosting: https://dinoeater-merchant.web.app
 - **Real-time ข้ามเครื่อง:** สถานะออเดอร์จะอัปเดตบนอุปกรณ์ทุกเครื่องที่ใช้โปรเจกต์เดียวกัน
 - **สลิปไม่ถูกตรวจสอบอัตโนมัติ:** ระบบเพียงแนบไฟล์และบันทึกว่ามีสลิป ร้านต้องตรวจสอบยอดเงินเอง
 - **PromptPay QR** สร้างตามหมายเลขที่ตั้งไว้ แต่ไม่มีการยืนยันการชำระเงินกับธนาคาร
-- `applicationId` ยังเป็น `com.aistudio.applet.csmhfz` จากโปรเจกต์ต้นทาง ควรเปลี่ยนก่อนเผยแพร่บน Play Store
+- `applicationId` ปัจจุบันเป็น `com.dinoeater.merchant`
+- Firebase Authentication เปิดใช้ Anonymous sign-in แล้ว และ rules ต้องการ `auth != null`
+- เว็บต้นแบบ deploy แล้วที่ https://dinoeater-merchant.web.app (ลูกค้า: /index.html, หลังร้าน: /admin.html)
 - ข้อมูล analytics บางส่วน (เช่น ประมาณการแก๊สคงเหลือ) เป็นการประมาณจากจำนวนออเดอร์ ไม่ได้วัดจากเซ็นเซอร์จริง
 
 ---

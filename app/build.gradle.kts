@@ -13,7 +13,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.applet.csmhfz"
+    applicationId = "com.dinoeater.merchant"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
@@ -109,6 +109,7 @@ dependencies {
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
   implementation(libs.firebase.database)
+  implementation(libs.firebase.auth)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
