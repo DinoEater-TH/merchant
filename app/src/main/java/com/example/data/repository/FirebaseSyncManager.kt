@@ -150,7 +150,7 @@ class FirebaseSyncManager(
         } catch (_: Exception) {
             return
         }
-        if (json == lastPushedJson) return
+        if (json == lastPushedJson || json == lastAppliedJson) return
         lastPushedJson = json
         scope.launch {
             try {
