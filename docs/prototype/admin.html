@@ -66,6 +66,7 @@
       <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn py-3 border-b-2 border-transparent">💳 POS แต้ม</button>
       <button onclick="switchTab('inventory')" id="tabBtn_inventory" class="tab-btn py-3 border-b-2 border-transparent">📦 สต็อก</button>
       <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn py-3 border-b-2 border-transparent">📊 จุดคุ้มทุน</button>
+      <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn py-3 border-b-2 border-transparent">⚙️ ตั้งค่า</button>
     </nav>
 
     <!-- Tab 1: Orders -->
@@ -215,6 +216,33 @@
         </div>
       </div>
     </section>
+
+    <!-- Tab 5: Settings -->
+    <section id="tab_settings" class="p-4 space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+        <h3 class="font-bold text-base">⚙️ ตั้งค่าร้านค้า</h3>
+        <div>
+          <label class="text-xs text-gray-500">ชื่อร้าน</label>
+          <input id="shopNameInput" type="text" value="ร้านลูกชิ้นนายเอ็ด" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">หมายเลข PromptPay</label>
+          <input id="promptPayInput" type="text" value="081-234-5678" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">ค่าส่ง (บาท)</label>
+          <input id="deliveryFeeInput" type="number" value="15" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
+          <input id="adminPinInput" type="text" value="1234" maxlength="4" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <button onclick="alert('บันทึกการตั้งค่าแล้ว (ต้นแบบ)')" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกการตั้งค่า</button>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+        หมายเหตุ: หน้านี้เป็นต้นแบบ (prototype) การบันทึกจริงทำในแอป Android แท็บ ⚙️ ตั้งค่า
+      </div>
+    </section>
   </div>
 
   <script>
@@ -258,7 +286,7 @@
     }
 
     function switchTab(tab) {
-      ['orders', 'pos', 'inventory', 'analytics'].forEach(t => {
+      ['orders', 'pos', 'inventory', 'analytics', 'settings'].forEach(t => {
         document.getElementById(`tab_${t}`).classList.add('hidden');
         document.getElementById(`tabBtn_${t}`).className = 'tab-btn py-3 border-b-2 border-transparent text-gray-600';
       });
