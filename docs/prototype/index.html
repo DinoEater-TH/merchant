@@ -179,10 +179,8 @@
       <!-- Condiments Checkboxes -->
       <div>
         <label class="block text-xs font-bold text-gray-700 mb-1.5">3. เครื่องเคียงและถ้วยน้ำจิ้ม (ฟรี)</label>
-        <div class="space-y-1.5 text-xs">
-          <label id="rowChili" class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="chkChili" checked class="accent-orange-600"> <span>🌶️ รับพริกทอดกรอบ</span></label>
-          <label id="rowCucumber" class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="chkCucumber" checked class="accent-orange-600"> <span>🥒 รับแตงกวาสดกรอบ</span></label>
-          <label id="rowSauceCup" class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="chkSauceCup" checked class="accent-orange-600"> <span>🥣 รับถ้วยน้ำจิ้มแยก</span></label>
+        <div id="addonOptionsContainer" class="space-y-1.5 text-xs">
+          <!-- rendered dynamically from addonConfig -->
         </div>
       </div>
 
@@ -497,15 +495,26 @@
       document.getElementById('modalDelivery').textContent = deliveryFee === 0 ? 'ฟรี (ซื้อครบ 120.-)' : `฿${deliveryFee}`;
       document.getElementById('modalNetTotal').textContent = `฿${net}`;
 
-      // Apply manager addon config
-      let cfg = window.addonConfig || {};
-      try { if (typeof cfg === 'string') cfg = JSON.parse(cfg || '{}'); } catch (e) { cfg = {}; }
-      const chiliRow = document.getElementById('rowChili');
-      const cucRow = document.getElementById('rowCucumber');
-      const sauceRow = document.getElementById('rowSauceCup');
-      if (chiliRow) chiliRow.style.display = (cfg.friedChili === false) ? 'none' : '';
-      if (cucRow) cucRow.style.display = (cfg.cucumber === false) ? 'none' : '';
-      if (sauceRow) sauceRow.style.display = (cfg.sauceCup === false) ? 'none' : '';
+      // Render addon options from manager config
+      const container = document.getElementById('addonOptionsContainer');
+      if (container) {
+        let items = window.addonConfig;
+        if (typeof items === 'string') { try { items = JSON.parse(items || '[]'); } catch(e){ items = []; } }
+        if (!Array.isArray(items) || items.length === 0) {
+          items = [
+            { id: 'chili', name: 'พริกทอดกรอบ', enabled: true },
+            { id: 'cucumber', name: 'แตงกวาสดกรอบ', enabled: true },
+            { id: 'sauceCup', name: 'ถ้วยน้ำจิ้มแยก', enabled: true }
+          ];
+        }
+        const enabledItems = items.filter(i => i.enabled !== false);
+        container.innerHTML = enabledItems.map(i => `
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" checked class="accent-orange-600" data-addon="${i.id}">
+            <span>${i.name}</span>
+          </label>
+        `).join('') || '<p class="text-xs text-gray-400">ไม่มีตัวเลือกเสริม</p>';
+      }
 
       document.getElementById('addonsModal').classList.remove('hidden');
     }
