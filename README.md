@@ -44,6 +44,7 @@
 - Kotlin + Jetpack Compose (Material 3)
 - MVVM + `StateFlow`
 - Moshi + SharedPreferences สำหรับ persistence ภายในเครื่อง
+- Firebase Realtime Database สำหรับซิงก์ข้ามอุปกรณ์ (project `dinoeater-merchant`)
 - ZXing สำหรับสร้าง QR Code
 - Android `PrintHelper` สำหรับพิมพ์ใบสรุป
 - `ActivityResultContracts.OpenDocument()` สำหรับแนบสลิป
@@ -132,9 +133,13 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ## การเก็บข้อมูล
 
 - ข้อมูลทั้งหมดถูกเก็บใน `SharedPreferences` ชื่อ `meatball_shop_state` (JSON ผ่าน Moshi)
-- ข้อมูลจะอยู่เฉพาะเครื่อง/แอปที่ติดตั้ง ไม่มีการซิงก์ข้ามอุปกรณ์
-- การล้างข้อมูลแอป (Clear storage) หรือถอนการติดตั้งจะลบข้อมูลทั้งหมดและ seed ใหม่ในครั้งถัดไป
-- URI ของสลิปที่แนบจะขอสิทธิ์อ่านแบบถาวรผ่าน `takePersistableUriPermission`
+- ข้อมูลร้าน เมนู สต็อก ออเดอร์ สมาชิก และต้นทุนแฝงจะ **ซิงก์ข้ามอุปกรณ์ผ่าน Firebase Realtime Database** โดยอัตโนมัติ
+  - Firebase project: `dinoeater-merchant`
+  - Database URL: `https://dinoeater-merchant-default-rtdb.asia-southeast1.firebasedatabase.app`
+  - Path: `shops/dinoeater-merchant/state`
+- การล้างข้อมูลแอป (Clear storage) หรือถอนการติดตั้งจะลบข้อมูลในเครื่อง แต่ข้อมูลบน Firebase ยังอยู่ และจะถูกดึงกลับมาเมื่อเปิดแอปใหม่
+- URI ของสลิปที่แนบจะขอสิทธิ์อ่านแบบถาวรผ่าน `takePersistableUriPermission` (เป็นไฟล์ในเครื่อง ไม่ได้ซิงก์ข้ามอุปกรณ์)
+- ข้อมูลที่อยู่เฉพาะเครื่อง: PIN หลังร้าน, เบอร์โทรลูกค้าปัจจุบัน, ออเดอร์ที่กำลังติดตาม, รูปโลโก้/แสตมป์แบบอัปโหลด และ URI สลิป
 
 ---
 
@@ -162,8 +167,10 @@ docs/
 
 ## ข้อจำกัดที่ทราบ
 
-- **ยังไม่มี Firebase/backend:** ข้อมูลลูกค้าและร้านค้าไม่แชร์ระหว่างอุปกรณ์ และไม่มีการแจ้งเตือนข้ามเครื่อง
-- **Real-time ภายในเครื่องเดียว:** สถานะออเดอร์อัปเดตทันทีเมื่ออยู่ในแอปเดียวกัน
+- **ซิงก์ผ่าน Firebase Realtime Database:** ข้อมูลร้าน/เมนู/ออเดอร์/สมาชิก/ต้นทุนแฝง แชร์ข้ามอุปกรณ์แบบ real-time ด้วย last-write-wins
+- **กฎความปลอดภัยปัจจุบันเปิดกว้าง (demo):** `database.rules.json` อนุญาต read/write ทุกคน — ต้องปรับเป็น authenticated rules ก่อนใช้งานจริง
+- **ไม่มีการยืนยันตัวตน:** ยังไม่ได้เปิด Firebase Authentication; ทุก client สามารถเขียนข้อมูลได้
+- **Real-time ข้ามเครื่อง:** สถานะออเดอร์จะอัปเดตบนอุปกรณ์ทุกเครื่องที่ใช้โปรเจกต์เดียวกัน
 - **สลิปไม่ถูกตรวจสอบอัตโนมัติ:** ระบบเพียงแนบไฟล์และบันทึกว่ามีสลิป ร้านต้องตรวจสอบยอดเงินเอง
 - **PromptPay QR** สร้างตามหมายเลขที่ตั้งไว้ แต่ไม่มีการยืนยันการชำระเงินกับธนาคาร
 - `applicationId` ยังเป็น `com.aistudio.applet.csmhfz` จากโปรเจกต์ต้นทาง ควรเปลี่ยนก่อนเผยแพร่บน Play Store

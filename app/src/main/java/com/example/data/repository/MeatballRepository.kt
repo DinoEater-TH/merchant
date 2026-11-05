@@ -78,6 +78,9 @@ class MeatballRepository(context: Context? = null) {
     private val _adminPin = MutableStateFlow(DEFAULT_ADMIN_PIN)
     val adminPin: StateFlow<String> = _adminPin.asStateFlow()
 
+    @Volatile
+    var isApplyingRemote: Boolean = false
+
     init {
         if (!restoreState()) {
             loadInitialData()
@@ -122,7 +125,22 @@ class MeatballRepository(context: Context? = null) {
         editor.putString(KEY_STATE, adapter.toJson(state)).apply()
     }
 
-    private data class PersistedState(
+    fun applyRemoteState(state: PersistedState) {
+        isApplyingRemote = true
+        try {
+            _shopInfo.value = state.shopInfo
+            _categories.value = state.categories.ifEmpty { defaultCategories() }
+            _menuItems.value = state.menuItems
+            _orders.value = state.orders
+            _users.value = state.users
+            _hiddenCosts.value = state.hiddenCosts
+            persistState()
+        } finally {
+            isApplyingRemote = false
+        }
+    }
+
+    data class PersistedState(
         val shopInfo: ShopInfo = ShopInfo(),
         val categories: List<Category> = emptyList(),
         val menuItems: List<MenuItem> = emptyList(),

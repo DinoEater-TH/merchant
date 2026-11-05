@@ -11,6 +11,7 @@ import com.example.data.model.Order
 import com.example.data.model.OrderItem
 import com.example.data.model.OrderStatus
 import com.example.data.model.ShopInfo
+import com.example.data.repository.FirebaseSyncManager
 import com.example.data.repository.MeatballRepository
 import com.example.util.SoundHelper
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,7 @@ import java.util.Locale
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val repository = MeatballRepository(application)
+    val firebaseSync = FirebaseSyncManager(application, repository).apply { start() }
 
     val shopInfo = repository.shopInfo
     val categories = repository.categories
