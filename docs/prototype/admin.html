@@ -123,13 +123,18 @@
           <input id="s_name" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
         <div>
+          <label class="text-xs text-gray-500">โลโก้ร้าน (อัปโหลดรูป)</label>
+          <input type="file" id="s_logo" accept="image/*" class="w-full text-sm">
+          <div id="logoPreview" class="mt-2"></div>
+        </div>
+        <div>
           <label class="text-xs text-gray-500">หมายเลข PromptPay</label>
           <input id="s_promptPay" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
         <!-- Promotions moved to dedicated tab -->
         <div>
           <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
-          <input id="s_pin" maxlength="4" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <input id="s_pin" maxlength="8" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
         <div class="border-t pt-2">
           <label class="text-xs font-bold text-gray-700">ตัวเลือกเสริมที่ลูกค้าเห็น</label>
@@ -202,7 +207,7 @@
     // ---------- State ----------
     const DEFAULT_STATE = {
       shopInfo: {
-        name: "ร้านลูกชิ้นนายเอ็ด",
+        name: "DinoEater ลูกชิ้นทอด",
         slogan: "ลูกชิ้นทอดในตำนาน",
         promptPayNumber: "084-611-2419",
         promptPayName: "นายเอ็ด ลูกชิ้นทอด",
@@ -587,6 +592,11 @@
     function renderSettings() {
       const s = state.shopInfo || {};
       document.getElementById('s_name').value = s.name || '';
+      const logoPreview = document.getElementById('logoPreview');
+      if (logoPreview) {
+        if (s.logoUri) logoPreview.innerHTML = `<img src="${s.logoUri}" class="w-16 h-16 rounded-lg object-cover">`;
+        else logoPreview.innerHTML = `<span class="text-3xl">${s.logoEmoji || '🍢'}</span>`;
+      }
       document.getElementById('s_promptPay').value = s.promptPayNumber || '';
       document.getElementById('s_deliveryFee').value = s.deliveryFee ?? 15;
       document.getElementById('s_minDiscount').value = s.minOrderForDiscount ?? 50;
@@ -639,7 +649,20 @@
       renderAddonAdminList();
     }
 
-    function saveSettings() {
+function saveSettings() {
+      const file = document.getElementById('s_logo').files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          state.shopInfo.logoType = 'CUSTOM_IMAGE';
+          state.shopInfo.logoUri = e.target.result;
+          finishSaveSettings();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        finishSaveSettings();
+      }
+    }    function finishSaveSettings() {
       state.shopInfo.name = document.getElementById('s_name').value.trim() || state.shopInfo.name;
       state.shopInfo.promptPayNumber = document.getElementById('s_promptPay').value.trim() || state.shopInfo.promptPayNumber;
       state.shopInfo.deliveryFee = parseFloat(document.getElementById('s_deliveryFee').value) || state.shopInfo.deliveryFee;

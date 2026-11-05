@@ -13,7 +13,7 @@ enum class StampIconType {
 }
 
 data class ShopInfo(
-    val name: String = "ร้านลูกชิ้นนายเอ็ด",
+    val name: String = "DinoEater ลูกชิ้นทอด",
     val slogan: String = "ลูกชิ้นทอดในตำนาน น้ำจิ้มมะขามรสเด็ด กรอบนอกนุ่มใน",
     val promptPayNumber: String = "084-611-2419",
     val promptPayName: String = "นายเอ็ด ลูกชิ้นทอด",

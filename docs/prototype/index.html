@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ร้านลูกชิ้นนายเอ็ด - สั่งอาหารออนไลน์</title>
+  <title>DinoEater ลูกชิ้นทอด - สั่งอาหารออนไลน์</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -23,10 +23,10 @@
   <header class="bg-white shadow-sm sticky top-0 z-30 px-4 py-3 flex justify-between items-center">
     <div>
       <div class="flex items-center space-x-2">
-        <h1 class="text-lg font-bold text-orange-600">🍢 ร้านลูกชิ้นนายเอ็ด</h1>
-        <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">● เปิดบริการ</span>
+        <h1 id="shopTitle" class="text-lg font-bold text-orange-600 flex items-center gap-2"><span id="shopLogo" class="text-2xl">🍢</span><span id="shopNameText">DinoEater ลูกชิ้นทอด</span></h1>
+        <span id="shopStatus" class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">● เปิดบริการ</span>
       </div>
-      <p class="text-xs text-gray-500">ตลาดโต้รุ่ง ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น</p>
+      <p id="shopAddress" class="text-xs text-gray-500">ตลาดโต้รุ่ง ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น</p>
     </div>
     <a href="admin.html" class="border border-orange-500 text-orange-600 text-xs px-3 py-1.5 rounded-full font-medium flex items-center space-x-1 hover:bg-orange-50">
       <span>🔒 จัดการร้าน</span>
@@ -865,6 +865,21 @@
           const json = (typeof val === 'string') ? val : JSON.stringify(val);
           const parsed = JSON.parse(json);
           window.remoteState = parsed;
+          const si = parsed.shopInfo || {};
+          const nameEl = document.getElementById('shopNameText');
+          if (nameEl) nameEl.textContent = si.name || 'DinoEater ลูกชิ้นทอด';
+          const logoEl = document.getElementById('shopLogo');
+          if (logoEl) {
+            if (si.logoUri) logoEl.innerHTML = `<img src="${si.logoUri}" class="w-8 h-8 rounded-full object-cover">`;
+            else logoEl.textContent = si.logoEmoji || '🍢';
+          }
+          const addrEl = document.getElementById('shopAddress');
+          if (addrEl) addrEl.textContent = si.address || addrEl.textContent;
+          const statusEl = document.getElementById('shopStatus');
+          if (statusEl) {
+            if (si.isOpen === false) { statusEl.textContent = '● ปิดบริการ'; statusEl.className = 'bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-medium'; }
+            else { statusEl.textContent = '● เปิดบริการ'; statusEl.className = 'bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium'; }
+          }
           let cfg = parsed.shopInfo && parsed.shopInfo.addonConfig;
           if (typeof cfg === 'string') { try { cfg = JSON.parse(cfg); } catch(e){ cfg = {}; } }
           window.addonConfig = cfg || {};
