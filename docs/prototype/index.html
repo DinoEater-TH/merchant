@@ -544,8 +544,8 @@
               </div>
               <p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p>
               <div class="flex items-center space-x-2 mt-1">
-                <span class="font-extrabold text-orange-600 text-base">฿${item.price}</span>
-                ${item.unlimited ? '' : `<span class="text-[11px] text-gray-400">คงเหลือ ${item.stock} ไม้</span>`}
+                <span class="font-extrabold text-orange-600 text-base">฿${item.price} <span class="text-xs font-medium">/ ${item.saleUnit || 'ไม้'}</span></span>
+                ${item.unlimited ? '' : `<span class="text-[11px] text-gray-400">คงเหลือ ${item.stock} ${item.saleUnit || 'ไม้'}</span>`}
               </div>
             </div>
           </div>
@@ -1107,7 +1107,7 @@
             menu = parsed.menuItems
               .filter(m => m.status !== 'HIDDEN')
               .sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0))
-              .map(m => ({ id: m.id, cat: m.categoryId, name: m.name, price: m.price, stock: m.stockQty, unlimited: m.isUnlimitedStock !== false, bestseller: !!m.isBestseller, emoji: m.emoji || '🍢', desc: m.description || '', imageUrl: m.imageUrl || null }));
+              .map(m => ({ id: m.id, cat: m.categoryId, name: m.name, price: m.price, stock: m.stockQty, unlimited: m.isUnlimitedStock !== false, saleUnit: m.saleUnit || 'ไม้', bestseller: !!m.isBestseller, emoji: m.emoji || '🍢', desc: m.description || '', imageUrl: m.imageUrl || null }));
             // Categories tabs - only categories that have items
             const tabsEl = document.getElementById('categoryTabs');
             if (tabsEl && Array.isArray(parsed.categories) && parsed.categories.length > 0) {

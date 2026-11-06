@@ -15,6 +15,7 @@ class DeliveryRouteHelperTest {
             id = "item_test", name = "test", categoryId = "cat_1", price = 10.0, directCost = 5.0
         )
         assertEquals(true, item.isUnlimitedStock)
+        assertEquals("ไม้", item.saleUnit)
     }
 
     @Test

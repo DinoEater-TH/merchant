@@ -288,7 +288,7 @@ fun InventoryItemCard(
                     Column {
                         Text(text = item.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text(
-                            text = "ราคาขาย ฿${String.format(Locale.US, "%.0f", item.price)} (ต้นทุนตรง ฿${String.format(Locale.US, "%.1f", item.directCost)})",
+                            text = "ราคาขาย ฿${String.format(Locale.US, "%.0f", item.price)} / ${item.saleUnit} (ต้นทุนตรง ฿${String.format(Locale.US, "%.1f", item.directCost)})",
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
@@ -415,6 +415,7 @@ fun AddMenuItemDialog(
     var price by remember { mutableStateOf(existing?.price?.toString() ?: "") }
     var directCost by remember { mutableStateOf(existing?.directCost?.toString() ?: "") }
     var isUnlimitedStock by remember { mutableStateOf(existing?.isUnlimitedStock ?: true) }
+    var saleUnit by remember { mutableStateOf(existing?.saleUnit ?: "ไม้") }
     var stockQty by remember { mutableStateOf(existing?.stockQty?.toString() ?: "30") }
     var defaultResetQty by remember { mutableStateOf(existing?.defaultResetQty?.toString() ?: "30") }
     var emoji by remember { mutableStateOf(existing?.emoji ?: "🍢") }
@@ -440,6 +441,16 @@ fun AddMenuItemDialog(
                     }
                 }
                 OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("ราคาขาย (บาท)") }, modifier = Modifier.fillMaxWidth())
+                Text("ขายเป็น (แสดงให้ลูกค้า เช่น ฿10 / ไม้)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("ไม้", "ชุด").forEach { unit ->
+                        FilterChip(
+                            selected = saleUnit == unit,
+                            onClick = { saleUnit = unit },
+                            label = { Text(if (unit == "ไม้") "🍢 ขายเป็นไม้" else "🍱 ขายเป็นชุด", fontSize = 11.sp) }
+                        )
+                    }
+                }
                 OutlinedTextField(value = directCost, onValueChange = { directCost = it }, label = { Text("ต้นทุนตรง (บาท)") }, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(checked = isUnlimitedStock, onCheckedChange = { isUnlimitedStock = it })
@@ -470,6 +481,7 @@ fun AddMenuItemDialog(
                         status = existing?.status ?: ItemStatus.ACTIVE,
                         stockQty = s,
                         isUnlimitedStock = isUnlimitedStock,
+                        saleUnit = saleUnit,
                         defaultResetQty = r,
                         isBestseller = existing?.isBestseller ?: false,
                         emoji = emoji.ifBlank { "🍢" },

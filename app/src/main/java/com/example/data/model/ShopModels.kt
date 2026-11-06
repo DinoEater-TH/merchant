@@ -79,6 +79,7 @@ data class MenuItem(
     val isUnlimitedStock: Boolean = true,
     val defaultResetQty: Int = 50,
     val isBestseller: Boolean = false,
+    val saleUnit: String = "ไม้",
     val emoji: String = "🍢",
     val description: String = "",
 val imageUrl: String? = null,

@@ -401,7 +401,14 @@
       </div>
       <div class="flex gap-2">
         <input id="m_stock" type="number" placeholder="สต็อกเริ่มต้น (เฉพาะแบบจำกัด)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
-        <input id="m_emoji" placeholder="อีโมจิ" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+        <input id="m_emoji" placeholder="อีโมจิ (เช่น 🍢)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-[11px] text-gray-500">ขายเป็น (แสดงให้ลูกค้า เช่น ฿10 / ไม้)</label>
+        <select id="m_saleUnit" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="ไม้">🍢 ขายเป็นไม้</option>
+          <option value="ชุด">🍱 ขายเป็นชุด</option>
+        </select>
       </div>
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="m_unlimited" checked onchange="toggleStockInputs()"> สต็อกไม่จำกัด (ค่าเริ่มต้น — ไม่แสดงคงเหลือให้ลูกค้า)</label>
       <div class="flex gap-2">
@@ -944,7 +951,7 @@
           <div class="flex justify-between items-center border rounded-lg p-2">
             <div class="flex items-center gap-2">
               ${m.imageUrl ? `<img src="${m.imageUrl}" class="w-10 h-10 rounded object-cover">` : `<span class="text-xl">${m.emoji || '🍢'}</span>`}
-              <div><div class="text-sm font-bold">${m.name}</div><div class="text-xs text-gray-500">฿${m.price} • ${stockText(m)}</div></div>
+              <div><div class="text-sm font-bold">${m.name}</div><div class="text-xs text-gray-500">฿${m.price} / ${m.saleUnit || 'ไม้'} • ${stockText(m)}</div></div>
             </div>
             <div class="flex items-center gap-1">
               <button onclick="openEditMenu('${m.id}')" title="แก้ไขเมนู / หมวดหมู่" class="w-7 h-7 bg-blue-50 text-blue-600 rounded-full text-xs">✏️</button>
@@ -1084,7 +1091,7 @@
               ${item.imageUrl ? `<img src="${item.imageUrl}" class="w-12 h-12 rounded-lg object-cover">` : `<span class="text-2xl">${item.emoji || '🍢'}</span>`}
               <div>
                 <div class="font-bold text-sm">${item.name}</div>
-                <div class="text-xs text-gray-500">฿${item.price} (ต้นทุน ฿${item.directCost}) • ${stockText(item)}</div>
+                <div class="text-xs text-gray-500">฿${item.price} / ${item.saleUnit || 'ไม้'} (ต้นทุน ฿${item.directCost}) • ${stockText(item)}</div>
               </div>
             </div>
             ${unlimited
@@ -1205,6 +1212,7 @@
       document.getElementById('m_unlimited').checked = isUnlimitedStock(m);
       toggleStockInputs();
       document.getElementById('m_emoji').value = m.emoji || '🍢';
+      document.getElementById('m_saleUnit').value = m.saleUnit || 'ไม้';
       document.getElementById('m_desc').value = m.description || '';
     }
     function toggleStockInputs() {
@@ -1222,6 +1230,7 @@
       document.getElementById('m_unlimited').checked = true;
       toggleStockInputs();
       document.getElementById('m_emoji').value = '🍢';
+      document.getElementById('m_saleUnit').value = 'ไม้';
       document.getElementById('m_desc').value = '';
       document.getElementById('m_image').value = '';
       const categorySelect = document.getElementById('m_category');
@@ -1260,6 +1269,7 @@
       const stock = parseInt(document.getElementById('m_stock').value) || 0;
       const unlimited = document.getElementById('m_unlimited').checked;
       const emoji = document.getElementById('m_emoji').value.trim() || '🍢';
+      const saleUnit = document.getElementById('m_saleUnit').value || 'ไม้';
       const desc = document.getElementById('m_desc').value.trim();
       const file = document.getElementById('m_image').files[0];
 
@@ -1271,13 +1281,13 @@
         if (editingMenuId) {
           const existing = (state.menuItems || []).find(x => x.id === editingMenuId);
           if (existing) {
-            existing.name = name; existing.categoryId = category; existing.price = price; existing.directCost = cost; existing.stockQty = stock; existing.isUnlimitedStock = unlimited; existing.emoji = emoji; existing.description = desc; existing.packagePrice = packagePrice; existing.piecesPerPackage = pieces;
+            existing.name = name; existing.categoryId = category; existing.price = price; existing.directCost = cost; existing.stockQty = stock; existing.isUnlimitedStock = unlimited; existing.saleUnit = saleUnit; existing.emoji = emoji; existing.description = desc; existing.packagePrice = packagePrice; existing.piecesPerPackage = pieces;
             if (unlimited && existing.status === 'OUT_OF_STOCK') existing.status = 'ACTIVE';
             if (imageUrl) existing.imageUrl = imageUrl;
           }
           editingMenuId = null;
         } else {
-          const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, isUnlimitedStock: unlimited, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, sortOrder: (state.menuItems || []).length };
+          const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, isUnlimitedStock: unlimited, saleUnit, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, sortOrder: (state.menuItems || []).length };
           if (!state.menuItems) state.menuItems = [];
           state.menuItems.push(item);
         }

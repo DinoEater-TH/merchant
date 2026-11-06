@@ -999,7 +999,7 @@ fun MenuItemCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "฿${String.format(Locale.US, "%.0f", item.price)}",
+                        text = "฿${String.format(Locale.US, "%.0f", item.price)} / ${item.saleUnit}",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 16.sp,
                         color = OrangePrimary
@@ -1014,7 +1014,7 @@ fun MenuItemCard(
                         )
                     } else if (!item.isUnlimitedStock) {
                         Text(
-                            text = "คงเหลือ ${item.stockQty} ไม้",
+                            text = "คงเหลือ ${item.stockQty} ${item.saleUnit}",
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
