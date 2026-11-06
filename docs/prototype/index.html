@@ -372,7 +372,7 @@
       { id: 'item_10', cat: 'cat_4', name: 'โค้กเย็นฉ่ำ (กระป๋อง)', price: 15, stock: 40, bestseller: false, emoji: '🥤', desc: 'โค้กแช่เย็นเจี๊ยบ ดื่มคู่ลูกชิ้นทอดแก้เลี่ยน' }
     ];
 
-    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, promoBanner: true, stampsRequired: 10 };
+    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, promoBanner: true, stampsRequired: 10, promoDiscountEnabled: true, promoFreeDeliveryEnabled: true, promoRewardEnabled: true };
     function renderStamps() {
       if (!isMember) return;
       const need = shopCfg.stampsRequired || 10;
@@ -457,8 +457,8 @@
         cartBar.classList.remove('hidden');
         document.getElementById('cartItemCount').textContent = count;
 
-        let discount = subtotal >= shopCfg.minOrderForDiscount ? shopCfg.discountAmount : 0;
-        let deliveryFee = fulfillment === 'delivery' ? (subtotal >= shopCfg.minOrderForFreeDelivery ? 0 : shopCfg.deliveryFee) : 0;
+        let discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
+        let deliveryFee = fulfillment === 'delivery' ? ((shopCfg.promoFreeDeliveryEnabled && subtotal >= shopCfg.minOrderForFreeDelivery) ? 0 : shopCfg.deliveryFee) : 0;
         let total = Math.max(0, subtotal - discount + deliveryFee);
 
         document.getElementById('cartTotalText').textContent = total;
@@ -487,8 +487,8 @@
         const item = menu.find(m => m.id === id);
         if (item) subtotal += item.price * qty;
       }
-      let discount = subtotal >= shopCfg.minOrderForDiscount ? shopCfg.discountAmount : 0;
-      let deliveryFee = fulfillment === 'delivery' ? (subtotal >= shopCfg.minOrderForFreeDelivery ? 0 : shopCfg.deliveryFee) : 0;
+      let discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
+      let deliveryFee = fulfillment === 'delivery' ? ((shopCfg.promoFreeDeliveryEnabled && subtotal >= shopCfg.minOrderForFreeDelivery) ? 0 : shopCfg.deliveryFee) : 0;
       let net = Math.max(0, subtotal - discount + deliveryFee);
 
       document.getElementById('modalSubtotal').textContent = `฿${subtotal}`;
@@ -912,6 +912,9 @@
           shopCfg.deliveryFee = si.deliveryFee ?? 15;
           shopCfg.stampsRequired = si.stampsRequiredForReward ?? 10;
           shopCfg.promoBanner = si.showPromoBanner !== false;
+          shopCfg.promoDiscountEnabled = si.promoDiscountEnabled !== false;
+          shopCfg.promoFreeDeliveryEnabled = si.promoFreeDeliveryEnabled !== false;
+          shopCfg.promoRewardEnabled = si.promoRewardEnabled !== false;
           renderPromoBanner();
           // Menu from Firebase (real data)
           if (Array.isArray(parsed.menuItems) && parsed.menuItems.length > 0) {

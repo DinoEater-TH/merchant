@@ -52,6 +52,9 @@ fun PromotionView(viewModel: MainViewModel) {
     var rewardDesc by remember(shopInfo.rewardDescription) { mutableStateOf(shopInfo.rewardDescription) }
     var rewardItemId by remember(shopInfo.rewardItemId) { mutableStateOf(shopInfo.rewardItemId) }
     var showPromo by remember(shopInfo.showPromoBanner) { mutableStateOf(shopInfo.showPromoBanner) }
+    var promoDiscount by remember(shopInfo.promoDiscountEnabled) { mutableStateOf(shopInfo.promoDiscountEnabled) }
+    var promoFreeDelivery by remember(shopInfo.promoFreeDeliveryEnabled) { mutableStateOf(shopInfo.promoFreeDeliveryEnabled) }
+    var promoReward by remember(shopInfo.promoRewardEnabled) { mutableStateOf(shopInfo.promoRewardEnabled) }
     var rewardExpanded by remember { mutableStateOf(false) }
     val rewardItem = menuItems.find { it.id == rewardItemId }
 
@@ -101,6 +104,19 @@ fun PromotionView(viewModel: MainViewModel) {
                     Checkbox(checked = showPromo, onCheckedChange = { showPromo = it })
                     Text("แสดงป้ายโปรโมชั่นให้ลูกค้า", fontSize = 13.sp)
                 }
+                Text("เปิด/ปิดโปรโมชั่นแต่ละรายการ", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked = promoDiscount, onCheckedChange = { promoDiscount = it })
+                    Text("ส่วนลดเมื่อครบยอด", fontSize = 13.sp)
+                }
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked = promoFreeDelivery, onCheckedChange = { promoFreeDelivery = it })
+                    Text("ส่งฟรีเมื่อครบยอด", fontSize = 13.sp)
+                }
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked = promoReward, onCheckedChange = { promoReward = it })
+                    Text("แต้มแลกฟรี 1 รายการ", fontSize = 13.sp)
+                }
 
                 Button(
                     onClick = {
@@ -112,7 +128,10 @@ fun PromotionView(viewModel: MainViewModel) {
                             stampsRequiredForReward = stamps.toIntOrNull() ?: shopInfo.stampsRequiredForReward,
                             rewardDescription = rewardDesc,
                             rewardItemId = rewardItemId,
-                            showPromoBanner = showPromo
+                            showPromoBanner = showPromo,
+                            promoDiscountEnabled = promoDiscount,
+                            promoFreeDeliveryEnabled = promoFreeDelivery,
+                            promoRewardEnabled = promoReward
                         )
                         viewModel.updateShopInfo(updated)
                     },

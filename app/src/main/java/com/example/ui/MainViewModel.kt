@@ -61,7 +61,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _cart = MutableStateFlow<Map<String, Int>>(emptyMap())
     val cart: StateFlow<Map<String, Int>> = _cart.asStateFlow()
 
-    private val _customerPhone = MutableStateFlow("0812345678")
+    private val _customerPhone = MutableStateFlow("")
     val customerPhone: StateFlow<String> = _customerPhone.asStateFlow()
 
     private val _isPhoneInputDialogOpen = MutableStateFlow(false)

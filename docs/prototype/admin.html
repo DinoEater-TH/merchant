@@ -62,7 +62,7 @@
 
     <nav class="bg-white border-b flex justify-around text-xs font-bold text-gray-600">
       <button onclick="switchTab('orders')" id="tabBtn_orders" class="tab-btn py-3 border-b-2 border-orange-600 text-orange-600">📋 ออเดอร์</button>
-      <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn py-3 border-b-2 border-transparent">💳 POS แต้ม</button>
+      <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn py-3 border-b-2 border-transparent">💳 POS</button>
       <button onclick="switchTab('inventory')" id="tabBtn_inventory" class="tab-btn py-3 border-b-2 border-transparent">📦 สต็อก</button>
       <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn py-3 border-b-2 border-transparent">📊 จุดคุ้มทุน</button>
       <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn py-3 border-b-2 border-transparent">⚙️ ตั้งค่า</button>
@@ -82,6 +82,7 @@
         <input id="posPhoneInput" type="text" placeholder="เบอร์โทร (จำเป็น)" class="w-full border rounded-lg px-3 py-2 text-sm">
         <input id="posNameInput" type="text" placeholder="ชื่อ (ไม่จำเป็น)" class="w-full border rounded-lg px-3 py-2 text-sm">
         <div class="flex gap-2">
+          <button onclick="addMember()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm">เพิ่มสมาชิก</button>
           <button onclick="addPosStamp()" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-lg text-sm">+1 แต้ม</button>
           <button onclick="redeemPosReward()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm">แลกรางวัล</button>
         </div>
@@ -106,10 +107,26 @@
       </div>
 
       <div class="bg-white rounded-2xl p-4 shadow-sm">
-        <h3 class="font-bold text-sm mb-2">สมาชิก</h3>
+        <h3 class="font-bold text-sm mb-2">สมาชิกทั้งหมด</h3>
         <div id="usersList" class="space-y-2 text-sm"></div>
       </div>
     </section>
+
+    <!-- Member History Modal -->
+    <div id="memberModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-2xl max-h-[90vh] overflow-auto">
+        <h3 class="font-bold text-base" id="memberModalTitle">ประวัติสมาชิก</h3>
+        <div id="memberModalBody" class="text-sm space-y-2"></div>
+        <div class="flex gap-2">
+          <input id="editMemberName" placeholder="ชื่อ" class="flex-1 border rounded-lg px-3 py-2 text-sm">
+          <input id="editMemberStamps" type="number" placeholder="แต้ม" class="w-24 border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div class="flex gap-2">
+          <button onclick="saveMemberEdit()" class="bg-orange-600 text-white flex-1 py-2 rounded-lg text-sm font-bold">บันทึก</button>
+          <button onclick="closeMemberModal()" class="bg-gray-200 text-gray-700 flex-1 py-2 rounded-lg text-sm font-bold">ปิด</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Inventory -->
     <section id="tab_inventory" class="p-4 space-y-4 hidden">
@@ -144,8 +161,12 @@
 
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
         <h3 class="font-bold text-sm">ต้นทุนแฝง</h3>
+        <div class="grid grid-cols-5 gap-2 text-[11px] font-bold text-gray-500 border-b pb-1">
+          <span>วันที่</span><span>หมวดหมู่</span><span>รายการ</span><span class="text-right">จำนวนเงิน</span><span class="text-right">แก้ไข/ลบ</span>
+        </div>
         <div id="hiddenCostsList" class="space-y-1 text-sm"></div>
         <button onclick="addHiddenCost()" class="mt-2 bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold">+ เพิ่มต้นทุนแฝง</button>
+        <div id="hiddenTotal" class="text-sm font-bold text-right">รวม ฿0</div>
       </div>
 
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
@@ -235,6 +256,12 @@
         <input id="s_rewardDesc" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_showPromo" checked> แสดงป้ายโปรโมชั่นให้ลูกค้า</label>
+      <div class="border-t pt-2 space-y-1">
+        <label class="text-xs font-bold text-gray-700">เปิด/ปิดโปรโมชั่นแต่ละรายการ</label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoDiscount" checked> ส่วนลดเมื่อครบยอด</label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoFreeDelivery" checked> ส่งฟรีเมื่อครบยอด</label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoReward" checked> แต้มแลกฟรี 1 รายการ</label>
+      </div>
       <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกโปรโมชั่น</button>
     </div>
   </section>
@@ -522,6 +549,17 @@
 
     // ---------- POS ----------
     let posCart = {};
+    let editingMemberPhone = null;
+    function addMember() {
+      const phone = document.getElementById('posPhoneInput').value.trim();
+      const name = document.getElementById('posNameInput').value.trim();
+      if (!/^0\d{9}$/.test(phone)) { document.getElementById('posResult').textContent = 'เบอร์โทรไม่ถูกต้อง'; return; }
+      if (!state.users) state.users = {};
+      if (state.users[phone]) { document.getElementById('posResult').textContent = 'เบอร์โทรนี้มีสมาชิกอยู่แล้ว'; return; }
+      state.users[phone] = { phoneNumber: phone, name, stamps: 0, totalOrders: 0, lastOrder: null };
+      document.getElementById('posResult').textContent = `เพิ่มสมาชิก ${phone} แล้ว`;
+      renderUsers(); schedulePush();
+    }
     function renderUsers() {
       const el = document.getElementById('usersList');
       if (!el) return;
@@ -530,9 +568,41 @@
       if (keys.length === 0) { el.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีสมาชิก</p>'; return; }
       el.innerHTML = keys.map(phone => {
         const u = users[phone];
-        return `<div class="flex justify-between items-center border-b py-1"><span>${phone} ${u.name?`(${u.name})`:''}</span><span class="font-bold text-orange-600">${u.stamps || 0} แต้ม</span></div>`;
+        return `<div class="flex justify-between items-center border-b py-1">
+          <span>${phone} ${u.name?`(${u.name})`:''} • <b class="text-orange-600">${u.stamps || 0} แต้ม</b></span>
+          <span class="space-x-1">
+            <button onclick="viewMember('${phone}')" class="text-blue-600 text-xs font-bold">ประวัติ</button>
+            <button onclick="editMember('${phone}')" class="text-orange-600 text-xs font-bold">แก้ไข</button>
+            <button onclick="deleteMember('${phone}')" class="text-red-600 text-xs font-bold">ลบ</button>
+          </span>
+        </div>`;
       }).join('');
     }
+    function viewMember(phone) {
+      editingMemberPhone = phone;
+      const u = (state.users || {})[phone] || {};
+      const orders = (state.orders || []).filter(o => o.customerPhone === phone);
+      document.getElementById('memberModalTitle').textContent = `สมาชิก ${phone} ${u.name ? '(' + u.name + ')' : ''}`;
+      document.getElementById('memberModalBody').innerHTML = orders.length
+        ? orders.map(o => `<div class="border-b py-1">${o.id} • ${o.timestamp}<br>${(o.items||[]).map(i => `${i.name} x${i.quantity}`).join(', ')} • ฿${o.totalAmount}</div>`).join('')
+        : '<p class="text-xs text-gray-400">ยังไม่มีประวัติสั่งซื้อ</p>';
+      document.getElementById('editMemberName').value = u.name || '';
+      document.getElementById('editMemberStamps').value = u.stamps ?? 0;
+      document.getElementById('memberModal').classList.remove('hidden');
+    }
+    function editMember(phone) { viewMember(phone); }
+    function saveMemberEdit() {
+      if (!editingMemberPhone || !state.users[editingMemberPhone]) return;
+      state.users[editingMemberPhone].name = document.getElementById('editMemberName').value.trim();
+      state.users[editingMemberPhone].stamps = parseInt(document.getElementById('editMemberStamps').value) || 0;
+      renderUsers(); schedulePush(); closeMemberModal();
+    }
+    function deleteMember(phone) {
+      if (!confirm('ลบสมาชิก ' + phone + '?')) return;
+      delete state.users[phone];
+      renderUsers(); schedulePush();
+    }
+    function closeMemberModal() { document.getElementById('memberModal').classList.add('hidden'); }
     function renderPos() {
       const si = state.shopInfo || {};
       const banner = document.getElementById('posPromoBanner');
@@ -842,8 +912,14 @@
       }
       const hc = document.getElementById('hiddenCostsList');
       if (hc) {
-        if ((state.hiddenCosts || []).length === 0) hc.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีต้นทุนแฝง</p>';
-        else hc.innerHTML = (state.hiddenCosts || []).map(c => `<div class="flex justify-between"><span>${c.itemName}</span><span class="font-bold">฿${(c.amount||0).toFixed(0)}</span></div>`).join('');
+        if ((state.hiddenCosts || []).length === 0) hc.innerHTML = '<p class="text-xs text-gray-400 col-span-5">ยังไม่มีต้นทุนแฝง</p>';
+        else hc.innerHTML = (state.hiddenCosts || []).map(c => `
+          <div class="grid grid-cols-5 gap-2 items-center text-xs border-b py-1">
+            <span>${c.date || ''}</span><span>${c.category || ''}</span><span>${c.itemName}</span><span class="text-right font-bold">฿${(c.amount||0).toFixed(0)}</span>
+            <span class="text-right"><button onclick="editHiddenCost('${c.id}')" class="text-blue-600 font-bold">แก้ไข</button> <button onclick="deleteHiddenCost('${c.id}')" class="text-red-600 font-bold">ลบ</button></span>
+          </div>`).join('');
+        const totalEl = document.getElementById('hiddenTotal');
+        if (totalEl) totalEl.textContent = 'รวม ฿' + (state.hiddenCosts || []).reduce((s, c) => s + (c.amount || 0), 0).toFixed(0);
       }
       // AI settings load (localStorage)
       const aiProviderEl = document.getElementById('ai_provider');
@@ -872,8 +948,25 @@
       if (pkg > 0 && pieces > 0) m.directCost = pkg / pieces;
       renderAnalytics(); renderInventory(); schedulePush();
     }
+    let editingHcId = null;
     const HC_PRESETS = ['น้ำตาลทราย','น้ำตาลปี๊บ','ไม้เสียบ','ถุงพลาสติก 6*14','ถุงพลาสติก 9*18','ถุงพลาสติก 10*12','ถุงใส่น้ำจิ้มเบอร์ 3','ถุงใส่น้ำจิ้มเบอร์ 4','ถุงใส่น้ำจิ้มเบอร์ 5','ถุงใส่น้ำจิ้มเบอร์ 6','ถุงกระดาษ 4*8','ถุงกระดาษ 5*7','ถุงกระดาษ 5*9','แตงกวา','พริก','แป้งมัน','แป้งข้าวเจ้า'];
-    function addHiddenCost() { openHiddenCostModal(); }
+    function addHiddenCost() { editingHcId = null; openHiddenCostModal(); }
+    function editHiddenCost(id) {
+      const c = (state.hiddenCosts || []).find(x => x.id === id);
+      if (!c) return;
+      editingHcId = id;
+      openHiddenCostModal();
+      document.getElementById('hc_name').value = c.itemName || '';
+      document.getElementById('hc_amount').value = c.amount ?? '';
+      document.getElementById('hc_notes').value = c.notes || '';
+      document.getElementById('hc_date').value = c.date || '';
+      document.getElementById('hc_category').value = c.category || 'เครื่องปรุง';
+    }
+    function deleteHiddenCost(id) {
+      if (!confirm('ลบรายการนี้?')) return;
+      state.hiddenCosts = (state.hiddenCosts || []).filter(x => x.id !== id);
+      renderAnalytics(); schedulePush();
+    }
     function openHiddenCostModal() {
       document.getElementById('hc_name').value = '';
       document.getElementById('hc_amount').value = '';
@@ -892,7 +985,13 @@
       const notes = document.getElementById('hc_notes').value.trim();
       if (!name || amount <= 0) { alert('กรุณากรอกรายการและจำนวนเงิน'); return; }
       if (!state.hiddenCosts) state.hiddenCosts = [];
-      state.hiddenCosts.unshift({ id: 'cost_' + Date.now(), date, category: cat, itemName: name, amount, notes });
+      if (editingHcId) {
+        const c = state.hiddenCosts.find(x => x.id === editingHcId);
+        if (c) { c.itemName = name; c.amount = amount; c.category = cat; c.date = date; c.notes = notes; }
+        editingHcId = null;
+      } else {
+        state.hiddenCosts.unshift({ id: 'cost_' + Date.now(), date, category: cat, itemName: name, amount, notes });
+      }
       closeHiddenCostModal();
       renderAnalytics();
       schedulePush();
@@ -968,6 +1067,9 @@
       }
       const promoChk = document.getElementById('s_showPromo');
       if (promoChk) promoChk.checked = (s.showPromoBanner !== false);
+      document.getElementById('s_promoDiscount').checked = (s.promoDiscountEnabled !== false);
+      document.getElementById('s_promoFreeDelivery').checked = (s.promoFreeDeliveryEnabled !== false);
+      document.getElementById('s_promoReward').checked = (s.promoRewardEnabled !== false);
       document.getElementById('s_pin').value = state.adminPin || '09286840';
       document.getElementById('s_showScan').checked = (s.showScanPayment !== false);
       const qrPreview = document.getElementById('qrPreview');
@@ -1070,6 +1172,9 @@ function finishSaveSettings() {
       if (rewardItemEl) state.shopInfo.rewardItemId = rewardItemEl.value;
       const promoEl = document.getElementById('s_showPromo');
       if (promoEl) state.shopInfo.showPromoBanner = promoEl.checked;
+      state.shopInfo.promoDiscountEnabled = document.getElementById('s_promoDiscount').checked;
+      state.shopInfo.promoFreeDeliveryEnabled = document.getElementById('s_promoFreeDelivery').checked;
+      state.shopInfo.promoRewardEnabled = document.getElementById('s_promoReward').checked;
       const pin = document.getElementById('s_pin').value.trim();
       if (pin.length === 8 && /^\d{8}$/.test(pin)) state.adminPin = pin;
       if (pin.length === 4 && /^\d{4}$/.test(pin)) state.adminPin = pin;
