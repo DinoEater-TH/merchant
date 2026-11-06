@@ -250,6 +250,30 @@ fun AnalyticsView(viewModel: MainViewModel) {
             }
         }
 
+        // 3b. Cost breakdown per item
+        item {
+            val menuItems by viewModel.menuItems.collectAsState()
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("ต้นทุนหลัก (แยกตามรายการ)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    menuItems.forEach { m ->
+                        val unit = if (m.packagePrice > 0 && m.piecesPerPackage > 0) m.packagePrice / m.piecesPerPackage else m.directCost
+                        val profit = m.price - unit
+                        Text(
+                            text = "${m.emoji} ${m.name} • ถุง ฿${m.packagePrice.toInt()} ÷ ${m.piecesPerPackage} ชิ้น = ฿${String.format(Locale.US, "%.2f", unit)}/หน่วย • กำไร ฿${String.format(Locale.US, "%.2f", profit)}",
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // 4. Hidden & Operating Costs Log Header & Add button
         item {
             Row(

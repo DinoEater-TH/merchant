@@ -26,6 +26,11 @@ data class ShopInfo(
     val minOrderForFreeDelivery: Double = 120.0,
     val stampsRequiredForReward: Int = 10,
     val rewardDescription: String = "ฟรี! ชุดลูกชิ้นรวมมิตร 1 ชุด",
+    val rewardItemId: String = "",
+    val showPromoBanner: Boolean = true,
+    val aiBaseUrl: String = "",
+    val aiApiKey: String = "",
+    val aiModel: String = "gemini-2.5-flash-lite",
 val addonConfig: String = "", // JSON: {"friedChili":true,"cucumber":true,"sauceCup":true}
 val showScanPayment: Boolean = true,
 val promptPayQrUri: String? = null,
@@ -67,7 +72,9 @@ data class MenuItem(
     val emoji: String = "🍢",
     val description: String = "",
 val imageUrl: String? = null,
-val sortOrder: Int = 0
+val sortOrder: Int = 0,
+    val packagePrice: Double = 0.0,
+    val piecesPerPackage: Int = 0
 )
 
 data class CartItem(

@@ -76,15 +76,35 @@
 
     <!-- POS -->
     <section id="tab_pos" class="p-4 space-y-4 hidden">
-      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-        <h3 class="font-bold text-base">POS เพิ่มแต้มหน้าร้าน</h3>
-        <input id="posPhoneInput" type="text" placeholder="เบอร์โทรศัพท์ลูกค้า" class="w-full border rounded-lg px-3 py-2 text-sm">
+      <div id="posPromoBanner" class="bg-orange-100 text-orange-800 rounded-xl px-3 py-2 text-xs font-medium"></div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">สมัคร/เพิ่มบัญชีลูกค้า</h3>
+        <input id="posPhoneInput" type="text" placeholder="เบอร์โทร (จำเป็น)" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <input id="posNameInput" type="text" placeholder="ชื่อ (ไม่จำเป็น)" class="w-full border rounded-lg px-3 py-2 text-sm">
         <div class="flex gap-2">
           <button onclick="addPosStamp()" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-lg text-sm">+1 แต้ม</button>
-          <button onclick="redeemPosReward()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm">แลกรางวัล (10 แต้ม)</button>
+          <button onclick="redeemPosReward()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm">แลกรางวัล</button>
         </div>
         <div id="posResult" class="text-sm text-gray-600"></div>
       </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">รายการเมนูทั้งหมด (POS)</h3>
+        <p class="text-xs text-gray-500">พนักงานเลือกเมนูแทนลูกค้าได้เลย</p>
+        <div id="posMenuList" class="space-y-2 max-h-72 overflow-auto"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">สรุปออเดอร์หน้าร้าน</h3>
+        <div id="posCart" class="text-sm space-y-1"></div>
+        <div class="flex justify-between text-xs text-gray-500"><span>ส่วนลด</span><span id="posDiscount">฿0</span></div>
+        <div class="flex justify-between font-bold"><span>ยอดรวม</span><span id="posTotal">฿0</span></div>
+        <div class="flex gap-2">
+          <button onclick="posConfirmOrder('cash')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm">💵 เงินสด</button>
+          <button onclick="posConfirmOrder('scan')" class="flex-1 bg-orange-600 text-white font-bold py-2 rounded-lg text-sm">📱 สแกน</button>
+        </div>
+      </div>
+
       <div class="bg-white rounded-2xl p-4 shadow-sm">
         <h3 class="font-bold text-sm mb-2">สมาชิก</h3>
         <div id="usersList" class="space-y-2 text-sm"></div>
@@ -115,11 +135,33 @@
     <!-- Analytics -->
     <section id="tab_analytics" class="p-4 space-y-4 hidden">
       <div id="analyticsSummary" class="grid grid-cols-2 gap-3"></div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">ต้นทุนหลัก (แยกตามรายการ)</h3>
+        <p class="text-xs text-gray-500">ราคาถุง / จำนวนต่อถุง = ต้นทุนต่อหน่วย</p>
+        <div id="costBreakdownList" class="space-y-2 text-sm"></div>
+      </div>
+
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
         <h3 class="font-bold text-sm">ต้นทุนแฝง</h3>
         <div id="hiddenCostsList" class="space-y-1 text-sm"></div>
         <button onclick="addHiddenCost()" class="mt-2 bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold">+ เพิ่มต้นทุนแฝง</button>
       </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">ตั้งค่า AI วิเคราะห์</h3>
+        <select id="ai_provider" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="custom">Custom (OpenAI-compatible)</option>
+          <option value="kku">KKU GenAI</option>
+        </select>
+        <input id="ai_baseUrl" placeholder="Base URL (เช่น https://gen.ai.kku.ac.th/api/v1)" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <input id="ai_apiKey" placeholder="API Key" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <input id="ai_model" placeholder="Model (เช่น gemini-2.5-flash-lite)" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <button onclick="saveAiSettings()" class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold">บันทึกค่า AI</button>
+        <button onclick="aiAdvice()" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">วิเคราะห์ด้วย AI</button>
+        <div id="aiResult" class="text-xs text-gray-600 whitespace-pre-wrap"></div>
+      </div>
+
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-1 text-sm" id="adviceBox"></div>
     </section>
 
@@ -181,9 +223,14 @@
         <input id="s_stamps" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <div>
+        <label class="text-xs text-gray-500">รายการฟรีที่แอดมินเลือก (เมื่อสะสมครบ)</label>
+        <select id="s_rewardItem" class="w-full border rounded-lg px-3 py-2 text-sm"></select>
+      </div>
+      <div>
         <label class="text-xs text-gray-500">คำอธิบายรางวัล</label>
         <input id="s_rewardDesc" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_showPromo" checked> แสดงป้ายโปรโมชั่นให้ลูกค้า</label>
       <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกโปรโมชั่น</button>
     </div>
   </section>
@@ -203,6 +250,11 @@
         <input id="m_stock" type="number" placeholder="สต็อกเริ่มต้น" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
         <input id="m_emoji" placeholder="อีโมจิ" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
       </div>
+      <div class="flex gap-2">
+        <input id="m_packagePrice" type="number" placeholder="ราคาถุง (บาท)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+        <input id="m_pieces" type="number" placeholder="จำนวนต่อถุง" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <p class="text-xs text-gray-500">ต้นทุนต่อหน่วย = ราคาถุง ÷ จำนวนต่อถุง (ถ้าใส่)</p>
       <input id="m_desc" placeholder="คำอธิบาย" class="w-full border rounded-lg px-3 py-2 text-sm">
       <div class="flex gap-2 pt-1">
         <button onclick="saveMenuItem()" class="bg-orange-600 text-white flex-1 py-2 rounded-lg text-sm font-bold">บันทึก</button>
@@ -421,6 +473,7 @@
     function printSlipMock(orderId) { alert('สั่งพิมพ์ใบเสร็จ ' + orderId); }
 
     // ---------- POS ----------
+    let posCart = {};
     function renderUsers() {
       const el = document.getElementById('usersList');
       if (!el) return;
@@ -429,15 +482,127 @@
       if (keys.length === 0) { el.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีสมาชิก</p>'; return; }
       el.innerHTML = keys.map(phone => {
         const u = users[phone];
-        return `<div class="flex justify-between items-center border-b py-1"><span>${phone}</span><span class="font-bold text-orange-600">${u.stamps || 0} แต้ม</span></div>`;
+        return `<div class="flex justify-between items-center border-b py-1"><span>${phone} ${u.name?`(${u.name})`:''}</span><span class="font-bold text-orange-600">${u.stamps || 0} แต้ม</span></div>`;
       }).join('');
+    }
+    function renderPos() {
+      const si = state.shopInfo || {};
+      const banner = document.getElementById('posPromoBanner');
+      if (banner) {
+        if (si.showPromoBanner === false) banner.style.display = 'none';
+        else { banner.style.display = ''; banner.textContent = `🎁 โปรสุดคุ้ม: ซื้อครบ ${si.minOrderForDiscount ?? 50}.- ลด ${si.discountAmount ?? 5}.- | ซื้อครบ ${si.minOrderForFreeDelivery ?? 120}.- ส่งฟรี | สะสมครบ ${si.stampsRequiredForReward ?? 10} แต้ม รับ ${rewardItemName()} ฟรี`; }
+      }
+      const menuEl = document.getElementById('posMenuList');
+      if (menuEl) {
+        const items = (state.menuItems || []).filter(m => m.status !== 'HIDDEN');
+        menuEl.innerHTML = items.map(m => `
+          <div class="flex justify-between items-center border rounded-lg p-2">
+            <div class="flex items-center gap-2">
+              ${m.imageUrl ? `<img src="${m.imageUrl}" class="w-10 h-10 rounded object-cover">` : `<span class="text-xl">${m.emoji || '🍢'}</span>`}
+              <div><div class="text-sm font-bold">${m.name}</div><div class="text-xs text-gray-500">฿${m.price} • สต็อก ${m.stockQty}</div></div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button onclick="posChangeQty('${m.id}', -1)" class="w-7 h-7 bg-gray-100 rounded-full">-</button>
+              <span class="px-1 font-bold">${posCart[m.id] || 0}</span>
+              <button onclick="posChangeQty('${m.id}', 1)" class="w-7 h-7 bg-green-100 text-green-700 rounded-full">+</button>
+            </div>
+          </div>
+        `).join('') || '<p class="text-xs text-gray-400">ยังไม่มีเมนู</p>';
+      }
+      renderPosCart();
+    }
+    function rewardItemName() {
+      const id = (state.shopInfo || {}).rewardItemId;
+      const m = (state.menuItems || []).find(x => x.id === id);
+      return m ? m.name : '1 รายการ';
+    }
+    function posChangeQty(id, delta) {
+      posCart[id] = Math.max(0, (posCart[id] || 0) + delta);
+      if (posCart[id] === 0) delete posCart[id];
+      renderPos();
+    }
+    function posTotals() {
+      let subtotal = 0;
+      for (const [id, qty] of Object.entries(posCart)) {
+        const m = (state.menuItems || []).find(x => x.id === id);
+        if (m) subtotal += (m.price || 0) * qty;
+      }
+      const si = state.shopInfo || {};
+      const discount = subtotal >= (si.minOrderForDiscount ?? 50) ? (si.discountAmount ?? 5) : 0;
+      const total = Math.max(0, subtotal - discount);
+      return { subtotal, discount, total };
+    }
+    function renderPosCart() {
+      const el = document.getElementById('posCart');
+      if (!el) return;
+      const entries = Object.entries(posCart);
+      if (!entries.length) { el.innerHTML = '<p class="text-xs text-gray-400">ยังไม่ได้เลือกรายการ</p>'; }
+      else {
+        el.innerHTML = entries.map(([id, qty]) => {
+          const m = (state.menuItems || []).find(x => x.id === id) || { name: id, price: 0 };
+          return `<div class="flex justify-between"><span>${m.name} x${qty}</span><span>฿${(m.price||0)*qty}</span></div>`;
+        }).join('');
+      }
+      const t = posTotals();
+      document.getElementById('posDiscount').textContent = `-฿${t.discount}`;
+      document.getElementById('posTotal').textContent = `฿${t.total}`;
+    }
+    function posConfirmOrder(method) {
+      const entries = Object.entries(posCart);
+      if (!entries.length) { alert('กรุณาเลือกรายการก่อน'); return; }
+      const phone = document.getElementById('posPhoneInput').value.trim();
+      const t = posTotals();
+      const items = entries.map(([id, qty]) => {
+        const m = (state.menuItems || []).find(x => x.id === id) || { name: id, price: 0, directCost: 0 };
+        return { itemId: id, name: m.name, price: m.price, directCost: m.directCost || 0, quantity: qty };
+      });
+      const order = {
+        id: 'ORD-' + Math.floor(100 + Math.random() * 900),
+        customerPhone: phone,
+        isGuest: !phone,
+        fulfillment: 'PICKUP',
+        deliveryAddress: '',
+        gpsCoordinates: '',
+        items,
+        options: { skewer: 'SKEWERED', friedChili: true, cucumber: true, sauceCup: true, sauceChoice: 'MIXED', comment: '', selectedAddons: [] },
+        comment: `POS (${method === 'scan' ? 'สแกน' : 'เงินสด'})`,
+        subtotal: t.subtotal,
+        discount: t.discount,
+        deliveryFee: 0,
+        totalAmount: t.total,
+        status: 'PENDING',
+        timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        slipAttached: false,
+        slipImageUri: null
+      };
+      if (!state.orders) state.orders = [];
+      state.orders.unshift(order);
+      // stock deduction
+      (state.menuItems || []).forEach(m => {
+        const q = posCart[m.id] || 0;
+        if (q > 0) m.stockQty = Math.max(0, (m.stockQty || 0) - q);
+      });
+      // member stamps
+      if (phone) {
+        if (!state.users) state.users = {};
+        if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: document.getElementById('posNameInput') ? document.getElementById('posNameInput').value.trim() : '', stamps: 0, totalOrders: 0, lastOrder: order };
+        state.users[phone].stamps = (state.users[phone].stamps || 0) + 1;
+        state.users[phone].totalOrders = (state.users[phone].totalOrders || 0) + 1;
+        state.users[phone].lastOrder = order;
+      }
+      posCart = {};
+      document.getElementById('posResult').textContent = `สร้างออเดอร์ ${order.id} เรียบร้อย ฿${t.total}`;
+      renderPos(); renderUsers(); renderOrders(); renderInventory();
+      schedulePush();
     }
 
     function addPosStamp() {
       const phone = document.getElementById('posPhoneInput').value.trim();
+      const name = document.getElementById('posNameInput') ? document.getElementById('posNameInput').value.trim() : '';
       if (!phone) { document.getElementById('posResult').textContent = 'กรุณาใส่เบอร์โทร'; return; }
       if (!state.users) state.users = {};
-      if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: '', stamps: 0, totalOrders: 0, lastOrder: null };
+      if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: name || '', stamps: 0, totalOrders: 0, lastOrder: null };
+      else if (name && !state.users[phone].name) state.users[phone].name = name;
       state.users[phone].stamps = (state.users[phone].stamps || 0) + 1;
       renderUsers();
       schedulePush();
@@ -452,7 +617,7 @@
       state.users[phone].stamps -= cost;
       renderUsers();
       schedulePush();
-      document.getElementById('posResult').textContent = `แลกรางวัลให้ ${phone} แล้ว`;
+      document.getElementById('posResult').textContent = `แลกรางวัลให้ ${phone} แล้ว: ${rewardItemName()} ฟรี 1 รายการ`;
     }
 
     // ---------- Inventory ----------
@@ -512,7 +677,8 @@
       document.getElementById('m_name').value = '';
       document.getElementById('m_category').value = 'cat_1';
       document.getElementById('m_price').value = '';
-      document.getElementById('m_cost').value = '';
+      document.getElementById('m_packagePrice').value = '';
+      document.getElementById('m_pieces').value = '';
       document.getElementById('m_stock').value = '30';
       document.getElementById('m_emoji').value = '🍢';
       document.getElementById('m_desc').value = '';
@@ -527,7 +693,9 @@
       if (!name) { alert('กรุณาใส่ชื่อเมนู'); return; }
       const category = document.getElementById('m_category').value.trim() || 'cat_1';
       const price = parseFloat(document.getElementById('m_price').value) || 0;
-      const cost = 0;
+      const packagePrice = parseFloat(document.getElementById('m_packagePrice').value) || 0;
+      const pieces = parseInt(document.getElementById('m_pieces').value) || 0;
+      const cost = (packagePrice > 0 && pieces > 0) ? (packagePrice / pieces) : 0;
       const stock = parseInt(document.getElementById('m_stock').value) || 0;
       const emoji = document.getElementById('m_emoji').value.trim() || '🍢';
       const desc = document.getElementById('m_desc').value.trim();
@@ -538,7 +706,7 @@
           if (!state.categories) state.categories = [];
           state.categories.push({ id: category, name: category, sort: state.categories.length + 1, iconEmoji: '🍽️' });
         }
-        const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null };
+        const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, sortOrder: (state.menuItems || []).length };
         if (!state.menuItems) state.menuItems = [];
         state.menuItems.push(item);
         renderInventory();
@@ -572,10 +740,31 @@
         <div class="bg-white rounded-2xl p-4 shadow-sm"><div class="text-xs text-gray-500">ออเดอร์</div><div class="text-xl font-bold">${orders.length}</div></div>
         <div class="bg-white rounded-2xl p-4 shadow-sm"><div class="text-xs text-gray-500">จุดคุ้มทุน</div><div class="text-xl font-bold">${beUnits} ไม้ (${progress}%)</div></div>
       `;
+      // Cost breakdown per menu item
+      const breakdown = document.getElementById('costBreakdownList');
+      if (breakdown) {
+        const items = state.menuItems || [];
+        if (!items.length) breakdown.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีเมนู</p>';
+        else breakdown.innerHTML = items.map(m => {
+          const pkg = m.packagePrice || 0;
+          const pieces = m.piecesPerPackage || 0;
+          const unit = (pkg > 0 && pieces > 0) ? (pkg / pieces) : (m.directCost || 0);
+          const profit = (m.price || 0) - unit;
+          return `<div class="flex justify-between items-center border-b py-1 text-xs"><span>${m.emoji || ''} ${m.name}<br><span class="text-gray-500">ถุง ฿${pkg} ÷ ${pieces} ชิ้น</span></span><span class="font-bold">ต้นทุน ฿${unit.toFixed(2)}<br><span class="text-green-600 font-normal">กำไร ฿${profit.toFixed(2)}</span></span></div>`;
+        }).join('');
+      }
       const hc = document.getElementById('hiddenCostsList');
       if (hc) {
         if ((state.hiddenCosts || []).length === 0) hc.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีต้นทุนแฝง</p>';
         else hc.innerHTML = (state.hiddenCosts || []).map(c => `<div class="flex justify-between"><span>${c.itemName}</span><span class="font-bold">฿${(c.amount||0).toFixed(0)}</span></div>`).join('');
+      }
+      // AI settings load (localStorage)
+      const aiProviderEl = document.getElementById('ai_provider');
+      if (aiProviderEl) {
+        aiProviderEl.value = localStorage.getItem('ai_provider') || 'custom';
+        document.getElementById('ai_baseUrl').value = localStorage.getItem('ai_baseUrl') || '';
+        document.getElementById('ai_apiKey').value = localStorage.getItem('ai_apiKey') || '';
+        document.getElementById('ai_model').value = localStorage.getItem('ai_model') || 'gemini-2.5-flash-lite';
       }
       const advice = document.getElementById('adviceBox');
       if (advice) {
@@ -598,6 +787,52 @@
       schedulePush();
     }
 
+    function saveAiSettings() {
+      localStorage.setItem('ai_provider', document.getElementById('ai_provider').value);
+      localStorage.setItem('ai_baseUrl', document.getElementById('ai_baseUrl').value.trim());
+      localStorage.setItem('ai_apiKey', document.getElementById('ai_apiKey').value.trim());
+      localStorage.setItem('ai_model', document.getElementById('ai_model').value.trim());
+      alert('บันทึกค่า AI แล้ว');
+    }
+
+    async function aiAdvice() {
+      const baseUrl = localStorage.getItem('ai_baseUrl') || document.getElementById('ai_baseUrl').value.trim();
+      const apiKey = localStorage.getItem('ai_apiKey') || document.getElementById('ai_apiKey').value.trim();
+      const model = localStorage.getItem('ai_model') || document.getElementById('ai_model').value.trim() || 'gemini-2.5-flash-lite';
+      const out = document.getElementById('aiResult');
+      if (!baseUrl || !apiKey) {
+        // fallback to rule-based advice (already rendered in adviceBox)
+        out.textContent = 'กรุณาตั้งค่า Base URL และ API Key ก่อนใช้ AI (ใช้คำแนะนำพื้นฐานในกล่องด้านล่างแทน)';
+        return;
+      }
+      const summary = {
+        revenue: (state.orders || []).reduce((s, o) => s + (o.totalAmount || 0), 0),
+        orders: (state.orders || []).length,
+        menu: (state.menuItems || []).map(m => `${m.name}: ฿${m.price} ต้นทุน ฿${m.directCost} สต็อก ${m.stockQty}`).join('; '),
+        hidden: (state.hiddenCosts || []).map(c => `${c.itemName} ฿${c.amount}`).join('; ')
+      };
+      out.textContent = 'กำลังวิเคราะห์ด้วย AI...';
+      try {
+        const res = await fetch(baseUrl.replace(/\/$/, '') + '/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: 'คุณคือผู้เชี่ยวชาญวิเคราะห์ร้านอาหาร ภาษาไทย กระชับ' },
+              { role: 'user', content: `วิเคราะห์ยอดขายและต้นทุนร้านลูกชิ้น: รายได้ ฿${summary.revenue}, ออเดอร์ ${summary.orders}, เมนู: ${summary.menu}, ต้นทุนแฝง: ${summary.hidden}. ให้คำแนะนำ 3 ข้อ` }
+            ],
+            stream: false
+          })
+        });
+        const data = await res.json();
+        const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content : JSON.stringify(data);
+        out.textContent = text;
+      } catch (e) {
+        out.textContent = 'เรียก AI ไม่สำเร็จ: ' + e.message;
+      }
+    }
+
     // ---------- Settings ----------
     function renderSettings() {
       const s = state.shopInfo || {};
@@ -614,6 +849,13 @@
       document.getElementById('s_freeDelivery').value = s.minOrderForFreeDelivery ?? 120;
       document.getElementById('s_stamps').value = s.stampsRequiredForReward ?? 10;
       document.getElementById('s_rewardDesc').value = s.rewardDescription || '';
+      const rewardSel = document.getElementById('s_rewardItem');
+      if (rewardSel) {
+        rewardSel.innerHTML = (state.menuItems || []).map(m => `<option value="${m.id}">${m.emoji || ''} ${m.name} (฿${m.price})</option>`).join('') || '<option value="">ไม่มีเมนู</option>';
+        if (s.rewardItemId) rewardSel.value = s.rewardItemId;
+      }
+      const promoChk = document.getElementById('s_showPromo');
+      if (promoChk) promoChk.checked = (s.showPromoBanner !== false);
       document.getElementById('s_pin').value = state.adminPin || '09286840';
       document.getElementById('s_showScan').checked = (s.showScanPayment !== false);
       const qrPreview = document.getElementById('qrPreview');
@@ -710,6 +952,10 @@ function finishSaveSettings() {
       state.shopInfo.minOrderForFreeDelivery = parseFloat(document.getElementById('s_freeDelivery').value) || state.shopInfo.minOrderForFreeDelivery;
       state.shopInfo.stampsRequiredForReward = parseInt(document.getElementById('s_stamps').value) || state.shopInfo.stampsRequiredForReward;
       state.shopInfo.rewardDescription = document.getElementById('s_rewardDesc').value.trim() || state.shopInfo.rewardDescription;
+      const rewardItemEl = document.getElementById('s_rewardItem');
+      if (rewardItemEl) state.shopInfo.rewardItemId = rewardItemEl.value;
+      const promoEl = document.getElementById('s_showPromo');
+      if (promoEl) state.shopInfo.showPromoBanner = promoEl.checked;
       const pin = document.getElementById('s_pin').value.trim();
       if (pin.length === 8 && /^\d{8}$/.test(pin)) state.adminPin = pin;
       if (pin.length === 4 && /^\d{4}$/.test(pin)) state.adminPin = pin;
@@ -723,6 +969,7 @@ function finishSaveSettings() {
     function renderAll() {
       renderOrders();
       renderUsers();
+      renderPos();
       renderInventory();
       renderAnalytics();
       renderSettings();

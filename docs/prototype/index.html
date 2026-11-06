@@ -33,8 +33,13 @@
     </a>
   </header>
 
-  <!-- Member Loyalty Card -->
-  <div class="max-w-md mx-auto px-4 mt-3">
+  <!-- Guest login hint (member card hidden for guests) -->
+  <div id="guestLoginHint" class="max-w-md mx-auto px-4 mt-3">
+    <button onclick="promptChangePhone()" class="w-full bg-white border border-orange-200 text-orange-700 text-xs font-bold py-2 rounded-xl">เข้าสู่ระบบ/สมัครสมาชิกเพื่อสะสมแต้ม</button>
+  </div>
+
+  <!-- Member Loyalty Card (hidden for guests) -->
+  <div class="max-w-md mx-auto px-4 mt-3 hidden" id="memberCard">
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-orange-100">
       <div class="flex justify-between items-center">
         <div class="flex items-center space-x-3">
@@ -82,15 +87,15 @@
   </div>
 
   <!-- Promotion Ticker -->
-  <div class="max-w-md mx-auto px-4 mt-2">
+  <div class="max-w-md mx-auto px-4 mt-2" id="promoBanner">
     <div class="bg-orange-100 text-orange-800 rounded-xl px-3 py-2 text-xs font-medium flex items-center space-x-1.5">
       <span>🎁</span>
-      <span>โปรสุดคุ้ม: ซื้อครบ 50.- ลด 5.- | ซื้อครบ 120.- ส่งฟรีทั่วเมือง</span>
+      <span id="promoBannerText">โปรสุดคุ้ม: ซื้อครบ 50.- ลด 5.- | ซื้อครบ 120.- ส่งฟรีทั่วเมือง</span>
     </div>
   </div>
 
   <!-- Active Order Alert (if any) -->
-  <div id="activeOrderAlert" class="max-w-md mx-auto px-4 mt-2 hidden">
+  <div id="activeOrderAlert" class="max-w-md mx-auto px-4 mt-2 hidden" style="display:none">
     <div onclick="openTrackerModal()" class="bg-amber-100 border border-amber-300 rounded-xl p-3 flex justify-between items-center cursor-pointer hover:bg-amber-200 transition">
       <div class="flex items-center space-x-2">
         <span class="text-xl">🛵</span>
@@ -349,13 +354,10 @@
     // In-memory State
     let cart = {};
     let fulfillment = 'delivery';
-    let customerPhone = '084-611-2419';
-    let stamps = 7;
-    let activeOrder = {
-      id: 'ORD-101',
-      status: 'cooking',
-      total: 45
-    };
+    let customerPhone = '';
+    let isMember = false;
+    let stamps = 0;
+    let activeOrder = null;
 
     const menu = [
       { id: 'item_01', cat: 'cat_1', name: 'ลูกชิ้นเอ็นเนื้อ', price: 10, stock: 50, bestseller: true, emoji: '🍢', desc: 'เอ็นเนื้อแท้ กรุบกรอบ ทอดพองกำลังดี' },
@@ -370,17 +372,33 @@
       { id: 'item_10', cat: 'cat_4', name: 'โค้กเย็นฉ่ำ (กระป๋อง)', price: 15, stock: 40, bestseller: false, emoji: '🥤', desc: 'โค้กแช่เย็นเจี๊ยบ ดื่มคู่ลูกชิ้นทอดแก้เลี่ยน' }
     ];
 
+    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, promoBanner: true, stampsRequired: 10 };
     function renderStamps() {
+      if (!isMember) return;
+      const need = shopCfg.stampsRequired || 10;
       const container = document.getElementById('stampsContainer');
       container.innerHTML = '';
-      for (let i = 1; i <= 10; i++) {
+      for (let i = 1; i <= need; i++) {
         const isStamped = i <= stamps;
         const div = document.createElement('div');
         div.className = `w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isStamped ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-400 border border-gray-200'}`;
         div.textContent = isStamped ? '🍢' : i;
         container.appendChild(div);
       }
-      document.getElementById('stampsCountText').textContent = `สะสมแล้ว ${stamps}/10 แต้ม`;
+      document.getElementById('stampsCountText').textContent = `สะสมแล้ว ${stamps}/${need} แต้ม`;
+    }
+    function renderMemberVisibility() {
+      const card = document.getElementById('memberCard');
+      const hint = document.getElementById('guestLoginHint');
+      if (card) card.classList.toggle('hidden', !isMember);
+      if (hint) hint.classList.toggle('hidden', isMember);
+      if (isMember) { renderStamps(); updateConsumptionMetrics(); }
+    }
+    function renderPromoBanner() {
+      const banner = document.getElementById('promoBanner');
+      const text = document.getElementById('promoBannerText');
+      if (banner) banner.style.display = shopCfg.promoBanner === false ? 'none' : '';
+      if (text) text.textContent = `โปรสุดคุ้ม: ซื้อครบ ${shopCfg.minOrderForDiscount}.- ลด ${shopCfg.discountAmount}.- | ซื้อครบ ${shopCfg.minOrderForFreeDelivery}.- ส่งฟรี`;
     }
 
     function renderMenu(catFilter = 'all') {
@@ -394,7 +412,7 @@
         card.className = 'bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center justify-between';
         card.innerHTML = `
           <div class="flex items-center space-x-3 flex-1 pr-2">
-            <div class="w-14 h-14 bg-amber-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">${item.emoji}</div>
+            ${item.imageUrl ? `<img src="${item.imageUrl}" class="w-14 h-14 rounded-xl object-cover flex-shrink-0">` : `<div class="w-14 h-14 bg-amber-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">${item.emoji}</div>`}
             <div>
               <div class="flex items-center space-x-1.5">
                 <span class="font-bold text-sm text-gray-800">${item.name}</span>
@@ -439,8 +457,8 @@
         cartBar.classList.remove('hidden');
         document.getElementById('cartItemCount').textContent = count;
 
-        let discount = subtotal >= 50 ? 5 : 0;
-        let deliveryFee = fulfillment === 'delivery' ? (subtotal >= 120 ? 0 : 15) : 0;
+        let discount = subtotal >= shopCfg.minOrderForDiscount ? shopCfg.discountAmount : 0;
+        let deliveryFee = fulfillment === 'delivery' ? (subtotal >= shopCfg.minOrderForFreeDelivery ? 0 : shopCfg.deliveryFee) : 0;
         let total = Math.max(0, subtotal - discount + deliveryFee);
 
         document.getElementById('cartTotalText').textContent = total;
@@ -469,13 +487,13 @@
         const item = menu.find(m => m.id === id);
         if (item) subtotal += item.price * qty;
       }
-      let discount = subtotal >= 50 ? 5 : 0;
-      let deliveryFee = fulfillment === 'delivery' ? (subtotal >= 120 ? 0 : 15) : 0;
+      let discount = subtotal >= shopCfg.minOrderForDiscount ? shopCfg.discountAmount : 0;
+      let deliveryFee = fulfillment === 'delivery' ? (subtotal >= shopCfg.minOrderForFreeDelivery ? 0 : shopCfg.deliveryFee) : 0;
       let net = Math.max(0, subtotal - discount + deliveryFee);
 
       document.getElementById('modalSubtotal').textContent = `฿${subtotal}`;
       document.getElementById('modalDiscount').textContent = `-฿${discount}`;
-      document.getElementById('modalDelivery').textContent = deliveryFee === 0 ? 'ฟรี (ซื้อครบ 120.-)' : `฿${deliveryFee}`;
+      document.getElementById('modalDelivery').textContent = deliveryFee === 0 ? `ฟรี (ซื้อครบ ${shopCfg.minOrderForFreeDelivery}.-)` : `฿${deliveryFee}`;
       document.getElementById('modalNetTotal').textContent = `฿${net}`;
 
       // Render addon options from manager config
@@ -713,6 +731,7 @@
     let currentHistoryFilter = 'all';
 
     function openOrderHistoryModal() {
+      if (!isMember) { alert('กรุณาเข้าสู่ระบบก่อนดูประวัติการสั่งซื้อ'); return; }
       updateConsumptionMetrics();
       renderOrderHistory();
       document.getElementById('orderHistoryModal').classList.remove('hidden');
@@ -739,6 +758,7 @@
     }
 
     function updateConsumptionMetrics() {
+      if (!isMember) return;
       const validOrders = pastOrders.filter(o => o.status !== 'cancelled');
       let totalSpent = 0;
       let totalSticks = 0;
@@ -833,23 +853,22 @@
       const phone = p.trim();
       if (!/^0\\d{9}$/.test(phone)) { alert('เบอร์โทรไม่ถูกต้อง (ตัวอย่าง 0846112419)'); return; }
       const name = prompt('ชื่อ (ไม่จำเป็นต้องกรอก):', '') || '';
-      // match existing member if present
       const rs = window.remoteState;
       if (rs && rs.users && rs.users[phone]) {
         const u = rs.users[phone];
-        customerPhone = phone;
+        customerPhone = phone; isMember = true; stamps = u.stamps || 0;
         document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${u.name || name || phone}`;
         document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${phone}`;
         alert(`เข้าสู่ระบบสมาชิก ${u.name || phone} เรียบร้อย`);
       } else {
-        // create new member locally (will sync if connected)
         if (!window.customerMembers) window.customerMembers = {};
         window.customerMembers[phone] = { phoneNumber: phone, name: name.trim(), stamps: 0, totalOrders: 0 };
-        customerPhone = phone;
+        customerPhone = phone; isMember = true; stamps = 0;
         document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${name.trim() || phone}`;
         document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${phone}`;
         alert(`สร้างบัญชีสมาชิก ${name.trim() || phone} เรียบร้อย`);
       }
+      renderMemberVisibility();
     }
 
     // Firebase addon config
@@ -886,14 +905,41 @@
           let cfg = parsed.shopInfo && parsed.shopInfo.addonConfig;
           if (typeof cfg === 'string') { try { cfg = JSON.parse(cfg); } catch(e){ cfg = {}; } }
           window.addonConfig = cfg || {};
+          // Shop config for promos
+          shopCfg.minOrderForDiscount = si.minOrderForDiscount ?? 50;
+          shopCfg.discountAmount = si.discountAmount ?? 5;
+          shopCfg.minOrderForFreeDelivery = si.minOrderForFreeDelivery ?? 120;
+          shopCfg.deliveryFee = si.deliveryFee ?? 15;
+          shopCfg.stampsRequired = si.stampsRequiredForReward ?? 10;
+          shopCfg.promoBanner = si.showPromoBanner !== false;
+          renderPromoBanner();
+          // Menu from Firebase (real data)
+          if (Array.isArray(parsed.menuItems) && parsed.menuItems.length > 0) {
+            menu = parsed.menuItems
+              .filter(m => m.status !== 'HIDDEN')
+              .sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0))
+              .map(m => ({ id: m.id, cat: m.categoryId, name: m.name, price: m.price, stock: m.stockQty, bestseller: !!m.isBestseller, emoji: m.emoji || '🍢', desc: m.description || '', imageUrl: m.imageUrl || null }));
+            // Categories tabs
+            const tabsEl = document.getElementById('categoryTabs');
+            if (tabsEl && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+              tabsEl.innerHTML = parsed.categories.map(c => `<button onclick="filterCategory('${c.id}')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">${c.iconEmoji || ''} ${c.name}</button>`).join('');
+              tabsEl.firstChild.className = 'cat-btn bg-orange-600 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap shadow-sm';
+            }
+            renderMenu();
+            updateCartSummary();
+          }
+          if (isMember && parsed.users && parsed.users[customerPhone]) {
+            stamps = parsed.users[customerPhone].stamps || 0;
+            renderStamps();
+          }
         }).catch(()=>{});
       }).catch(()=>{});
     } catch (e) { console.error(e); }
 
-    // Init
-    renderStamps();
+    // Init (guest: no member data shown)
     renderMenu();
-    updateConsumptionMetrics();
+    renderMemberVisibility();
+    renderPromoBanner();
   </script>
 </body>
 </html>

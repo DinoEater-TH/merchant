@@ -269,20 +269,41 @@ fun CustomerScreen(viewModel: MainViewModel) {
                 .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(bottom = if (cartSummary.totalItemsCount > 0) 100.dp else 24.dp)
         ) {
-            // 1. Member Stamps & Loyalty Banner & Order History Section
-            item {
-                MemberLoyaltyCard(
-                    shopInfo = shopInfo,
-                    customerPhone = customerPhone,
-                    memberUser = currentUser,
-                    customerOrders = customerOrders,
-                    consumption = customerConsumption,
-                    onPhoneChangeClick = { viewModel.setPhoneInputDialogOpen(true) },
-                    onReorderClick = { viewModel.reorderLastOrder() },
-                    onOpenOrderHistoryClick = { viewModel.openOrderHistory() },
-                    onReorderSpecificOrder = { viewModel.reorderSpecificOrder(it) },
-                    onTrackOrder = { viewModel.viewOrderTracking(it) }
-                )
+            // 1. Member Stamps & Loyalty Banner & Order History Section (hidden for guests)
+            if (customerPhone.isNotBlank()) {
+                item {
+                    MemberLoyaltyCard(
+                        shopInfo = shopInfo,
+                        customerPhone = customerPhone,
+                        memberUser = currentUser,
+                        customerOrders = customerOrders,
+                        consumption = customerConsumption,
+                        onPhoneChangeClick = { viewModel.setPhoneInputDialogOpen(true) },
+                        onReorderClick = { viewModel.reorderLastOrder() },
+                        onOpenOrderHistoryClick = { viewModel.openOrderHistory() },
+                        onReorderSpecificOrder = { viewModel.reorderSpecificOrder(it) },
+                        onTrackOrder = { viewModel.viewOrderTracking(it) }
+                    )
+                }
+            } else {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .clickable { viewModel.setPhoneInputDialogOpen(true) }
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "เข้าสู่ระบบ/สมัครสมาชิกเพื่อสะสมแต้ม",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = OrangePrimary
+                        )
+                    }
+                }
             }
 
             // 2. Active Order Tracker Alert (if order is active)
@@ -296,8 +317,10 @@ fun CustomerScreen(viewModel: MainViewModel) {
             }
 
             // 3. Shop Promotion Highlights
-            item {
-                PromotionTicker(shopInfo = shopInfo)
+            if (shopInfo.showPromoBanner) {
+                item {
+                    PromotionTicker(shopInfo = shopInfo)
+                }
             }
 
             // 4. Horizontal Categories Scroll
