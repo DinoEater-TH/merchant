@@ -71,6 +71,8 @@ fun InventoryView(viewModel: MainViewModel) {
     val categories by viewModel.categories.collectAsState()
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingItem by remember { mutableStateOf<MenuItem?>(null) }
+    var deletingItem by remember { mutableStateOf<MenuItem?>(null) }
 
     // Group exactly like the customer page: shop categories in configured order,
     // only categories that actually contain menu items.
@@ -161,6 +163,9 @@ fun InventoryView(viewModel: MainViewModel) {
                         item = item,
                         onStatusChange = { newStatus -> viewModel.updateItemStatus(item.id, newStatus) },
                         onStockChange = { newStock -> viewModel.updateItemStock(item.id, newStock) },
+                        onUnlimitedChange = { unlimited -> viewModel.setItemUnlimitedStock(item.id, unlimited) },
+                        onEdit = { editingItem = item },
+                        onDelete = { deletingItem = item },
                         onMove = { dir -> viewModel.moveMenuItem(item.id, dir) }
                     )
                 }
@@ -178,12 +183,54 @@ fun InventoryView(viewModel: MainViewModel) {
                 }
             )
         }
+
+        editingItem?.let { item ->
+            AddMenuItemDialog(
+                categories = categories,
+                existing = item,
+                onDismiss = { editingItem = null },
+                onSave = { updated ->
+                    viewModel.addOrUpdateMenuItem(updated)
+                    editingItem = null
+                    Toast.makeText(context, "แก้ไขเมนู ${updated.name} แล้ว", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        deletingItem?.let { item ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { deletingItem = null },
+                title = { Text("ลบเมนู?", fontWeight = FontWeight.Bold) },
+                text = { Text("ต้องการลบเมนู “${item.name}” ออกจากระบบใช่หรือไม่? เมนูนี้จะไม่แสดงให้ลูกค้าเห็นอีก") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteMenuItem(item.id)
+                            Toast.makeText(context, "ลบเมนู ${item.name} แล้ว", Toast.LENGTH_SHORT).show()
+                            deletingItem = null
+                        }
+                    ) {
+                        Text("ลบเมนู", color = ChiliRed, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deletingItem = null }) { Text("ยกเลิก") }
+                }
+            )
+        }
     }
 }
 
 @Composable
 fun InventoryCategoryHeader(category: Category?, items: List<MenuItem>) {
-    val stockTotal = items.sumOf { it.stockQty }
+    val limitedTotal = items.filter { !it.isUnlimitedStock }.sumOf { it.stockQty }
+    val unlimitedCount = items.count { it.isUnlimitedStock }
+    val totalText = when {
+        items.isEmpty() -> ""
+        unlimitedCount == items.size -> "${items.size} รายการ • ไม่จำกัด ∞"
+        unlimitedCount > 0 -> "${items.size} รายการ • คงเหลือ $limitedTotal ชิ้น • ไม่จำกัด $unlimitedCount รายการ"
+        else -> "${items.size} รายการ • คงเหลือ $limitedTotal ชิ้น"
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -197,7 +244,7 @@ fun InventoryCategoryHeader(category: Category?, items: List<MenuItem>) {
             fontSize = 14.sp
         )
         Text(
-            text = "${items.size} รายการ • คงเหลือ $stockTotal ชิ้น",
+            text = totalText,
             fontSize = 10.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -209,6 +256,9 @@ fun InventoryItemCard(
     item: MenuItem,
     onStatusChange: (ItemStatus) -> Unit,
     onStockChange: (Int) -> Unit,
+    onUnlimitedChange: (Boolean) -> Unit = {},
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit = {},
     onMove: (Int) -> Unit = {}
 ) {
     Card(
@@ -245,8 +295,16 @@ fun InventoryItemCard(
                     }
                 }
 
-                // Current stock stepper
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Current stock stepper (hidden when unlimited)
+                if (item.isUnlimitedStock) {
+                    Text(
+                        text = "∞ ไม่จำกัด",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp,
+                        color = CucumberGreen
+                    )
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { onStockChange(item.stockQty - 5) },
                         modifier = Modifier
@@ -271,6 +329,7 @@ fun InventoryItemCard(
                             .background(Color(0xFFFFF3E0), CircleShape)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "เพิ่ม 5", tint = OrangePrimary, modifier = Modifier.size(14.dp))
+                    }
                     }
                 }
             }
@@ -308,6 +367,34 @@ fun InventoryItemCard(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Stock mode: unlimited (default) or limited with visible remaining count
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(
+                        checked = item.isUnlimitedStock,
+                        onCheckedChange = { onUnlimitedChange(it) }
+                    )
+                    Text(
+                        text = if (item.isUnlimitedStock) "สต็อกไม่จำกัด (ค่าเริ่มต้น)" else "จำกัดสต็อก — แสดงคงเหลือให้ลูกค้า",
+                        fontSize = 12.sp
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    OutlinedButton(onClick = onEdit, shape = RoundedCornerShape(8.dp)) {
+                        Text("✏️ แก้ไข", fontSize = 12.sp)
+                    }
+                    OutlinedButton(onClick = onDelete, shape = RoundedCornerShape(8.dp)) {
+                        Text("🗑️ ลบ", fontSize = 12.sp, color = ChiliRed)
+                    }
+                }
+            }
         }
     }
 }
@@ -316,24 +403,26 @@ fun InventoryItemCard(
 fun AddMenuItemDialog(
     categories: List<Category>,
     onDismiss: () -> Unit,
-    onSave: (MenuItem) -> Unit
+    onSave: (MenuItem) -> Unit,
+    existing: MenuItem? = null
 ) {
-    var id by remember { mutableStateOf("item_${System.currentTimeMillis()}") }
-    var name by remember { mutableStateOf("") }
+    var id by remember { mutableStateOf(existing?.id ?: "item_${System.currentTimeMillis()}") }
+    var name by remember { mutableStateOf(existing?.name ?: "") }
     val selectableCategories = remember(categories) {
         categories.filter { it.id != "all" }.sortedBy { it.sort }
     }
-    var categoryId by remember { mutableStateOf(selectableCategories.firstOrNull()?.id ?: "cat_1") }
-    var price by remember { mutableStateOf("") }
-    var directCost by remember { mutableStateOf("") }
-    var stockQty by remember { mutableStateOf("30") }
-    var defaultResetQty by remember { mutableStateOf("30") }
-    var emoji by remember { mutableStateOf("🍢") }
-    var description by remember { mutableStateOf("") }
+    var categoryId by remember { mutableStateOf(existing?.categoryId ?: selectableCategories.firstOrNull()?.id ?: "cat_1") }
+    var price by remember { mutableStateOf(existing?.price?.toString() ?: "") }
+    var directCost by remember { mutableStateOf(existing?.directCost?.toString() ?: "") }
+    var isUnlimitedStock by remember { mutableStateOf(existing?.isUnlimitedStock ?: true) }
+    var stockQty by remember { mutableStateOf(existing?.stockQty?.toString() ?: "30") }
+    var defaultResetQty by remember { mutableStateOf(existing?.defaultResetQty?.toString() ?: "30") }
+    var emoji by remember { mutableStateOf(existing?.emoji ?: "🍢") }
+    var description by remember { mutableStateOf(existing?.description ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("เพิ่มเมนูใหม่", fontWeight = FontWeight.Bold) },
+        title = { Text(if (existing != null) "แก้ไขเมนู" else "เพิ่มเมนูใหม่", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("ชื่อเมนู") }, modifier = Modifier.fillMaxWidth())
@@ -352,8 +441,14 @@ fun AddMenuItemDialog(
                 }
                 OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("ราคาขาย (บาท)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = directCost, onValueChange = { directCost = it }, label = { Text("ต้นทุนตรง (บาท)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = stockQty, onValueChange = { stockQty = it }, label = { Text("สต็อกเริ่มต้น") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = defaultResetQty, onValueChange = { defaultResetQty = it }, label = { Text("สต็อก reset รายวัน") }, modifier = Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = isUnlimitedStock, onCheckedChange = { isUnlimitedStock = it })
+                    Text("สต็อกไม่จำกัด (ค่าเริ่มต้น — ไม่แสดงคงเหลือให้ลูกค้า)", fontSize = 12.sp)
+                }
+                if (!isUnlimitedStock) {
+                    OutlinedTextField(value = stockQty, onValueChange = { stockQty = it }, label = { Text("สต็อกคงเหลือที่จะแสดงให้ลูกค้า") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = defaultResetQty, onValueChange = { defaultResetQty = it }, label = { Text("สต็อก reset รายวัน") }, modifier = Modifier.fillMaxWidth())
+                }
                 OutlinedTextField(value = emoji, onValueChange = { emoji = it }, label = { Text("อีโมจิ") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("คำอธิบาย") }, modifier = Modifier.fillMaxWidth())
             }
@@ -372,12 +467,17 @@ fun AddMenuItemDialog(
                         categoryId = categoryId.trim().ifBlank { "cat_1" },
                         price = p,
                         directCost = c,
-                        status = ItemStatus.ACTIVE,
+                        status = existing?.status ?: ItemStatus.ACTIVE,
                         stockQty = s,
+                        isUnlimitedStock = isUnlimitedStock,
                         defaultResetQty = r,
-                        isBestseller = false,
+                        isBestseller = existing?.isBestseller ?: false,
                         emoji = emoji.ifBlank { "🍢" },
-                        description = description.trim()
+                        description = description.trim(),
+                        imageUrl = existing?.imageUrl,
+                        sortOrder = existing?.sortOrder ?: 0,
+                        packagePrice = existing?.packagePrice ?: 0.0,
+                        piecesPerPackage = existing?.piecesPerPackage ?: 0
                     )
                 )
             }) { Text("บันทึก") }

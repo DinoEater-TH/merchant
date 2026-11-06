@@ -924,7 +924,8 @@ fun MenuItemCard(
     onAdd: () -> Unit,
     onRemove: () -> Unit
 ) {
-    val isOutOfStock = item.status == ItemStatus.OUT_OF_STOCK || item.stockQty <= 0
+    val isOutOfStock = item.status == ItemStatus.OUT_OF_STOCK ||
+        (!item.isUnlimitedStock && item.stockQty <= 0)
 
     Card(
         modifier = Modifier
@@ -1011,13 +1012,14 @@ fun MenuItemCard(
                             color = ChiliRed,
                             fontWeight = FontWeight.Bold
                         )
-                    } else {
+                    } else if (!item.isUnlimitedStock) {
                         Text(
                             text = "คงเหลือ ${item.stockQty} ไม้",
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
                     }
+                    // Unlimited stock: don't show remaining count to customers.
                 }
             }
 

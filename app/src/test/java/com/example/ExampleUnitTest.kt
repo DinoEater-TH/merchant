@@ -39,7 +39,8 @@ class ExampleUnitTest {
                 categoryId = "cat_1",
                 price = 10.0,
                 directCost = 5.5,
-                stockQty = 50
+                stockQty = 50,
+                isUnlimitedStock = false
             )
         )
         val initialBeefStock = repo.menuItems.value.find { it.id == "item_01" }?.stockQty ?: 50

@@ -76,6 +76,7 @@ data class MenuItem(
     val directCost: Double, // Cost per unit (ลูกชิ้น + น้ำจิ้ม + ไม้)
     val status: ItemStatus = ItemStatus.ACTIVE,
     val stockQty: Int = 50,
+    val isUnlimitedStock: Boolean = true,
     val defaultResetQty: Int = 50,
     val isBestseller: Boolean = false,
     val emoji: String = "🍢",

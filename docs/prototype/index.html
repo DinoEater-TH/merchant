@@ -545,7 +545,7 @@
               <p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p>
               <div class="flex items-center space-x-2 mt-1">
                 <span class="font-extrabold text-orange-600 text-base">฿${item.price}</span>
-                <span class="text-[11px] text-gray-400">คงเหลือ ${item.stock} ไม้</span>
+                ${item.unlimited ? '' : `<span class="text-[11px] text-gray-400">คงเหลือ ${item.stock} ไม้</span>`}
               </div>
             </div>
           </div>
@@ -800,11 +800,11 @@
           const parsed = typeof current === 'string' ? JSON.parse(current) : current;
           if (!Array.isArray(parsed.orders)) parsed.orders = [];
           parsed.orders.unshift(order);
-          // Deduct stock like the Android app does
+          // Deduct stock like the Android app does (only limited-stock items)
           if (Array.isArray(parsed.menuItems)) {
             order.items.forEach(oi => {
               const mi = parsed.menuItems.find(x => x.id === oi.itemId);
-              if (mi) {
+              if (mi && mi.isUnlimitedStock === false) {
                 mi.stockQty = Math.max(0, (mi.stockQty || 0) - oi.quantity);
                 if (mi.stockQty === 0) mi.status = 'OUT_OF_STOCK';
               }
@@ -987,7 +987,7 @@
       cart = {};
       (order.items || []).forEach(it => {
         const m = menu.find(x => x.name === it.name);
-        if (m && m.stock > 0) cart[m.id] = it.qty;
+        if (m && (m.unlimited || m.stock > 0)) cart[m.id] = it.qty;
       });
       closeOrderHistoryModal();
       updateCartSummary();
@@ -1107,7 +1107,7 @@
             menu = parsed.menuItems
               .filter(m => m.status !== 'HIDDEN')
               .sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0))
-              .map(m => ({ id: m.id, cat: m.categoryId, name: m.name, price: m.price, stock: m.stockQty, bestseller: !!m.isBestseller, emoji: m.emoji || '🍢', desc: m.description || '', imageUrl: m.imageUrl || null }));
+              .map(m => ({ id: m.id, cat: m.categoryId, name: m.name, price: m.price, stock: m.stockQty, unlimited: m.isUnlimitedStock !== false, bestseller: !!m.isBestseller, emoji: m.emoji || '🍢', desc: m.description || '', imageUrl: m.imageUrl || null }));
             // Categories tabs - only categories that have items
             const tabsEl = document.getElementById('categoryTabs');
             if (tabsEl && Array.isArray(parsed.categories) && parsed.categories.length > 0) {

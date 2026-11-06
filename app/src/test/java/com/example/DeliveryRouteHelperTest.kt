@@ -10,6 +10,14 @@ import kotlin.math.ceil
 class DeliveryRouteHelperTest {
 
     @Test
+    fun menuItem_unlimitedByDefault() {
+        val item = com.example.data.model.MenuItem(
+            id = "item_test", name = "test", categoryId = "cat_1", price = 10.0, directCost = 5.0
+        )
+        assertEquals(true, item.isUnlimitedStock)
+    }
+
+    @Test
     fun parseCoordinate_valid() {
         val parsed = DeliveryRouteHelper.parseCoordinate("16.442100, 102.835800")
         assertNotNull(parsed)

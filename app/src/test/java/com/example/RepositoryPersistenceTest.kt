@@ -35,7 +35,8 @@ class RepositoryPersistenceTest {
                 categoryId = "cat_1",
                 price = 10.0,
                 directCost = 5.5,
-                stockQty = 10
+                stockQty = 10,
+                isUnlimitedStock = false
             )
         )
         first.updateItemStock("item_01", 7)
@@ -61,7 +62,8 @@ class RepositoryPersistenceTest {
                 categoryId = "cat_1",
                 price = 10.0,
                 directCost = 5.5,
-                stockQty = 10
+                stockQty = 10,
+                isUnlimitedStock = false
             )
         )
         val before = first.menuItems.value.first { it.id == "item_01" }.stockQty

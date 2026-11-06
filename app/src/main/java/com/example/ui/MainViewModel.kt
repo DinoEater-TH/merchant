@@ -293,10 +293,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addToCart(item: MenuItem) {
-        if (item.status == ItemStatus.OUT_OF_STOCK || item.stockQty <= 0) return
+        if (item.status == ItemStatus.OUT_OF_STOCK) return
+        if (!item.isUnlimitedStock && item.stockQty <= 0) return
         val current = _cart.value.toMutableMap()
         val currentQty = current[item.id] ?: 0
-        if (currentQty < item.stockQty) {
+        if (item.isUnlimitedStock || currentQty < item.stockQty) {
             current[item.id] = currentQty + 1
             _cart.value = current
         }
@@ -543,6 +544,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addOrUpdateMenuItem(item: MenuItem) {
         repository.addOrUpdateMenuItem(item)
+    }
+
+    fun deleteMenuItem(itemId: String) {
+        repository.deleteMenuItem(itemId)
+    }
+
+    fun setItemUnlimitedStock(itemId: String, unlimited: Boolean) {
+        repository.setItemUnlimitedStock(itemId, unlimited)
     }
 
     fun moveMenuItem(itemId: String, direction: Int) {

@@ -188,15 +188,17 @@ class MeatballRepository(context: Context? = null) {
         _orders.value = currentOrders
         _currentActiveOrderId.value = newOrder.id
 
-        // Auto deduct stock
+        // Auto deduct stock (only when the item tracks limited stock)
         val currentMenu = _menuItems.value.toMutableList()
         newOrder.items.forEach { orderItem ->
             val index = currentMenu.indexOfFirst { it.id == orderItem.itemId }
             if (index != -1) {
                 val item = currentMenu[index]
-                val updatedStock = (item.stockQty - orderItem.quantity).coerceAtLeast(0)
-                val newStatus = if (updatedStock == 0) ItemStatus.OUT_OF_STOCK else item.status
-                currentMenu[index] = item.copy(stockQty = updatedStock, status = newStatus)
+                if (!item.isUnlimitedStock) {
+                    val updatedStock = (item.stockQty - orderItem.quantity).coerceAtLeast(0)
+                    val newStatus = if (updatedStock == 0) ItemStatus.OUT_OF_STOCK else item.status
+                    currentMenu[index] = item.copy(stockQty = updatedStock, status = newStatus)
+                }
             }
         }
         _menuItems.value = currentMenu
@@ -246,10 +248,14 @@ class MeatballRepository(context: Context? = null) {
 
     fun oneClickStockReset() {
         _menuItems.value = _menuItems.value.map { item ->
-            item.copy(
-                stockQty = item.defaultResetQty,
-                status = if (item.defaultResetQty > 0 && item.status == ItemStatus.OUT_OF_STOCK) ItemStatus.ACTIVE else item.status
-            )
+            if (item.isUnlimitedStock) {
+                item.copy(status = if (item.status == ItemStatus.OUT_OF_STOCK) ItemStatus.ACTIVE else item.status)
+            } else {
+                item.copy(
+                    stockQty = item.defaultResetQty,
+                    status = if (item.defaultResetQty > 0 && item.status == ItemStatus.OUT_OF_STOCK) ItemStatus.ACTIVE else item.status
+                )
+            }
         }
         persistState()
     }
@@ -283,6 +289,25 @@ fun addOrUpdateMenuItem(item: MenuItem) {
             current.add(item)
         }
         _menuItems.value = current
+        persistState()
+    }
+
+    fun deleteMenuItem(itemId: String) {
+        _menuItems.value = _menuItems.value.filterNot { it.id == itemId }
+        persistState()
+    }
+
+    fun setItemUnlimitedStock(itemId: String, unlimited: Boolean) {
+        _menuItems.value = _menuItems.value.map { item ->
+            if (item.id == itemId) {
+                item.copy(
+                    isUnlimitedStock = unlimited,
+                    status = if (unlimited) {
+                        if (item.status == ItemStatus.OUT_OF_STOCK) ItemStatus.ACTIVE else item.status
+                    } else item.status
+                )
+            } else item
+        }
         persistState()
     }
 

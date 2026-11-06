@@ -400,9 +400,10 @@
         <input id="m_price" type="number" placeholder="ราคาขาย (บาท)" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <div class="flex gap-2">
-        <input id="m_stock" type="number" placeholder="สต็อกเริ่มต้น" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+        <input id="m_stock" type="number" placeholder="สต็อกเริ่มต้น (เฉพาะแบบจำกัด)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
         <input id="m_emoji" placeholder="อีโมจิ" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
       </div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="m_unlimited" checked onchange="toggleStockInputs()"> สต็อกไม่จำกัด (ค่าเริ่มต้น — ไม่แสดงคงเหลือให้ลูกค้า)</label>
       <div class="flex gap-2">
         <input id="m_packagePrice" type="number" placeholder="ราคาถุง (บาท)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
         <input id="m_pieces" type="number" placeholder="จำนวนต่อถุง" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
@@ -418,6 +419,8 @@
 
   <script>
     // ---------- State ----------
+    function isUnlimitedStock(item) { return !item || item.isUnlimitedStock !== false; }
+    function stockText(item) { return isUnlimitedStock(item) ? 'สต็อก ∞ ไม่จำกัด' : `สต็อก ${item.stockQty || 0}`; }
     const DEFAULT_STATE = {
       shopInfo: {
         name: "DinoEater ลูกชิ้นทอด",
@@ -941,10 +944,11 @@
           <div class="flex justify-between items-center border rounded-lg p-2">
             <div class="flex items-center gap-2">
               ${m.imageUrl ? `<img src="${m.imageUrl}" class="w-10 h-10 rounded object-cover">` : `<span class="text-xl">${m.emoji || '🍢'}</span>`}
-              <div><div class="text-sm font-bold">${m.name}</div><div class="text-xs text-gray-500">฿${m.price} • สต็อก ${m.stockQty}</div></div>
+              <div><div class="text-sm font-bold">${m.name}</div><div class="text-xs text-gray-500">฿${m.price} • ${stockText(m)}</div></div>
             </div>
             <div class="flex items-center gap-1">
               <button onclick="openEditMenu('${m.id}')" title="แก้ไขเมนู / หมวดหมู่" class="w-7 h-7 bg-blue-50 text-blue-600 rounded-full text-xs">✏️</button>
+              <button onclick="deleteMenuItem('${m.id}')" title="ลบเมนู" class="w-7 h-7 bg-red-50 text-red-600 rounded-full text-xs">🗑️</button>
               <button onclick="posChangeQty('${m.id}', -1)" class="w-7 h-7 bg-gray-100 rounded-full">-</button>
               <span class="px-1 font-bold">${posCart[m.id] || 0}</span>
               <button onclick="posChangeQty('${m.id}', 1)" class="w-7 h-7 bg-green-100 text-green-700 rounded-full">+</button>
@@ -1026,10 +1030,10 @@
       };
       if (!state.orders) state.orders = [];
       state.orders.unshift(order);
-      // stock deduction
+      // stock deduction (only for limited-stock items)
       (state.menuItems || []).forEach(m => {
         const q = posCart[m.id] || 0;
-        if (q > 0) m.stockQty = Math.max(0, (m.stockQty || 0) - q);
+        if (q > 0 && !isUnlimitedStock(m)) m.stockQty = Math.max(0, (m.stockQty || 0) - q);
       });
       // member stamps
       if (phone) {
@@ -1061,7 +1065,18 @@
     }
 
     // ---------- Inventory ----------
+    function deleteMenuItem(id) {
+      const item = (state.menuItems || []).find(x => x.id === id);
+      if (!item) return;
+      if (!confirm(`ต้องการลบเมนู "${item.name}" ออกจากระบบใช่หรือไม่?`)) return;
+      state.menuItems = (state.menuItems || []).filter(x => x.id !== id);
+      delete posCart[id];
+      renderInventory(); renderPos(); renderOrders(); renderSales();
+      schedulePush();
+    }
+
     function inventoryItemCard(item) {
+      const unlimited = isUnlimitedStock(item);
       return `
         <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
           <div class="flex justify-between items-center">
@@ -1069,20 +1084,24 @@
               ${item.imageUrl ? `<img src="${item.imageUrl}" class="w-12 h-12 rounded-lg object-cover">` : `<span class="text-2xl">${item.emoji || '🍢'}</span>`}
               <div>
                 <div class="font-bold text-sm">${item.name}</div>
-                <div class="text-xs text-gray-500">฿${item.price} (ต้นทุน ฿${item.directCost}) • สต็อก ${item.stockQty}</div>
+                <div class="text-xs text-gray-500">฿${item.price} (ต้นทุน ฿${item.directCost}) • ${stockText(item)}</div>
               </div>
             </div>
-            <div class="flex items-center gap-1">
-              <button onclick="changeStock('${item.id}', -5)" class="w-7 h-7 bg-gray-100 rounded-full text-sm">-</button>
-              <span class="font-bold px-2 ${item.stockQty === 0 ? 'text-red-500' : ''}">${item.stockQty}</span>
-              <button onclick="changeStock('${item.id}', 5)" class="w-7 h-7 bg-orange-100 text-orange-600 rounded-full text-sm">+</button>
-            </div>
+            ${unlimited
+              ? '<span class="font-bold px-2 text-green-600">∞ ไม่จำกัด</span>'
+              : `<div class="flex items-center gap-1">
+                  <button onclick="changeStock('${item.id}', -5)" class="w-7 h-7 bg-gray-100 rounded-full text-sm">-</button>
+                  <span class="font-bold px-2 ${item.stockQty === 0 ? 'text-red-500' : ''}">${item.stockQty}</span>
+                  <button onclick="changeStock('${item.id}', 5)" class="w-7 h-7 bg-orange-100 text-orange-600 rounded-full text-sm">+</button>
+                </div>`}
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2 flex-wrap">
             <button onclick="setItemStatus('${item.id}','ACTIVE')" class="px-2 py-1 rounded text-xs ${item.status==='ACTIVE'?'bg-green-100 text-green-700 font-bold':'bg-gray-100'}">🟢 ขายปกติ</button>
             <button onclick="setItemStatus('${item.id}','OUT_OF_STOCK')" class="px-2 py-1 rounded text-xs ${item.status==='OUT_OF_STOCK'?'bg-yellow-100 text-yellow-700 font-bold':'bg-gray-100'}">🟡 สินค้าหมด</button>
             <button onclick="setItemStatus('${item.id}','HIDDEN')" class="px-2 py-1 rounded text-xs ${item.status==='HIDDEN'?'bg-red-100 text-red-700 font-bold':'bg-gray-100'}">🔴 ซ่อน</button>
+            <button onclick="toggleUnlimitedStock('${item.id}')" class="px-2 py-1 rounded text-xs font-bold ${unlimited ? 'bg-green-100 text-green-700' : 'bg-gray-100'}">${unlimited ? '∞ ไม่จำกัด' : 'จำกัดสต็อก'}</button>
             <button onclick="openEditMenu('${item.id}')" class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700 font-bold">✏️ แก้ไข</button>
+            <button onclick="deleteMenuItem('${item.id}')" class="px-2 py-1 rounded text-xs bg-red-100 text-red-700 font-bold">🗑️ ลบ</button>
           </div>
         </div>`;
     }
@@ -1111,12 +1130,19 @@
       const items = state.menuItems || [];
       if (items.length === 0) { el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">ยังไม่มีเมนู</p>'; return; }
       el.innerHTML = inventoryGroups().map(g => {
-        const stockTotal = g.items.reduce((s, i) => s + (i.stockQty || 0), 0);
+        const limited = g.items.filter(i => !isUnlimitedStock(i));
+        const limitedTotal = limited.reduce((s, i) => s + (i.stockQty || 0), 0);
+        const unlimitedCount = g.items.length - limited.length;
+        const totalLabel = unlimitedCount === g.items.length
+          ? `${g.items.length} รายการ • ไม่จำกัด ∞`
+          : unlimitedCount > 0
+            ? `${g.items.length} รายการ • คงเหลือ ${limitedTotal} ชิ้น • ไม่จำกัด ${unlimitedCount} รายการ`
+            : `${g.items.length} รายการ • คงเหลือ ${limitedTotal} ชิ้น`;
         return `
           <div class="space-y-2">
             <div class="flex justify-between items-end px-1 pt-2">
               <h4 class="font-bold text-sm">${g.category.iconEmoji || '🍽️'} ${g.category.name}</h4>
-              <span class="text-[11px] text-gray-500">${g.items.length} รายการ • คงเหลือ ${stockTotal} ชิ้น</span>
+              <span class="text-[11px] text-gray-500">${totalLabel}</span>
             </div>
             ${g.items.map(inventoryItemCard).join('')}
           </div>`;
@@ -1125,10 +1151,18 @@
 
     function changeStock(id, delta) {
       const item = (state.menuItems || []).find(x => x.id === id);
-      if (!item) return;
+      if (!item || isUnlimitedStock(item)) return;
       item.stockQty = Math.max(0, (item.stockQty || 0) + delta);
       if (item.stockQty === 0) item.status = 'OUT_OF_STOCK';
       renderInventory();
+      schedulePush();
+    }
+    function toggleUnlimitedStock(id) {
+      const item = (state.menuItems || []).find(x => x.id === id);
+      if (!item) return;
+      item.isUnlimitedStock = !isUnlimitedStock(item);
+      if (item.isUnlimitedStock && item.status === 'OUT_OF_STOCK') item.status = 'ACTIVE';
+      renderInventory(); renderPos();
       schedulePush();
     }
     function setItemStatus(id, status) {
@@ -1139,7 +1173,14 @@
       schedulePush();
     }
     function oneClickReset() {
-      (state.menuItems || []).forEach(item => { item.stockQty = item.defaultResetQty || item.stockQty; if (item.stockQty > 0 && item.status === 'OUT_OF_STOCK') item.status = 'ACTIVE'; });
+      (state.menuItems || []).forEach(item => {
+        if (isUnlimitedStock(item)) {
+          if (item.status === 'OUT_OF_STOCK') item.status = 'ACTIVE';
+          return;
+        }
+        item.stockQty = item.defaultResetQty || item.stockQty;
+        if (item.stockQty > 0 && item.status === 'OUT_OF_STOCK') item.status = 'ACTIVE';
+      });
       renderInventory();
       schedulePush();
       alert('รีเซ็ตสต็อกเรียบร้อย');
@@ -1161,8 +1202,16 @@
       document.getElementById('m_packagePrice').value = m.packagePrice ?? '';
       document.getElementById('m_pieces').value = m.piecesPerPackage ?? '';
       document.getElementById('m_stock').value = m.stockQty ?? '';
+      document.getElementById('m_unlimited').checked = isUnlimitedStock(m);
+      toggleStockInputs();
       document.getElementById('m_emoji').value = m.emoji || '🍢';
       document.getElementById('m_desc').value = m.description || '';
+    }
+    function toggleStockInputs() {
+      const unlimited = document.getElementById('m_unlimited').checked;
+      const stockEl = document.getElementById('m_stock');
+      stockEl.disabled = unlimited;
+      stockEl.classList.toggle('opacity-50', unlimited);
     }
     function openAddMenuModal() {
       document.getElementById('m_name').value = '';
@@ -1170,6 +1219,8 @@
       document.getElementById('m_packagePrice').value = '';
       document.getElementById('m_pieces').value = '';
       document.getElementById('m_stock').value = '30';
+      document.getElementById('m_unlimited').checked = true;
+      toggleStockInputs();
       document.getElementById('m_emoji').value = '🍢';
       document.getElementById('m_desc').value = '';
       document.getElementById('m_image').value = '';
@@ -1207,6 +1258,7 @@
       const pieces = parseInt(document.getElementById('m_pieces').value) || 0;
       const cost = (packagePrice > 0 && pieces > 0) ? (packagePrice / pieces) : 0;
       const stock = parseInt(document.getElementById('m_stock').value) || 0;
+      const unlimited = document.getElementById('m_unlimited').checked;
       const emoji = document.getElementById('m_emoji').value.trim() || '🍢';
       const desc = document.getElementById('m_desc').value.trim();
       const file = document.getElementById('m_image').files[0];
@@ -1219,12 +1271,13 @@
         if (editingMenuId) {
           const existing = (state.menuItems || []).find(x => x.id === editingMenuId);
           if (existing) {
-            existing.name = name; existing.categoryId = category; existing.price = price; existing.directCost = cost; existing.stockQty = stock; existing.emoji = emoji; existing.description = desc; existing.packagePrice = packagePrice; existing.piecesPerPackage = pieces;
+            existing.name = name; existing.categoryId = category; existing.price = price; existing.directCost = cost; existing.stockQty = stock; existing.isUnlimitedStock = unlimited; existing.emoji = emoji; existing.description = desc; existing.packagePrice = packagePrice; existing.piecesPerPackage = pieces;
+            if (unlimited && existing.status === 'OUT_OF_STOCK') existing.status = 'ACTIVE';
             if (imageUrl) existing.imageUrl = imageUrl;
           }
           editingMenuId = null;
         } else {
-          const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, sortOrder: (state.menuItems || []).length };
+          const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, isUnlimitedStock: unlimited, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, sortOrder: (state.menuItems || []).length };
           if (!state.menuItems) state.menuItems = [];
           state.menuItems.push(item);
         }
