@@ -1,114 +1,74 @@
 {
-  "shop_info": {
-    "name": "ร้านลูกชิ้น DinoEater",
-    "logo_url": "https://via.placeholder.com/150",
-    "promptpay_number": "0812345678"
+  "shopInfo": {
+    "name": "DinoEater ลูกชิ้นทอด",
+    "slogan": "ลูกชิ้นทอดในตำนาน น้ำจิ้มมะขามรสเด็ด กรอบนอกนุ่มใน",
+    "promptPayNumber": "084-611-2419",
+    "promptPayName": "นายเอ็ด ลูกชิ้นทอด",
+    "address": "ตลาดโต้รุ่ง ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น",
+    "openingHours": "10:00 - 20:30 น. (เปิดทุกวัน)",
+    "isOpen": true,
+    "deliveryFee": 15.0,
+    "deliveryFeePerKm": 0.0,
+    "maxDeliveryDistanceKm": 20.0,
+    "promoDeliveryPerKmEnabled": true,
+    "shopLat": null,
+    "shopLng": null,
+    "showShopLocation": true,
+    "minOrderForDiscount": 50.0,
+    "discountAmount": 5.0,
+    "minOrderForFreeDelivery": 120.0,
+    "stampsRequiredForReward": 10,
+    "rewardDescription": "ฟรี! ชุดลูกชิ้นรวมมิตร 1 ชุด",
+    "rewardItemId": "",
+    "showPromoBanner": true,
+    "promoDiscountEnabled": true,
+    "promoFreeDeliveryEnabled": true,
+    "promoRewardEnabled": true,
+    "aiBaseUrl": "",
+    "aiApiKey": "",
+    "aiModel": "gemini-2.5-flash-lite",
+    "addonConfig": "",
+    "showScanPayment": true,
+    "promptPayQrUri": null,
+    "logoType": "PRESET",
+    "logoUri": null,
+    "logoPresetId": "preset_logo_retro",
+    "logoEmoji": "🍢",
+    "stampType": "PRESET",
+    "stampIconUri": null,
+    "stampPresetId": "preset_stamp_badge",
+    "stampEmoji": "🍢"
   },
   "categories": [
-    { "id": "cat_1", "name": "ลูกชิ้นทอด", "sort": 1 },
-    { "id": "cat_2", "name": "เครื่องดื่ม", "sort": 2 },
-    { "id": "cat_3", "name": "ของทานเล่น", "sort": 3 }
+    { "id": "all", "name": "ทั้งหมด", "sort": 0, "iconEmoji": "🥢" },
+    { "id": "cat_1", "name": "ลูกชิ้นทอด", "sort": 1, "iconEmoji": "🍢" },
+    { "id": "cat_2", "name": "ลูกชิ้นปิ้ง/นึ่ง", "sort": 2, "iconEmoji": "🍡" },
+    { "id": "cat_3", "name": "ชุดสุดคุ้ม Combo", "sort": 3, "iconEmoji": "⭐" },
+    { "id": "cat_4", "name": "เครื่องดื่ม & เคียง", "sort": 4, "iconEmoji": "🥤" }
   ],
-  "menu_items": {
-    "item_01": {
-      "name": "ลูกชิ้นเอ็นเนื้อ",
-      "category_id": "cat_1",
-      "price": 10,
-      "direct_cost": 5.5,
-      "status": "active",
-      "stock_qty": 50,
-      "default_reset_qty": 50,
-      "is_bestseller": true
-    },
-    "item_02": {
-      "name": "ลูกชิ้นปลา",
-      "category_id": "cat_1",
-      "price": 8,
-      "direct_cost": 4.0,
-      "status": "active",
-      "stock_qty": 60,
-      "default_reset_qty": 60,
-      "is_bestseller": true
-    },
-    "item_03": {
-      "name": "ลูกชิ้นหมู",
-      "category_id": "cat_1",
-      "price": 8,
-      "direct_cost": 4.5,
-      "status": "active",
-      "stock_qty": 40,
-      "default_reset_qty": 40,
-      "is_bestseller": false
-    },
-    "item_04": {
-      "name": "น้ำコーラ",
-      "category_id": "cat_2",
-      "price": 15,
-      "direct_cost": 8.0,
-      "status": "active",
-      "stock_qty": 30,
-      "default_reset_qty": 30,
-      "is_bestseller": false
-    },
-    "item_05": {
-      "name": "น้ำเปล่า",
-      "category_id": "cat_2",
-      "price": 10,
-      "direct_cost": 5.0,
-      "status": "active",
-      "stock_qty": 50,
-      "default_reset_qty": 50,
-      "is_bestseller": false
-    },
-    "item_06": {
-      "name": "ไส้กรอกทอด",
-      "category_id": "cat_3",
-      "price": 15,
-      "direct_cost": 9.0,
-      "status": "active",
-      "stock_qty": 25,
-      "default_reset_qty": 25,
-      "is_bestseller": false
-    }
-  },
+  "menuItems": [
+    { "id": "item_01", "name": "ลูกชิ้นเอ็นเนื้อ", "categoryId": "cat_1", "price": 10.0, "directCost": 5.5, "status": "ACTIVE", "stockQty": 50, "isUnlimitedStock": true, "defaultResetQty": 50, "isBestseller": true, "saleUnit": "ไม้", "emoji": "🍢", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
+    { "id": "item_02", "name": "ลูกชิ้นปลา", "categoryId": "cat_1", "price": 8.0, "directCost": 4.0, "status": "ACTIVE", "stockQty": 60, "isUnlimitedStock": true, "defaultResetQty": 60, "isBestseller": true, "saleUnit": "ไม้", "emoji": "🍢", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
+    { "id": "item_03", "name": "ลูกชิ้นหมู", "categoryId": "cat_1", "price": 8.0, "directCost": 4.5, "status": "ACTIVE", "stockQty": 40, "isUnlimitedStock": true, "defaultResetQty": 40, "isBestseller": false, "saleUnit": "ไม้", "emoji": "🍢", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
+    { "id": "item_04", "name": "น้ำコーラ", "categoryId": "cat_4", "price": 15.0, "directCost": 8.0, "status": "ACTIVE", "stockQty": 30, "isUnlimitedStock": true, "defaultResetQty": 30, "isBestseller": false, "saleUnit": "ขวด", "emoji": "🥤", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
+    { "id": "item_05", "name": "น้ำเปล่า", "categoryId": "cat_4", "price": 10.0, "directCost": 5.0, "status": "ACTIVE", "stockQty": 50, "isUnlimitedStock": true, "defaultResetQty": 50, "isBestseller": false, "saleUnit": "ขวด", "emoji": "💧", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
+    { "id": "item_06", "name": "ไส้กรอกทอด", "categoryId": "cat_3", "price": 15.0, "directCost": 9.0, "status": "ACTIVE", "stockQty": 25, "isUnlimitedStock": true, "defaultResetQty": 25, "isBestseller": false, "saleUnit": "ไม้", "emoji": "🌭", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 }
+  ],
+  "orders": [],
   "users": {
     "0812345678": {
+      "phoneNumber": "0812345678",
+      "name": "",
       "stamps": 7,
-      "total_orders": 7,
-      "last_order": {
-        "items": [{ "name": "ลูกชิ้นเอ็นเนื้อ", "qty": 5 }],
-        "total": 50
-      }
+      "totalOrders": 7,
+      "lastOrder": null
     }
   },
-  "orders": {},
-  "hidden_costs_log": [
-    {
-      "date": "2026-11-06",
-      "category": "utilities",
-      "item_name": "เติมแก๊สหุงต้ม 15 กก.",
-      "amount": 390
-    },
-    {
-      "date": "2026-11-06",
-      "category": "packaging",
-      "item_name": "ถุงพลาสติก 100 ใบ",
-      "amount": 50
-    }
+  "hiddenCosts": [
+    { "id": "hc_1", "date": "2026-11-06", "category": "utilities", "itemName": "เติมแก๊สหุงต้ม 15 กก.", "amount": 390.0, "notes": "" },
+    { "id": "hc_2", "date": "2026-11-06", "category": "supplies", "itemName": "ถุงพลาสติก 100 ใบ", "amount": 50.0, "notes": "" }
   ],
-  "promotions": {
-    "promo_1": {
-      "name": "ซื้อครบ 50 บาท ลด 5 บาท",
-      "min_amount": 50,
-      "discount": 5,
-      "active": true
-    },
-    "promo_2": {
-      "name": "ซื้อครบ 120 บาท ส่งฟรี",
-      "min_amount": 120,
-      "discount": 0,
-      "free_delivery": true,
-      "active": true
-    }
-  }
+  "currentCustomerPhone": "",
+  "currentActiveOrderId": null,
+  "adminPin": "09286840"
 }
