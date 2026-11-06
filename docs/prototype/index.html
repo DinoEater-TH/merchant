@@ -919,11 +919,13 @@
               .filter(m => m.status !== 'HIDDEN')
               .sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0))
               .map(m => ({ id: m.id, cat: m.categoryId, name: m.name, price: m.price, stock: m.stockQty, bestseller: !!m.isBestseller, emoji: m.emoji || '🍢', desc: m.description || '', imageUrl: m.imageUrl || null }));
-            // Categories tabs
+            // Categories tabs - only categories that have items
             const tabsEl = document.getElementById('categoryTabs');
             if (tabsEl && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
-              tabsEl.innerHTML = parsed.categories.map(c => `<button onclick="filterCategory('${c.id}')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">${c.iconEmoji || ''} ${c.name}</button>`).join('');
-              tabsEl.firstChild.className = 'cat-btn bg-orange-600 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap shadow-sm';
+              const usedCats = new Set(menu.map(m => m.cat));
+              const cats = parsed.categories.filter(c => c.id === 'all' || usedCats.has(c.id));
+              tabsEl.innerHTML = cats.map(c => `<button onclick="filterCategory('${c.id}')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">${c.iconEmoji || ''} ${c.name}</button>`).join('');
+              if (tabsEl.firstChild) tabsEl.firstChild.className = 'cat-btn bg-orange-600 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap shadow-sm';
             }
             renderMenu();
             updateCartSummary();

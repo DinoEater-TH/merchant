@@ -48,7 +48,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val adminPin: StateFlow<String> = repository.adminPin
 
-    private val _adminSelectedTab = MutableStateFlow(0)
+    private val _adminSelectedTab = MutableStateFlow(1)
     val adminSelectedTab: StateFlow<Int> = _adminSelectedTab.asStateFlow()
 
     private val _adminOrderFilter = MutableStateFlow<OrderStatus?>(null)

@@ -101,7 +101,7 @@
         <div class="flex justify-between font-bold"><span>ยอดรวม</span><span id="posTotal">฿0</span></div>
         <div class="flex gap-2">
           <button onclick="posConfirmOrder('cash')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm">💵 เงินสด</button>
-          <button onclick="posConfirmOrder('scan')" class="flex-1 bg-orange-600 text-white font-bold py-2 rounded-lg text-sm">📱 สแกน</button>
+          <button onclick="posConfirmOrder('scan')" class="hidden">📱 สแกน</button>
         </div>
       </div>
 
@@ -182,6 +182,10 @@
           <label class="text-xs text-gray-500">หมายเลข PromptPay</label>
           <input id="s_promptPay" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
+        <div>
+          <label class="text-xs text-gray-500">ที่อยู่ร้าน (แสดงให้ลูกค้า)</label>
+          <input id="s_address" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
         <!-- Promotions moved to dedicated tab -->
         <div>
           <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
@@ -234,6 +238,49 @@
       <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกโปรโมชั่น</button>
     </div>
   </section>
+
+  <!-- Hidden Cost Modal (single window) -->
+  <div id="hiddenCostModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-2xl">
+      <h3 class="font-bold text-base">เพิ่มต้นทุนแฝง</h3>
+      <div>
+        <label class="text-xs text-gray-500">หมวดหมู่</label>
+        <select id="hc_category" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="เครื่องปรุง">เครื่องปรุง</option>
+          <option value="วัสดุสิ้นเปลือง">วัสดุสิ้นเปลือง</option>
+          <option value="เชื้อเพลิง">เชื้อเพลิง</option>
+          <option value="สาธารณูปโภค">สาธารณูปโภค</option>
+          <option value="ค่าแรงงาน">ค่าแรงงาน</option>
+          <option value="ค่าเสื่อมอุปกรณ์">ค่าเสื่อมอุปกรณ์</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">รายการ / รายละเอียด</label>
+        <input id="hc_name" list="hcPresets" placeholder="เช่น น้ำตาลทราย, ไม้เสียบ, ถุงพลาสติก 6*14" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <datalist id="hcPresets">
+          <option value="น้ำตาลทราย"><option value="น้ำตาลปี๊บ"><option value="ไม้เสียบ"><option value="ถุงพลาสติก 6*14"><option value="ถุงพลาสติก 9*18"><option value="ถุงพลาสติก 10*12"><option value="ถุงใส่น้ำจิ้มเบอร์ 3"><option value="ถุงใส่น้ำจิ้มเบอร์ 4"><option value="ถุงใส่น้ำจิ้มเบอร์ 5"><option value="ถุงใส่น้ำจิ้มเบอร์ 6"><option value="ถุงกระดาษ 4*8"><option value="ถุงกระดาษ 5*7"><option value="ถุงกระดาษ 5*9"><option value="แตงกวา"><option value="พริก"><option value="แป้งมัน"><option value="แป้งข้าวเจ้า"><option value="ซอส"><option value="น้ำปลา"><option value="แก๊สหุงต้ม"><option value="ค่าไฟและน้ำ">
+        </datalist>
+      </div>
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <label class="text-xs text-gray-500">จำนวนเงิน (บาท)</label>
+          <input id="hc_amount" type="number" placeholder="85" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-500">วันที่ซื้อ/เติม</label>
+          <input id="hc_date" type="date" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">หมายเหตุ</label>
+        <input id="hc_notes" placeholder="เช่น เก็บไว้ใช้ทอด" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div class="flex gap-2 pt-1">
+        <button onclick="saveHiddenCost()" class="bg-orange-600 text-white flex-1 py-2 rounded-lg text-sm font-bold">บันทึก</button>
+        <button onclick="closeHiddenCostModal()" class="bg-gray-200 text-gray-700 flex-1 py-2 rounded-lg text-sm font-bold">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Add Menu Modal -->
   <div id="addMenuModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
@@ -413,6 +460,7 @@
         document.getElementById('mainDashboard').classList.remove('hidden');
         document.getElementById('shopNameHeader').textContent = state.shopInfo.name;
         renderAll();
+        switchTab('pos');
       } else {
         document.getElementById('pinError').classList.remove('hidden');
         currentPin = '';
@@ -552,6 +600,12 @@
       if (!entries.length) { alert('กรุณาเลือกรายการก่อน'); return; }
       const phone = document.getElementById('posPhoneInput').value.trim();
       const t = posTotals();
+      const lines = entries.map(([id, qty]) => {
+        const m = (state.menuItems || []).find(x => x.id === id) || { name: id, price: 0 };
+        return `${m.name} x${qty} = ฿${(m.price||0)*qty}`;
+      }).join('\n');
+      const msg = `สรุปออเดอร์ POS\n${lines}\n----------------\nยอดรวม: ฿${t.subtotal}\nส่วนลด: -฿${t.discount}\nราคาสุทธิ: ฿${t.total}\n\nยืนยันการขายเรียบร้อย?`;
+      if (!confirm(msg)) return;
       const items = entries.map(([id, qty]) => {
         const m = (state.menuItems || []).find(x => x.id === id) || { name: id, price: 0, directCost: 0 };
         return { itemId: id, name: m.name, price: m.price, directCost: m.directCost || 0, quantity: qty };
@@ -646,6 +700,7 @@
             <button onclick="setItemStatus('${item.id}','ACTIVE')" class="px-2 py-1 rounded text-xs ${item.status==='ACTIVE'?'bg-green-100 text-green-700 font-bold':'bg-gray-100'}">🟢 ขายปกติ</button>
             <button onclick="setItemStatus('${item.id}','OUT_OF_STOCK')" class="px-2 py-1 rounded text-xs ${item.status==='OUT_OF_STOCK'?'bg-yellow-100 text-yellow-700 font-bold':'bg-gray-100'}">🟡 สินค้าหมด</button>
             <button onclick="setItemStatus('${item.id}','HIDDEN')" class="px-2 py-1 rounded text-xs ${item.status==='HIDDEN'?'bg-red-100 text-red-700 font-bold':'bg-gray-100'}">🔴 ซ่อน</button>
+            <button onclick="openEditMenu('${item.id}')" class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700 font-bold">✏️ แก้ไข</button>
           </div>
         </div>
       `).join('');
@@ -672,7 +727,22 @@
       schedulePush();
       alert('รีเซ็ตสต็อกเรียบร้อย');
     }
-    function addMenuItem() { openAddMenuModal(); }
+    let editingMenuId = null;
+    function addMenuItem() { editingMenuId = null; openAddMenuModal(); }
+    function openEditMenu(id) {
+      editingMenuId = id;
+      const m = (state.menuItems || []).find(x => x.id === id);
+      if (!m) return;
+      openAddMenuModal();
+      document.getElementById('m_name').value = m.name || '';
+      document.getElementById('m_category').value = m.categoryId || 'cat_1';
+      document.getElementById('m_price').value = m.price ?? '';
+      document.getElementById('m_packagePrice').value = m.packagePrice ?? '';
+      document.getElementById('m_pieces').value = m.piecesPerPackage ?? '';
+      document.getElementById('m_stock').value = m.stockQty ?? '';
+      document.getElementById('m_emoji').value = m.emoji || '🍢';
+      document.getElementById('m_desc').value = m.description || '';
+    }
     function openAddMenuModal() {
       document.getElementById('m_name').value = '';
       document.getElementById('m_category').value = 'cat_1';
@@ -706,9 +776,18 @@
           if (!state.categories) state.categories = [];
           state.categories.push({ id: category, name: category, sort: state.categories.length + 1, iconEmoji: '🍽️' });
         }
-        const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, sortOrder: (state.menuItems || []).length };
-        if (!state.menuItems) state.menuItems = [];
-        state.menuItems.push(item);
+        if (editingMenuId) {
+          const existing = (state.menuItems || []).find(x => x.id === editingMenuId);
+          if (existing) {
+            existing.name = name; existing.categoryId = category; existing.price = price; existing.directCost = cost; existing.stockQty = stock; existing.emoji = emoji; existing.description = desc; existing.packagePrice = packagePrice; existing.piecesPerPackage = pieces;
+            if (imageUrl) existing.imageUrl = imageUrl;
+          }
+          editingMenuId = null;
+        } else {
+          const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, sortOrder: (state.menuItems || []).length };
+          if (!state.menuItems) state.menuItems = [];
+          state.menuItems.push(item);
+        }
         renderInventory();
         schedulePush();
         closeAddMenuModal();
@@ -740,7 +819,7 @@
         <div class="bg-white rounded-2xl p-4 shadow-sm"><div class="text-xs text-gray-500">ออเดอร์</div><div class="text-xl font-bold">${orders.length}</div></div>
         <div class="bg-white rounded-2xl p-4 shadow-sm"><div class="text-xs text-gray-500">จุดคุ้มทุน</div><div class="text-xl font-bold">${beUnits} ไม้ (${progress}%)</div></div>
       `;
-      // Cost breakdown per menu item
+      // Cost breakdown per menu item (editable)
       const breakdown = document.getElementById('costBreakdownList');
       if (breakdown) {
         const items = state.menuItems || [];
@@ -750,7 +829,15 @@
           const pieces = m.piecesPerPackage || 0;
           const unit = (pkg > 0 && pieces > 0) ? (pkg / pieces) : (m.directCost || 0);
           const profit = (m.price || 0) - unit;
-          return `<div class="flex justify-between items-center border-b py-1 text-xs"><span>${m.emoji || ''} ${m.name}<br><span class="text-gray-500">ถุง ฿${pkg} ÷ ${pieces} ชิ้น</span></span><span class="font-bold">ต้นทุน ฿${unit.toFixed(2)}<br><span class="text-green-600 font-normal">กำไร ฿${profit.toFixed(2)}</span></span></div>`;
+          return `<div class="border-b py-2 space-y-1">
+            <div class="font-bold text-sm">${m.emoji || ''} ${m.name} • ราคาขาย ฿${m.price}</div>
+            <div class="flex gap-2 items-center text-xs">
+              <label class="flex-1">ราคาถุง <input type="number" value="${pkg}" id="pkg_${m.id}" class="w-full border rounded px-1 py-1"></label>
+              <label class="flex-1">จำนวน/ถุง <input type="number" value="${pieces}" id="pieces_${m.id}" class="w-full border rounded px-1 py-1"></label>
+              <button onclick="updateCost('${m.id}')" class="bg-orange-600 text-white px-2 py-1 rounded text-xs">บันทึก</button>
+            </div>
+            <div class="text-xs text-gray-500">ต้นทุนต่อหน่วย ฿${unit.toFixed(2)} • กำไร ฿${profit.toFixed(2)}</div>
+          </div>`;
         }).join('');
       }
       const hc = document.getElementById('hiddenCostsList');
@@ -776,13 +863,37 @@
       }
     }
 
-    function addHiddenCost() {
-      const name = prompt('ชื่อต้นทุนแฝง', 'เติมแก๊สหุงต้ม');
-      if (!name) return;
-      const amount = parseFloat(prompt('จำนวนเงิน (บาท)', '390')) || 0;
-      const cat = prompt('หมวดหมู่ (utilities/supplies/oil_gas/rent)', 'utilities') || 'utilities';
+    function updateCost(id) {
+      const m = (state.menuItems || []).find(x => x.id === id);
+      if (!m) return;
+      const pkg = parseFloat(document.getElementById('pkg_' + id).value) || 0;
+      const pieces = parseInt(document.getElementById('pieces_' + id).value) || 0;
+      m.packagePrice = pkg; m.piecesPerPackage = pieces;
+      if (pkg > 0 && pieces > 0) m.directCost = pkg / pieces;
+      renderAnalytics(); renderInventory(); schedulePush();
+    }
+    const HC_PRESETS = ['น้ำตาลทราย','น้ำตาลปี๊บ','ไม้เสียบ','ถุงพลาสติก 6*14','ถุงพลาสติก 9*18','ถุงพลาสติก 10*12','ถุงใส่น้ำจิ้มเบอร์ 3','ถุงใส่น้ำจิ้มเบอร์ 4','ถุงใส่น้ำจิ้มเบอร์ 5','ถุงใส่น้ำจิ้มเบอร์ 6','ถุงกระดาษ 4*8','ถุงกระดาษ 5*7','ถุงกระดาษ 5*9','แตงกวา','พริก','แป้งมัน','แป้งข้าวเจ้า'];
+    function addHiddenCost() { openHiddenCostModal(); }
+    function openHiddenCostModal() {
+      document.getElementById('hc_name').value = '';
+      document.getElementById('hc_amount').value = '';
+      document.getElementById('hc_notes').value = '';
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('hc_date').value = today;
+      document.getElementById('hc_category').value = 'เครื่องปรุง';
+      document.getElementById('hiddenCostModal').classList.remove('hidden');
+    }
+    function closeHiddenCostModal() { document.getElementById('hiddenCostModal').classList.add('hidden'); }
+    function saveHiddenCost() {
+      const name = document.getElementById('hc_name').value.trim();
+      const amount = parseFloat(document.getElementById('hc_amount').value) || 0;
+      const cat = document.getElementById('hc_category').value;
+      const date = document.getElementById('hc_date').value || new Date().toISOString().slice(0, 10);
+      const notes = document.getElementById('hc_notes').value.trim();
+      if (!name || amount <= 0) { alert('กรุณากรอกรายการและจำนวนเงิน'); return; }
       if (!state.hiddenCosts) state.hiddenCosts = [];
-      state.hiddenCosts.unshift({ id: 'cost_' + Date.now(), date: new Date().toISOString().slice(0, 10), category: cat, itemName: name, amount, notes: '' });
+      state.hiddenCosts.unshift({ id: 'cost_' + Date.now(), date, category: cat, itemName: name, amount, notes });
+      closeHiddenCostModal();
       renderAnalytics();
       schedulePush();
     }
@@ -843,6 +954,7 @@
         else logoPreview.innerHTML = `<span class="text-3xl">${s.logoEmoji || '🍢'}</span>`;
       }
       document.getElementById('s_promptPay').value = s.promptPayNumber || '';
+      document.getElementById('s_address').value = s.address || '';
       document.getElementById('s_deliveryFee').value = s.deliveryFee ?? 15;
       document.getElementById('s_minDiscount').value = s.minOrderForDiscount ?? 50;
       document.getElementById('s_discountAmount').value = s.discountAmount ?? 5;
@@ -946,6 +1058,8 @@ function saveSettings() {
 function finishSaveSettings() {
       state.shopInfo.name = document.getElementById('s_name').value.trim() || state.shopInfo.name;
       state.shopInfo.promptPayNumber = document.getElementById('s_promptPay').value.trim() || state.shopInfo.promptPayNumber;
+      const addrEl = document.getElementById('s_address');
+      if (addrEl) state.shopInfo.address = addrEl.value.trim() || state.shopInfo.address;
       state.shopInfo.deliveryFee = parseFloat(document.getElementById('s_deliveryFee').value) || state.shopInfo.deliveryFee;
       state.shopInfo.minOrderForDiscount = parseFloat(document.getElementById('s_minDiscount').value) || state.shopInfo.minOrderForDiscount;
       state.shopInfo.discountAmount = parseFloat(document.getElementById('s_discountAmount').value) || state.shopInfo.discountAmount;
