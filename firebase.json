@@ -4,6 +4,6 @@
   },
   "hosting": {
     "public": "docs/prototype",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "**/*.apk"]
   }
 }

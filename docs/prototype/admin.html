@@ -129,7 +129,6 @@
         <input id="posNameInput" type="text" placeholder="ชื่อ (ไม่จำเป็น)" class="w-full border rounded-lg px-3 py-2 text-sm">
         <div class="flex gap-2">
           <button onclick="addMember()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm">เพิ่มสมาชิก</button>
-          <button onclick="addPosStamp()" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-lg text-sm">+1 แต้ม</button>
           <button onclick="redeemPosReward()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm">แลกรางวัล</button>
         </div>
         <div id="posResult" class="text-sm text-gray-600"></div>
@@ -137,7 +136,7 @@
 
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
         <h3 class="font-bold text-sm">รายการเมนูทั้งหมด (POS)</h3>
-        <p class="text-xs text-gray-500">พนักงานเลือกเมนูแทนลูกค้าได้เลย</p>
+        <p class="text-xs text-gray-500">พนักงานเลือกเมนูแทนลูกค้าได้เลย • กด ✏️ เพื่อแก้ไขเมนูหรือย้ายหมวดหมู่</p>
         <div id="posMenuList" class="space-y-2 max-h-72 overflow-auto"></div>
       </div>
 
@@ -360,8 +359,9 @@
     <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-2xl">
       <h3 class="font-bold text-base">เพิ่มเมนูใหม่</h3>
       <input id="m_name" placeholder="ชื่อเมนู" class="w-full border rounded-lg px-3 py-2 text-sm">
-      <input id="m_category" list="categoryList" placeholder="หมวดหมู่ (เลือกหรือพิมพ์ใหม่)" class="w-full border rounded-lg px-3 py-2 text-sm">
-      <datalist id="categoryList"></datalist>
+      <label class="block text-[11px] text-gray-500">หมวดหมู่เมนู</label>
+      <select id="m_category" onchange="toggleNewCategoryInput()" class="w-full border rounded-lg px-3 py-2 text-sm"></select>
+      <input id="m_newCategory" placeholder="ชื่อหมวดหมู่ใหม่" class="w-full border rounded-lg px-3 py-2 text-sm hidden">
       <input type="file" id="m_image" accept="image/*" class="w-full text-sm">
       <div class="flex gap-2">
         <input id="m_price" type="number" placeholder="ราคาขาย (บาท)" class="w-full border rounded-lg px-3 py-2 text-sm">
@@ -446,6 +446,62 @@
 
     function setStatus(msg) { document.getElementById('syncStatus').textContent = msg; }
 
+    // ---------- New order sound alert ----------
+    let knownOrderIds = null;
+    let adminUnlocked = false;
+    let audioCtx = null;
+
+    function ensureAudioContext() {
+      try {
+        if (!audioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          audioCtx = new AudioCtx();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      } catch (_) {
+        audioCtx = null;
+      }
+    }
+
+    function playNewOrderSound() {
+      ensureAudioContext();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const beep = (freq, start, duration) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, now + start);
+        gain.gain.exponentialRampToValueAtTime(0.3, now + start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + start);
+        osc.stop(now + start + duration + 0.02);
+      };
+      beep(880, 0, 0.18);
+      beep(1175, 0.22, 0.18);
+      beep(1568, 0.44, 0.3);
+    }
+
+    function detectIncomingOrders(orders) {
+      const list = Array.isArray(orders) ? orders : [];
+      const ids = new Set(list.map(o => o.id));
+      if (knownOrderIds === null) { knownOrderIds = ids; return; }
+      const incoming = list.filter(o =>
+        !knownOrderIds.has(o.id) &&
+        o.status === 'PENDING' &&
+        !isPosOrder(o)
+      );
+      knownOrderIds = ids;
+      if (incoming.length > 0 && adminUnlocked) {
+        playNewOrderSound();
+        setStatus(`🔔 ออเดอร์ใหม่ ${incoming.length} รายการ`);
+      }
+    }
+
     function schedulePush() {
       if (applyingRemote) return;
       clearTimeout(pushTimer);
@@ -480,6 +536,7 @@
       state.users = parsed.users || state.users;
       state.hiddenCosts = parsed.hiddenCosts || state.hiddenCosts;
       applyingRemote = false;
+      detectIncomingOrders(state.orders);
     }
 
     function startSync() {
@@ -525,6 +582,11 @@
     }
     function checkPin() {
       if (currentPin === (state.adminPin || '09286840')) {
+        adminUnlocked = true;
+        ensureAudioContext();
+        if (knownOrderIds === null && Array.isArray(state.orders)) {
+          knownOrderIds = new Set(state.orders.map(o => o.id));
+        }
         document.getElementById('pinOverlay').classList.add('hidden');
         document.getElementById('mainDashboard').classList.remove('hidden');
         document.getElementById('shopNameHeader').textContent = state.shopInfo.name;
@@ -791,6 +853,7 @@
               <div><div class="text-sm font-bold">${m.name}</div><div class="text-xs text-gray-500">฿${m.price} • สต็อก ${m.stockQty}</div></div>
             </div>
             <div class="flex items-center gap-1">
+              <button onclick="openEditMenu('${m.id}')" title="แก้ไขเมนู / หมวดหมู่" class="w-7 h-7 bg-blue-50 text-blue-600 rounded-full text-xs">✏️</button>
               <button onclick="posChangeQty('${m.id}', -1)" class="w-7 h-7 bg-gray-100 rounded-full">-</button>
               <span class="px-1 font-bold">${posCart[m.id] || 0}</span>
               <button onclick="posChangeQty('${m.id}', 1)" class="w-7 h-7 bg-green-100 text-green-700 rounded-full">+</button>
@@ -889,19 +952,6 @@
       document.getElementById('posResult').textContent = `สร้างออเดอร์ ${order.id} เรียบร้อย ฿${t.total}`;
       renderPos(); renderUsers(); renderOrders(); renderInventory(); renderSales();
       schedulePush();
-    }
-
-    function addPosStamp() {
-      const phone = document.getElementById('posPhoneInput').value.trim();
-      const name = document.getElementById('posNameInput') ? document.getElementById('posNameInput').value.trim() : '';
-      if (!phone) { document.getElementById('posResult').textContent = 'กรุณาใส่เบอร์โทร'; return; }
-      if (!state.users) state.users = {};
-      if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: name || '', stamps: 0, totalOrders: 0, lastOrder: null };
-      else if (name && !state.users[phone].name) state.users[phone].name = name;
-      state.users[phone].stamps = (state.users[phone].stamps || 0) + 1;
-      renderUsers();
-      schedulePush();
-      document.getElementById('posResult').textContent = `เพิ่มแต้มให้ ${phone} แล้ว (รวม ${state.users[phone].stamps} แต้ม)`;
     }
 
     function redeemPosReward() {
@@ -1011,7 +1061,11 @@
       if (!m) return;
       openAddMenuModal();
       document.getElementById('m_name').value = m.name || '';
-      document.getElementById('m_category').value = m.categoryId || 'cat_1';
+      const categorySelect = document.getElementById('m_category');
+      if (![...categorySelect.options].some(o => o.value === m.categoryId)) {
+        categorySelect.insertAdjacentHTML('beforeend', `<option value="${m.categoryId}">${m.categoryId}</option>`);
+      }
+      categorySelect.value = m.categoryId || 'cat_1';
       document.getElementById('m_price').value = m.price ?? '';
       document.getElementById('m_packagePrice').value = m.packagePrice ?? '';
       document.getElementById('m_pieces').value = m.piecesPerPackage ?? '';
@@ -1021,7 +1075,6 @@
     }
     function openAddMenuModal() {
       document.getElementById('m_name').value = '';
-      document.getElementById('m_category').value = 'cat_1';
       document.getElementById('m_price').value = '';
       document.getElementById('m_packagePrice').value = '';
       document.getElementById('m_pieces').value = '';
@@ -1029,18 +1082,35 @@
       document.getElementById('m_emoji').value = '🍢';
       document.getElementById('m_desc').value = '';
       document.getElementById('m_image').value = '';
-      const dl = document.getElementById('categoryList');
-      dl.innerHTML = (state.categories || []).map(c => `<option value="${c.id}">${c.name || c.id}</option>`).join('');
+      const categorySelect = document.getElementById('m_category');
+      const cats = (state.categories || []).filter(c => c.id !== 'all');
+      categorySelect.innerHTML = cats
+        .map(c => `<option value="${c.id}">${c.iconEmoji || '🍽️'} ${c.name || c.id}</option>`)
+        .join('') + '<option value="__new">➕ เพิ่มหมวดหมู่ใหม่</option>';
+      categorySelect.value = cats.length ? cats[0].id : '__new';
+      const newCategoryInput = document.getElementById('m_newCategory');
+      newCategoryInput.value = '';
+      newCategoryInput.classList.add('hidden');
       document.getElementById('addMenuModal').classList.remove('hidden');
+    }
+    function toggleNewCategoryInput() {
+      const isNew = document.getElementById('m_category').value === '__new';
+      document.getElementById('m_newCategory').classList.toggle('hidden', !isNew);
     }
     function closeAddMenuModal() { document.getElementById('addMenuModal').classList.add('hidden'); }
     function saveMenuItem() {
       const name = document.getElementById('m_name').value.trim();
       if (!name) { alert('กรุณาใส่ชื่อเมนู'); return; }
-      const categoryInput = document.getElementById('m_category').value.trim() || 'cat_1';
+      let categoryInput = document.getElementById('m_category').value;
+      if (categoryInput === '__new') {
+        categoryInput = document.getElementById('m_newCategory').value.trim();
+        if (!categoryInput) { alert('กรุณาใส่ชื่อหมวดหมู่ใหม่'); return; }
+      }
+      if (!categoryInput) categoryInput = 'cat_1';
       const existingCategory = (state.categories || []).find(c => c.id === categoryInput)
         || (state.categories || []).find(c => (c.name || '').trim() === categoryInput);
-      const category = existingCategory ? existingCategory.id : categoryInput;
+      const category = existingCategory ? existingCategory.id : 'cat_' + Date.now();
+      const newCategoryName = categoryInput;
       const price = parseFloat(document.getElementById('m_price').value) || 0;
       const packagePrice = parseFloat(document.getElementById('m_packagePrice').value) || 0;
       const pieces = parseInt(document.getElementById('m_pieces').value) || 0;
@@ -1053,7 +1123,7 @@
       const doSave = (imageUrl) => {
         if (!(state.categories || []).some(c => c.id === category)) {
           if (!state.categories) state.categories = [];
-          state.categories.push({ id: category, name: category, sort: state.categories.length + 1, iconEmoji: '🍽️' });
+          state.categories.push({ id: category, name: newCategoryName, sort: state.categories.length + 1, iconEmoji: '🍽️' });
         }
         if (editingMenuId) {
           const existing = (state.menuItems || []).find(x => x.id === editingMenuId);

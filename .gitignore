@@ -64,5 +64,8 @@ coverage/
 # AI Studio local artifacts
 .aistudio/
 
+# Hosted APK (built artifact, not committed)
+docs/prototype/*.apk
+
 # Firebase CLI
 .firebase/

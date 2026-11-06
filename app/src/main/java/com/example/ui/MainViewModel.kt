@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -47,6 +48,53 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isPinDialogOpen: StateFlow<Boolean> = _isPinDialogOpen.asStateFlow()
 
     val adminPin: StateFlow<String> = repository.adminPin
+
+    // Incoming order alert (admin mode only)
+    private val locallySubmittedOrderIds = mutableSetOf<String>()
+    private var knownOrderIds: Set<String>? = null
+
+    init {
+        viewModelScope.launch {
+            orders.collect { list ->
+                if (!_isAdminMode.value) {
+                    knownOrderIds = null
+                    return@collect
+                }
+                val currentIds = list.map { it.id }.toSet()
+                val known = knownOrderIds
+                if (known == null) {
+                    knownOrderIds = currentIds
+                    return@collect
+                }
+                val incoming = list.filter { order ->
+                    order.id !in known &&
+                        order.status == OrderStatus.PENDING &&
+                        !isPosOrder(order) &&
+                        order.id !in locallySubmittedOrderIds &&
+                        isRecentOrder(order)
+                }
+                knownOrderIds = currentIds
+                if (incoming.isNotEmpty()) {
+                    SoundHelper.playNewOrderAlert(getApplication())
+                }
+            }
+        }
+    }
+
+    private fun isPosOrder(order: Order): Boolean =
+        order.comment.trim().uppercase(Locale.US).startsWith("POS")
+
+    private fun isRecentOrder(order: Order, windowMinutes: Long = 30): Boolean {
+        val timestamp = order.timestamp.trim()
+        if (timestamp.isEmpty()) return true
+        return try {
+            val parsed = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).parse(timestamp)
+                ?: return true
+            System.currentTimeMillis() - parsed.time <= windowMinutes * 60_000L
+        } catch (_: Exception) {
+            true
+        }
+    }
 
     private val _adminSelectedTab = MutableStateFlow(1)
     val adminSelectedTab: StateFlow<Int> = _adminSelectedTab.asStateFlow()
@@ -321,6 +369,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         repository.addOrder(newOrder)
+        locallySubmittedOrderIds.add(newOrder.id)
         clearCart()
         _isPaymentModalOpen.value = false
         _isTrackerModalOpen.value = true
@@ -422,6 +471,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         SoundHelper.playStampSuccessSound(getApplication())
     }
 
+    fun registerMember(phone: String) {
+        repository.addMemberStamp(phone, 0)
+    }
+
     fun addMemberStamp(phone: String, count: Int = 1) {
         repository.addMemberStamp(phone, count)
         SoundHelper.playStampSuccessSound(getApplication())
@@ -454,6 +507,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun verifyPin(entered: String): Boolean {
         if (entered == adminPin.value) {
             _isAdminMode.value = true
+            // Seed existing orders so only genuinely new ones trigger the alert.
+            knownOrderIds = orders.value.map { it.id }.toSet()
             _isPinDialogOpen.value = false
             return true
         }

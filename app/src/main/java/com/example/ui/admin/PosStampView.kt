@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
@@ -29,7 +28,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -163,47 +161,25 @@ fun PosStampView(viewModel: MainViewModel) {
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        // Stamps are earned automatically from orders, so staff only redeem rewards here.
+                        Button(
+                            onClick = {
+                                val success = viewModel.redeemReward(cleanPhone)
+                                if (success) {
+                                    Toast.makeText(context, "แลกของรางวัลฟรีสำเร็จ! (-10 แต้ม)", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "แต้มไม่พอ (ต้องการ 10 แต้ม)", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selectedUser.stamps >= 10) CucumberGreen else Color.Gray
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            // +1 Stamp
-                            Button(
-                                onClick = {
-                                    viewModel.addMemberStamp(cleanPhone, 1)
-                                    Toast.makeText(context, "เพิ่มแต้มให้ $cleanPhone สำเร็จ (+1)", Toast.LENGTH_SHORT).show()
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("add_stamp_button")
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("+1 แต้ม", fontWeight = FontWeight.Bold)
-                            }
-
-                            // Redeem 10 stamps
-                            Button(
-                                onClick = {
-                                    val success = viewModel.redeemReward(cleanPhone)
-                                    if (success) {
-                                        Toast.makeText(context, "แลกของรางวัลฟรีสำเร็จ! (-10 แต้ม)", Toast.LENGTH_LONG).show()
-                                    } else {
-                                        Toast.makeText(context, "แต้มไม่พอ (ต้องการ 10 แต้ม)", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selectedUser.stamps >= 10) CucumberGreen else Color.Gray
-                                ),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.CardGiftcard, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("แลกฟรี (10 แต้ม)")
-                            }
+                            Icon(Icons.Default.CardGiftcard, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("แลกฟรี (10 แต้ม)")
                         }
                     } else {
                         // User not yet registered, allow quick register
@@ -219,13 +195,13 @@ fun PosStampView(viewModel: MainViewModel) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(
                                 onClick = {
-                                    viewModel.addMemberStamp(cleanPhone, 1)
-                                    Toast.makeText(context, "ลงทะเบียนและให้แต้มแรกแล้ว (+1)", Toast.LENGTH_SHORT).show()
+                                    viewModel.registerMember(cleanPhone)
+                                    Toast.makeText(context, "ลงทะเบียนสมาชิกใหม่แล้ว", Toast.LENGTH_SHORT).show()
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text("ลงทะเบียนใหม่และให้ +1 แต้มทันที")
+                                Text("ลงทะเบียนสมาชิกใหม่")
                             }
                         }
                     }
@@ -277,28 +253,17 @@ fun PosStampView(viewModel: MainViewModel) {
                             }
                         }
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                color = Color(0xFFFFF3E0),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(
-                                    text = "🍢 ${user.stamps}/10 แต้ม",
-                                    color = OrangePrimary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            IconButton(
-                                onClick = {
-                                    viewModel.addMemberStamp(user.phoneNumber, 1)
-                                    Toast.makeText(context, "+1 แต้มให้ ${user.phoneNumber}", Toast.LENGTH_SHORT).show()
-                                }
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = "+1 แต้ม", tint = OrangePrimary)
-                            }
+                        Surface(
+                            color = Color(0xFFFFF3E0),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "🍢 ${user.stamps}/10 แต้ม",
+                                color = OrangePrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
                         }
                     }
                 }
