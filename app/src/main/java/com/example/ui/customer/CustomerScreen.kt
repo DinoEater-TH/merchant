@@ -123,6 +123,17 @@ fun CustomerScreen(viewModel: MainViewModel) {
         base.sortedWith(compareBy({ it.sortOrder }, { it.id }))
     }
 
+    // Category tabs must match the shop's real menu categories (same order as admin/web)
+    val visibleCategories = remember(categories, menuItems) {
+        val usedCategoryIds = menuItems
+            .filter { it.status != ItemStatus.HIDDEN }
+            .map { it.categoryId }
+            .toSet()
+        categories
+            .sortedBy { it.sort }
+            .filter { it.id == "all" || it.id in usedCategoryIds }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -326,7 +337,7 @@ fun CustomerScreen(viewModel: MainViewModel) {
             // 4. Horizontal Categories Scroll
             item {
                 CategoryHorizontalBar(
-                    categories = categories,
+                    categories = visibleCategories,
                     selectedCategoryId = selectedCategory,
                     onSelect = { viewModel.selectCategory(it) }
                 )
@@ -847,7 +858,16 @@ fun PromotionTicker(shopInfo: com.example.data.model.ShopInfo) {
             Text(text = "🎁", fontSize = 14.sp)
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "โปรสุดคุ้ม: ซื้อครบ ${String.format(Locale.US, "%.0f", shopInfo.minOrderForDiscount)}.- ลด ${String.format(Locale.US, "%.0f", shopInfo.discountAmount)}.- | ส่งฟรีเมื่อซื้อครบ ${String.format(Locale.US, "%.0f", shopInfo.minOrderForFreeDelivery)}.-",
+                text = buildString {
+                    val parts = mutableListOf<String>()
+                    if (shopInfo.promoDiscountEnabled) parts.add(
+                        "ซื้อครบ ${String.format(Locale.US, "%.0f", shopInfo.minOrderForDiscount)}.- ลด ${String.format(Locale.US, "%.0f", shopInfo.discountAmount)}.-"
+                    )
+                    if (shopInfo.promoFreeDeliveryEnabled) parts.add(
+                        "ส่งฟรีเมื่อซื้อครบ ${String.format(Locale.US, "%.0f", shopInfo.minOrderForFreeDelivery)}.-"
+                    )
+                    append(if (parts.isEmpty()) "ยินดีต้อนรับ" else "โปรสุดคุ้ม: " + parts.joinToString(" | "))
+                },
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 color = OrangePrimary

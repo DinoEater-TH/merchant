@@ -3,6 +3,7 @@ package com.example.ui.admin
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +55,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.Category
 import com.example.data.model.ItemStatus
 import com.example.data.model.MenuItem
 import com.example.ui.MainViewModel
@@ -64,8 +68,27 @@ import java.util.Locale
 @Composable
 fun InventoryView(viewModel: MainViewModel) {
     val menuItems by viewModel.menuItems.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
+
+    // Group exactly like the customer page: shop categories in configured order,
+    // only categories that actually contain menu items.
+    val groupedItems = remember(menuItems, categories) {
+        val groups = mutableListOf<Pair<Category?, List<MenuItem>>>()
+        val used = mutableSetOf<String>()
+        categories
+            .filter { it.id != "all" }
+            .sortedBy { it.sort }
+            .forEach { category ->
+                val items = menuItems.filter { it.categoryId == category.id }
+                used.add(category.id)
+                if (items.isNotEmpty()) groups.add(category to items)
+            }
+        val orphans = menuItems.filter { it.categoryId !in used }
+        if (orphans.isNotEmpty()) groups.add(null to orphans)
+        groups
+    }
 
     Column(
         modifier = Modifier
@@ -129,18 +152,24 @@ fun InventoryView(viewModel: MainViewModel) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(menuItems, key = { it.id }) { item ->
-                InventoryItemCard(
-                    item = item,
-                    onStatusChange = { newStatus -> viewModel.updateItemStatus(item.id, newStatus) },
-                    onStockChange = { newStock -> viewModel.updateItemStock(item.id, newStock) },
-                    onMove = { dir -> viewModel.moveMenuItem(item.id, dir) }
-                )
+            groupedItems.forEach { (category, items) ->
+                item(key = "category_${category?.id ?: "uncategorized"}") {
+                    InventoryCategoryHeader(category = category, items = items)
+                }
+                items(items, key = { it.id }) { item ->
+                    InventoryItemCard(
+                        item = item,
+                        onStatusChange = { newStatus -> viewModel.updateItemStatus(item.id, newStatus) },
+                        onStockChange = { newStock -> viewModel.updateItemStock(item.id, newStock) },
+                        onMove = { dir -> viewModel.moveMenuItem(item.id, dir) }
+                    )
+                }
             }
         }
 
         if (showAddDialog) {
             AddMenuItemDialog(
+                categories = categories,
                 onDismiss = { showAddDialog = false },
                 onSave = { item ->
                     viewModel.addOrUpdateMenuItem(item)
@@ -149,6 +178,29 @@ fun InventoryView(viewModel: MainViewModel) {
                 }
             )
         }
+    }
+}
+
+@Composable
+fun InventoryCategoryHeader(category: Category?, items: List<MenuItem>) {
+    val stockTotal = items.sumOf { it.stockQty }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, start = 2.dp, end = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Text(
+            text = "${category?.iconEmoji ?: "📦"} ${category?.name ?: "ไม่ระบุหมวดหมู่"}",
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp
+        )
+        Text(
+            text = "${items.size} รายการ • คงเหลือ $stockTotal ชิ้น",
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -262,12 +314,16 @@ fun InventoryItemCard(
 
 @Composable
 fun AddMenuItemDialog(
+    categories: List<Category>,
     onDismiss: () -> Unit,
     onSave: (MenuItem) -> Unit
 ) {
     var id by remember { mutableStateOf("item_${System.currentTimeMillis()}") }
     var name by remember { mutableStateOf("") }
-    var categoryId by remember { mutableStateOf("cat_1") }
+    val selectableCategories = remember(categories) {
+        categories.filter { it.id != "all" }.sortedBy { it.sort }
+    }
+    var categoryId by remember { mutableStateOf(selectableCategories.firstOrNull()?.id ?: "cat_1") }
     var price by remember { mutableStateOf("") }
     var directCost by remember { mutableStateOf("") }
     var stockQty by remember { mutableStateOf("30") }
@@ -281,7 +337,19 @@ fun AddMenuItemDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("ชื่อเมนู") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = categoryId, onValueChange = { categoryId = it }, label = { Text("หมวดหมู่ (cat_1, cat_2, ...)") }, modifier = Modifier.fillMaxWidth())
+                Text("หมวดหมู่", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    selectableCategories.forEach { category ->
+                        FilterChip(
+                            selected = categoryId == category.id,
+                            onClick = { categoryId = category.id },
+                            label = { Text("${category.iconEmoji} ${category.name}", fontSize = 11.sp) }
+                        )
+                    }
+                }
                 OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("ราคาขาย (บาท)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = directCost, onValueChange = { directCost = it }, label = { Text("ต้นทุนตรง (บาท)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = stockQty, onValueChange = { stockQty = it }, label = { Text("สต็อกเริ่มต้น") }, modifier = Modifier.fillMaxWidth())

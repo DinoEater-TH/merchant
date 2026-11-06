@@ -28,6 +28,16 @@ class RepositoryPersistenceTest {
     @Test
     fun shopState_survivesRepositoryRecreation() {
         val first = MeatballRepository(context)
+        first.addOrUpdateMenuItem(
+            com.example.data.model.MenuItem(
+                id = "item_01",
+                name = "ลูกชิ้นเอ็นเนื้อ",
+                categoryId = "cat_1",
+                price = 10.0,
+                directCost = 5.5,
+                stockQty = 10
+            )
+        )
         first.updateItemStock("item_01", 7)
         first.updateShopInfo(first.shopInfo.value.copy(name = "ร้านทดสอบ"))
         first.addMemberStamp("0899999999", 3)
@@ -44,6 +54,16 @@ class RepositoryPersistenceTest {
     @Test
     fun placedOrder_isPersistedAndStockIsDeducted() {
         val first = MeatballRepository(context)
+        first.addOrUpdateMenuItem(
+            com.example.data.model.MenuItem(
+                id = "item_01",
+                name = "ลูกชิ้นเอ็นเนื้อ",
+                categoryId = "cat_1",
+                price = 10.0,
+                directCost = 5.5,
+                stockQty = 10
+            )
+        )
         val before = first.menuItems.value.first { it.id == "item_01" }.stockQty
 
         first.addOrder(

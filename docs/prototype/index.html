@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -35,7 +35,7 @@
 
   <!-- Guest login hint (member card hidden for guests) -->
   <div id="guestLoginHint" class="max-w-md mx-auto px-4 mt-3">
-    <button onclick="promptChangePhone()" class="w-full bg-white border border-orange-200 text-orange-700 text-xs font-bold py-2 rounded-xl">เข้าสู่ระบบ/สมัครสมาชิกเพื่อสะสมแต้ม</button>
+    <button onclick="promptChangePhone()" class="w-full bg-white border border-orange-200 text-orange-700 text-xs font-bold py-2 rounded-xl">เข้าสู่ระบบสมาชิกเพื่อสะสมแต้ม</button>
   </div>
 
   <!-- Member Loyalty Card (hidden for guests) -->
@@ -45,28 +45,28 @@
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-lg">🍢</div>
           <div>
-            <h2 id="memberPhoneDisplay" class="font-bold text-sm hidden">สมาชิก: 084-611-2419</h2>
+            <h2 id="memberPhoneDisplay" class="font-bold text-sm hidden">สมาชิก</h2>
             <p class="text-xs text-gray-500">สะสมครบ 10 แต้ม ฟรี 1 ชุดทันที!</p>
           </div>
         </div>
-        <button onclick="promptChangePhone()" class="text-xs text-orange-600 font-bold hover:underline">เข้าสู่ระบบ/สมัครสมาชิก</button>
+        <button onclick="promptChangePhone()" class="text-xs text-orange-600 font-bold hover:underline">เปลี่ยนเบอร์ / เข้าสู่ระบบ</button>
       </div>
 
       <!-- Consumption Stats Row -->
       <div class="mt-3 bg-amber-50/70 border border-amber-200/60 rounded-xl p-2.5 flex justify-between items-center text-center">
         <div>
           <div class="text-[10px] text-gray-500">ยอดบริโภคสะสม</div>
-          <div class="text-xs font-extrabold text-orange-600">฿<span id="consumptionTotalSpent">230</span></div>
+          <div class="text-xs font-extrabold text-orange-600">฿<span id="consumptionTotalSpent">0</span></div>
         </div>
         <div class="w-px h-6 bg-amber-200"></div>
         <div>
           <div class="text-[10px] text-gray-500">สั่งซื้อแล้ว</div>
-          <div class="text-xs font-bold text-gray-800"><span id="consumptionTotalOrders">4</span> ครั้ง</div>
+          <div class="text-xs font-bold text-gray-800"><span id="consumptionTotalOrders">0</span> ครั้ง</div>
         </div>
         <div class="w-px h-6 bg-amber-200"></div>
         <div>
           <div class="text-[10px] text-gray-500">รวมลูกชิ้น</div>
-          <div class="text-xs font-bold text-gray-800"><span id="consumptionTotalSticks">22</span> ไม้</div>
+          <div class="text-xs font-bold text-gray-800"><span id="consumptionTotalSticks">0</span> ไม้</div>
         </div>
       </div>
 
@@ -75,7 +75,7 @@
         <!-- Stamp circles generated via JS -->
       </div>
       <div class="flex justify-between items-center mt-2.5 text-xs">
-        <span id="stampsCountText" class="text-orange-600 font-bold">สะสมแล้ว 7/10 แต้ม</span>
+        <span id="stampsCountText" class="text-orange-600 font-bold">สะสมแล้ว 0/10 แต้ม</span>
         <div class="flex space-x-1.5">
           <button onclick="openOrderHistoryModal()" class="text-xs bg-orange-100 text-orange-800 border border-orange-200 px-2 py-1 rounded-lg font-bold hover:bg-orange-200 flex items-center space-x-1">
             <span>📜 ประวัติสั่งซื้อ</span>
@@ -100,7 +100,7 @@
       <div class="flex items-center space-x-2">
         <span class="text-xl">🛵</span>
         <div>
-          <div class="text-xs font-bold text-gray-800">สถานะออเดอร์ #<span id="activeOrderId">ORD-101</span></div>
+          <div class="text-xs font-bold text-gray-800">สถานะออเดอร์ #<span id="activeOrderId">-</span></div>
           <div id="activeOrderStatusText" class="text-xs font-extrabold text-red-600">กำลังทอดร้อนๆ...</div>
         </div>
       </div>
@@ -112,10 +112,6 @@
   <div class="max-w-md mx-auto px-4 mt-3">
     <div class="flex space-x-2 overflow-x-auto no-scrollbar py-1" id="categoryTabs">
       <button onclick="filterCategory('all')" class="cat-btn bg-orange-600 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap shadow-sm">ทั้งหมด</button>
-      <button onclick="filterCategory('cat_1')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">🍢 ลูกชิ้นทอด</button>
-      <button onclick="filterCategory('cat_2')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">🍡 ลูกชิ้นปิ้ง/นึ่ง</button>
-      <button onclick="filterCategory('cat_3')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">⭐ ชุดสุดคุ้ม Combo</button>
-      <button onclick="filterCategory('cat_4')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">🥤 เครื่องดื่ม</button>
     </div>
   </div>
 
@@ -142,6 +138,20 @@
   </div>
 
   <!-- Modal 1: Addons & Fulfillment Modal -->
+  <!-- Modal: Member Login -->
+  <div id="memberLoginModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-base text-gray-800">🔐 เข้าสู่ระบบสมาชิก</h3>
+        <button onclick="closeMemberLogin()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-gray-500">ใส่เบอร์โทรที่ลงทะเบียนกับร้าน เพื่อดูแต้มและประวัติการสั่งซื้อ</p>
+      <input id="loginPhoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="เบอร์โทร 10 หลัก (เช่น 0812345678)" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+      <div id="loginError" class="text-xs text-red-500 hidden"></div>
+      <button onclick="submitMemberLogin()" class="w-full bg-orange-600 text-white font-bold py-2.5 rounded-xl text-sm">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+
   <div id="addonsModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-5 space-y-4">
       <div class="flex justify-between items-center border-b pb-3">
@@ -254,7 +264,7 @@
   <div id="trackerModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4">
       <div class="flex justify-between items-center border-b pb-2">
-        <h3 class="font-bold text-base text-gray-800">🛵 ติดตามออเดอร์ #<span id="trackerOrderId">ORD-101</span></h3>
+        <h3 class="font-bold text-base text-gray-800">🛵 ติดตามออเดอร์ #<span id="trackerOrderId">-</span></h3>
         <button onclick="closeTrackerModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
       </div>
 
@@ -272,9 +282,9 @@
 
       <div class="bg-gray-50 p-3 rounded-lg text-xs space-y-1">
         <div class="font-bold text-gray-700">รายการที่สั่ง:</div>
-        <div id="trackerItemsList">• ลูกชิ้นเอ็นเนื้อ x5</div>
-        <div class="text-gray-500" id="trackerOptionsText">- เสียบไม้, รับพริกทอด, แตงกวา, ถ้วยน้ำจิ้ม</div>
-        <div class="text-red-500 font-bold" id="trackerCommentText">💬 หมายเหตุ: "ขอทอดกรอบๆ แยกน้ำจิ้ม"</div>
+        <div id="trackerItemsList">-</div>
+        <div class="text-gray-500" id="trackerOptionsText"></div>
+        <div class="text-red-500 font-bold hidden" id="trackerCommentText"></div>
       </div>
 
       <button onclick="closeTrackerModal()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs">
@@ -291,7 +301,7 @@
           <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-sm">📋</div>
           <div>
             <h3 class="font-bold text-base text-gray-800">ประวัติการสั่งซื้อและการบริโภค</h3>
-            <p class="text-xs text-gray-500" id="historyPhoneSubtext">เบอร์: 084-611-2419</p>
+            <p class="text-xs text-gray-500" id="historyPhoneSubtext">เบอร์: -</p>
           </div>
         </div>
         <button onclick="closeOrderHistoryModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
@@ -359,18 +369,7 @@
     let stamps = 0;
     let activeOrder = null;
 
-    const menu = [
-      { id: 'item_01', cat: 'cat_1', name: 'ลูกชิ้นเอ็นเนื้อ', price: 10, stock: 50, bestseller: true, emoji: '🍢', desc: 'เอ็นเนื้อแท้ กรุบกรอบ ทอดพองกำลังดี' },
-      { id: 'item_02', cat: 'cat_1', name: 'ลูกชิ้นหมูล้วนแท้', price: 10, stock: 50, bestseller: true, emoji: '🍡', desc: 'หมูบดเนียนนุ่ม ไม่ผสมแป้งเยอะ ทอดไม่อมน้ำมัน' },
-      { id: 'item_03', cat: 'cat_1', name: 'ไส้กรอกแดงในตำนาน', price: 10, stock: 60, bestseller: true, emoji: '🌭', desc: 'ไส้กรอกแดงวัยเด็ก ทอดกรอบบั้งสวย น้ำจิ้มเข้าเนื้อ' },
-      { id: 'item_04', cat: 'cat_2', name: 'ลูกชิ้นปลากรายเยาวราช', price: 12, stock: 40, bestseller: false, emoji: '🍥', desc: 'เนื้อปลากรายนวดฟู เด้งสู้ฟัน ราดซีฟู้ดเข้ากันมาก' },
-      { id: 'item_05', cat: 'cat_1', name: 'ลูกชิ้นกุ้งทอดทรงเครื่อง', price: 15, stock: 35, bestseller: false, emoji: '🦐', desc: 'เนื้อกุ้งหอมละมุน ทอดสีเหลืองทองหอมฟุ้ง' },
-      { id: 'item_06', cat: 'cat_1', name: 'เกี๊ยวกรอบทอดไส้หมู', price: 10, stock: 45, bestseller: true, emoji: '🥟', desc: 'แผ่นเกี๊ยวทอดกรอบสะท้านฟัน จิ้มน้ำจิ้มมะขามฟินเว่อร์' },
-      { id: 'item_07', cat: 'cat_3', name: 'ชุดคอมโบรวมมิตร 6 ไม้', price: 55, stock: 25, bestseller: true, emoji: '⭐', desc: 'เอ็นเนื้อ 2, หมู 2, ไส้กรอกแดง 1, เกี๊ยว 1 (ประหยัด 5.-)' },
-      { id: 'item_08', cat: 'cat_3', name: 'ชุดปาร์ตี้อิ่มจุก 12 ไม้', price: 99, stock: 15, bestseller: false, emoji: '🎉', desc: 'รวมลูกชิ้นครบทุกแบบ 12 ไม้ ผักสดจุใจ (ประหยัด 21.-)' },
-      { id: 'item_09', cat: 'cat_4', name: 'ชาดำเย็นโบราณ / ชามะนาว', price: 20, stock: 30, bestseller: false, emoji: '🧋', desc: 'ชาต้มสดหอมกรุ่น เย็นชื่นใจ ดับกระหาย' },
-      { id: 'item_10', cat: 'cat_4', name: 'โค้กเย็นฉ่ำ (กระป๋อง)', price: 15, stock: 40, bestseller: false, emoji: '🥤', desc: 'โค้กแช่เย็นเจี๊ยบ ดื่มคู่ลูกชิ้นทอดแก้เลี่ยน' }
-    ];
+    let menu = [];
 
     let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, promoBanner: true, stampsRequired: 10, promoDiscountEnabled: true, promoFreeDeliveryEnabled: true, promoRewardEnabled: true };
     function renderStamps() {
@@ -397,8 +396,11 @@
     function renderPromoBanner() {
       const banner = document.getElementById('promoBanner');
       const text = document.getElementById('promoBannerText');
-      if (banner) banner.style.display = shopCfg.promoBanner === false ? 'none' : '';
-      if (text) text.textContent = `โปรสุดคุ้ม: ซื้อครบ ${shopCfg.minOrderForDiscount}.- ลด ${shopCfg.discountAmount}.- | ซื้อครบ ${shopCfg.minOrderForFreeDelivery}.- ส่งฟรี`;
+      const parts = [];
+      if (shopCfg.promoDiscountEnabled) parts.push(`ซื้อครบ ${shopCfg.minOrderForDiscount}.- ลด ${shopCfg.discountAmount}.-`);
+      if (shopCfg.promoFreeDeliveryEnabled) parts.push(`ซื้อครบ ${shopCfg.minOrderForFreeDelivery}.- ส่งฟรี`);
+      if (banner) banner.style.display = (shopCfg.promoBanner === false || parts.length === 0) ? 'none' : '';
+      if (text) text.textContent = parts.length ? 'โปรสุดคุ้ม: ' + parts.join(' | ') : '';
     }
 
     function renderMenu(catFilter = 'all') {
@@ -646,87 +648,21 @@
     }
 
     function reorderPrevious() {
-      cart = { 'item_01': 3, 'item_03': 2 };
+      // reorder last real order of this member (if any)
+      const last = pastOrders[0];
+      if (!last) { alert('ยังไม่มีประวัติให้สั่งซ้ำ'); return; }
+      cart = {};
+      (last.items || []).forEach(it => {
+        const m = menu.find(x => x.name === it.name);
+        if (m) cart[m.id] = it.qty;
+      });
       updateCartSummary();
       renderMenu();
       openAddonsModal();
     }
 
-    // Past Orders History
-    let pastOrders = [
-      {
-        id: 'ORD-101',
-        time: '2026-11-04 12:00',
-        status: 'cooking',
-        statusLabel: '🍳 กำลังทอดร้อนๆ',
-        statusClass: 'bg-amber-100 text-amber-800',
-        items: [{ name: 'ลูกชิ้นเอ็นเนื้อ', qty: 5, price: 10 }],
-        subtotal: 50,
-        discount: 5,
-        total: 45,
-        options: '🍢 เสียบไม้ • น้ำจิ้มผสม 2 อย่าง • รับพริกทอด, แตงกวา'
-      },
-      {
-        id: 'ORD-098',
-        time: '2026-11-03 18:45',
-        status: 'completed',
-        statusLabel: '✅ สำเร็จแล้ว',
-        statusClass: 'bg-green-100 text-green-800',
-        items: [
-          { name: 'ลูกชิ้นหมูล้วนแท้', qty: 3, price: 10 },
-          { name: 'ไส้กรอกแดงในตำนาน', qty: 3, price: 10 }
-        ],
-        subtotal: 60,
-        discount: 5,
-        total: 55,
-        options: '🍢 เสียบไม้ • น้ำจิ้มมะขามโบราณ • พริกทอด'
-      },
-      {
-        id: 'ORD-089',
-        time: '2026-11-01 12:30',
-        status: 'completed',
-        statusLabel: '✅ สำเร็จแล้ว',
-        statusClass: 'bg-green-100 text-green-800',
-        items: [
-          { name: 'ชุดคอมโบรวมมิตร 6 ไม้', qty: 1, price: 55 },
-          { name: 'ชาดำเย็นโบราณ', qty: 1, price: 20 }
-        ],
-        subtotal: 75,
-        discount: 5,
-        total: 70,
-        options: '🛍️ ใส่ถุง • น้ำจิ้มผสม 2 อย่าง • แตงกวาสด'
-      },
-      {
-        id: 'ORD-075',
-        time: '2026-10-29 19:15',
-        status: 'completed',
-        statusLabel: '✅ สำเร็จแล้ว',
-        statusClass: 'bg-green-100 text-green-800',
-        items: [
-          { name: 'เกี๊ยวกรอบทอดไส้หมู', qty: 3, price: 10 },
-          { name: 'ลูกชิ้นเอ็นเนื้อ', qty: 2, price: 10 }
-        ],
-        subtotal: 50,
-        discount: 5,
-        total: 45,
-        options: '🍢 เสียบไม้ • น้ำจิ้มซีฟู้ดมะนาวสด'
-      },
-      {
-        id: 'ORD-063',
-        time: '2026-10-24 16:00',
-        status: 'cancelled',
-        statusLabel: '❌ ยกเลิก',
-        statusClass: 'bg-red-100 text-red-800',
-        items: [
-          { name: 'ลูกชิ้นปลากรายเยาวราช', qty: 2, price: 12 },
-          { name: 'โค้กเย็นฉ่ำ', qty: 1, price: 15 }
-        ],
-        subtotal: 39,
-        discount: 0,
-        total: 54,
-        options: '🥢 รับไม้เสียบแยก • น้ำจิ้มมะขาม'
-      }
-    ];
+    // Past Orders History (loaded from Firebase for the logged-in member)
+    let pastOrders = [];
 
     let currentHistoryFilter = 'all';
 
@@ -832,43 +768,70 @@
 
     function reorderPastOrder(orderId) {
       const order = pastOrders.find(o => o.id === orderId);
-      if (order) {
-        cart = {};
-        if (order.id === 'ORD-101') cart['item_01'] = 5;
-        else if (order.id === 'ORD-098') { cart['item_02'] = 3; cart['item_03'] = 3; }
-        else if (order.id === 'ORD-089') { cart['item_07'] = 1; cart['item_09'] = 1; }
-        else if (order.id === 'ORD-075') { cart['item_06'] = 3; cart['item_01'] = 2; }
-        else cart['item_01'] = 2;
-
-        closeOrderHistoryModal();
-        updateCartSummary();
-        renderMenu();
-        openAddonsModal();
-      }
+      if (!order) return;
+      cart = {};
+      (order.items || []).forEach(it => {
+        const m = menu.find(x => x.name === it.name);
+        if (m && m.stock > 0) cart[m.id] = it.qty;
+      });
+      closeOrderHistoryModal();
+      updateCartSummary();
+      renderMenu();
+      openAddonsModal();
     }
 
     function promptChangePhone() {
-      const p = prompt('กรุณาใส่เบอร์โทรศัพท์สำหรับสะสมแต้ม (ต้องตรงกับบัญชีสมาชิก):', customerPhone);
-      if (!p) return;
-      const phone = p.trim();
-      if (!/^0\\d{9}$/.test(phone)) { alert('เบอร์โทรไม่ถูกต้อง (ตัวอย่าง 0846112419)'); return; }
-      const name = prompt('ชื่อ (ไม่จำเป็นต้องกรอก):', '') || '';
+      const modal = document.getElementById('memberLoginModal');
+      const input = document.getElementById('loginPhoneInput');
+      input.value = customerPhone || '';
+      document.getElementById('loginError').classList.add('hidden');
+      modal.classList.remove('hidden');
+      setTimeout(() => input.focus(), 60);
+    }
+    function closeMemberLogin() {
+      document.getElementById('memberLoginModal').classList.add('hidden');
+    }
+    function showLoginError(msg) {
+      const err = document.getElementById('loginError');
+      err.textContent = msg;
+      err.classList.remove('hidden');
+    }
+    function submitMemberLogin() {
+      const phone = (document.getElementById('loginPhoneInput').value || '').replace(/\D/g, '').slice(0, 10);
+      if (!/^0\d{9}$/.test(phone)) { showLoginError('เบอร์โทรไม่ถูกต้อง (ต้องเป็น 10 หลัก เริ่มด้วย 0)'); return; }
       const rs = window.remoteState;
-      if (rs && rs.users && rs.users[phone]) {
-        const u = rs.users[phone];
-        customerPhone = phone; isMember = true; stamps = u.stamps || 0;
-        document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${u.name || name || phone}`;
-        document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${phone}`;
-        alert(`เข้าสู่ระบบสมาชิก ${u.name || phone} เรียบร้อย`);
-      } else {
-        if (!window.customerMembers) window.customerMembers = {};
-        window.customerMembers[phone] = { phoneNumber: phone, name: name.trim(), stamps: 0, totalOrders: 0 };
-        customerPhone = phone; isMember = true; stamps = 0;
-        document.getElementById('memberPhoneDisplay').textContent = `สมาชิก: ${name.trim() || phone}`;
-        document.getElementById('historyPhoneSubtext').textContent = `เบอร์: ${phone}`;
-        alert(`สร้างบัญชีสมาชิก ${name.trim() || phone} เรียบร้อย`);
+      if (!rs || !rs.users || !rs.users[phone]) {
+        showLoginError('ไม่พบสมาชิกเบอร์นี้ กรุณาให้ร้านเพิ่มสมาชิกที่หน้า POS ก่อน');
+        return;
       }
+      customerPhone = phone;
+      hydrateMemberData(rs);
+      closeMemberLogin();
+    }
+    function hydrateMemberData(rs) {
+      if (!rs || !rs.users || !rs.users[customerPhone]) return;
+      const u = rs.users[customerPhone];
+      isMember = true;
+      stamps = u.stamps || 0;
+      const display = document.getElementById('memberPhoneDisplay');
+      if (display) display.textContent = `สมาชิก: ${u.name || customerPhone}`;
+      const sub = document.getElementById('historyPhoneSubtext');
+      if (sub) sub.textContent = `เบอร์: ${customerPhone}`;
+      pastOrders = (Array.isArray(rs.orders) ? rs.orders : [])
+        .filter(o => o.customerPhone === customerPhone)
+        .map(o => ({
+          id: o.id,
+          time: o.timestamp,
+          status: (o.status || '').toLowerCase(),
+          statusLabel: ({ PENDING: 'รอดำเนินการ', COOKING: '🍳 กำลังทอดร้อนๆ', READY: 'เสร็จแล้ว', COMPLETED: '✅ สำเร็จแล้ว', CANCELLED: '❌ ยกเลิก' })[o.status] || o.status,
+          statusClass: ({ PENDING: 'bg-yellow-100 text-yellow-800', COOKING: 'bg-amber-100 text-amber-800', READY: 'bg-green-100 text-green-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-800' })[o.status] || 'bg-gray-100 text-gray-800',
+          items: (o.items || []).map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
+          subtotal: o.subtotal, discount: o.discount, total: o.totalAmount,
+          options: o.comment || ''
+        }));
+      renderStamps();
       renderMemberVisibility();
+      updateConsumptionMetrics();
     }
 
     // Firebase addon config
@@ -926,17 +889,18 @@
             const tabsEl = document.getElementById('categoryTabs');
             if (tabsEl && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
               const usedCats = new Set(menu.map(m => m.cat));
-              const cats = parsed.categories.filter(c => c.id === 'all' || usedCats.has(c.id));
+              const cats = parsed.categories
+                .slice()
+                .sort((a, b) => (a.sort || 0) - (b.sort || 0))
+                .filter(c => c.id === 'all' || usedCats.has(c.id));
               tabsEl.innerHTML = cats.map(c => `<button onclick="filterCategory('${c.id}')" class="cat-btn bg-white text-gray-700 border border-gray-200 text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">${c.iconEmoji || ''} ${c.name}</button>`).join('');
               if (tabsEl.firstChild) tabsEl.firstChild.className = 'cat-btn bg-orange-600 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap shadow-sm';
             }
             renderMenu();
             updateCartSummary();
           }
-          if (isMember && parsed.users && parsed.users[customerPhone]) {
-            stamps = parsed.users[customerPhone].stamps || 0;
-            renderStamps();
-          }
+          // If already logged in, refresh this member's stamps/history from the shop data
+          hydrateMemberData(parsed);
         }).catch(()=>{});
       }).catch(()=>{});
     } catch (e) { console.error(e); }

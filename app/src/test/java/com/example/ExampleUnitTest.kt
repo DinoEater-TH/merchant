@@ -20,7 +20,11 @@ class ExampleUnitTest {
     @Test
     fun testInitialRepositoryState() {
         val repo = MeatballRepository()
-        assertTrue(repo.menuItems.value.isNotEmpty())
+        // No demo/sample data: everything real comes from the shop's Firebase state.
+        assertTrue(repo.menuItems.value.isEmpty())
+        assertTrue(repo.orders.value.isEmpty())
+        assertTrue(repo.users.value.isEmpty())
+        assertTrue(repo.hiddenCosts.value.isEmpty())
         assertTrue(repo.categories.value.isNotEmpty())
         assertEquals("DinoEater ลูกชิ้นทอด", repo.shopInfo.value.name)
     }
@@ -28,6 +32,16 @@ class ExampleUnitTest {
     @Test
     fun testStockDeductionOnOrder() {
         val repo = MeatballRepository()
+        repo.addOrUpdateMenuItem(
+            com.example.data.model.MenuItem(
+                id = "item_01",
+                name = "ลูกชิ้นเอ็นเนื้อ",
+                categoryId = "cat_1",
+                price = 10.0,
+                directCost = 5.5,
+                stockQty = 50
+            )
+        )
         val initialBeefStock = repo.menuItems.value.find { it.id == "item_01" }?.stockQty ?: 50
 
         val order = Order(
@@ -57,6 +71,7 @@ class ExampleUnitTest {
     @Test
     fun testBreakEvenCalculation() {
         val repo = MeatballRepository()
+        repo.addHiddenCost("เติมแก๊สหุงต้ม", "utilities", 390.0)
         val summary = repo.calculateBreakEvenSummary()
         assertTrue(summary.breakEvenUnitsNeeded > 0)
         assertTrue(summary.gasTankRemainingPercent in 1..100)
@@ -80,24 +95,39 @@ class ExampleUnitTest {
     fun testCustomerOrderHistoryAndConsumption() {
         val repo = MeatballRepository()
         val customerPhone = "0812345678"
+        assertTrue("No sample orders should exist", repo.orders.value.isEmpty())
+
+        repo.addOrder(
+            Order(
+                id = "ORD-TEST-COMPLETED",
+                customerPhone = customerPhone,
+                items = listOf(OrderItem("item_01", "ลูกชิ้นเอ็นเนื้อ", 10.0, 5.5, 5)),
+                totalAmount = 45.0,
+                status = OrderStatus.COMPLETED,
+                timestamp = "2026-11-05 12:00"
+            )
+        )
+        repo.addOrder(
+            Order(
+                id = "ORD-TEST-PENDING",
+                customerPhone = customerPhone,
+                items = listOf(OrderItem("item_02", "ลูกชิ้นหมูล้วนแท้", 10.0, 5.0, 2)),
+                totalAmount = 20.0,
+                status = OrderStatus.PENDING,
+                timestamp = "2026-11-06 09:00"
+            )
+        )
+
         val orders = repo.orders.value.filter { it.customerPhone == customerPhone }
+        assertEquals(2, orders.size)
 
-        assertTrue("User should have past orders", orders.size >= 4)
-
-        // Check statuses present
         val hasCompleted = orders.any { it.status == OrderStatus.COMPLETED }
         val hasCookingOrPending = orders.any { it.status == OrderStatus.PENDING || it.status == OrderStatus.COOKING }
         assertTrue("Should have completed orders", hasCompleted)
         assertTrue("Should have active orders", hasCookingOrPending)
 
-        // Check consumption total
         val totalSpent = orders.filter { it.status != OrderStatus.CANCELLED }.sumOf { it.totalAmount }
-        assertTrue("Total consumption should be greater than 100", totalSpent > 100.0)
-
-        // Verify all order total costs are positive
-        orders.forEach { order ->
-            assertTrue("Order ${order.id} total must be > 0", order.totalAmount > 0)
-            assertTrue("Order ${order.id} must have items", order.items.isNotEmpty())
-        }
+        assertEquals(65.0, totalSpent, 0.001)
+        assertTrue(orders.all { it.totalAmount > 0 && it.items.isNotEmpty() })
     }
 }

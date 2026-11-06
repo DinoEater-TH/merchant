@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -122,8 +123,20 @@ fun AdminScreen(viewModel: MainViewModel) {
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { viewModel.setAdminTab(2) },
+                    icon = { Icon(Icons.Default.BarChart, contentDescription = "ประวัติการขาย") },
+                    label = { Text("ยอดขาย", fontSize = 9.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = OrangePrimary,
+                        selectedTextColor = OrangePrimary,
+                        indicatorColor = Color(0xFFFFF3E0)
+                    ),
+                    modifier = Modifier.testTag("nav_admin_sales")
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { viewModel.setAdminTab(3) },
                     icon = { Icon(Icons.Default.Inventory2, contentDescription = "สต็อก") },
-                    label = { Text("สต็อก", fontSize = 10.sp) },
+                    label = { Text("สต็อก", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = OrangePrimary,
                         selectedTextColor = OrangePrimary,
@@ -132,10 +145,10 @@ fun AdminScreen(viewModel: MainViewModel) {
                     modifier = Modifier.testTag("nav_admin_inventory")
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { viewModel.setAdminTab(3) },
+                    selected = selectedTab == 4,
+                    onClick = { viewModel.setAdminTab(4) },
                     icon = { Icon(Icons.Default.Analytics, contentDescription = "ต้นทุน/กำไร") },
-                    label = { Text("ต้นทุน/กำไร", fontSize = 10.sp) },
+                    label = { Text("ต้นทุน", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = OrangePrimary,
                         selectedTextColor = OrangePrimary,
@@ -144,10 +157,10 @@ fun AdminScreen(viewModel: MainViewModel) {
                     modifier = Modifier.testTag("nav_admin_analytics")
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 4,
-                    onClick = { viewModel.setAdminTab(4) },
+                    selected = selectedTab == 5,
+                    onClick = { viewModel.setAdminTab(5) },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "ตั้งค่า") },
-                    label = { Text("ตั้งค่า", fontSize = 10.sp) },
+                    label = { Text("ตั้งค่า", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = OrangePrimary,
                         selectedTextColor = OrangePrimary,
@@ -156,10 +169,10 @@ fun AdminScreen(viewModel: MainViewModel) {
                     modifier = Modifier.testTag("nav_admin_settings")
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 5,
-                    onClick = { viewModel.setAdminTab(5) },
+                    selected = selectedTab == 6,
+                    onClick = { viewModel.setAdminTab(6) },
                     icon = { Icon(Icons.Default.LocalOffer, contentDescription = "โปรโมชั่น") },
-                    label = { Text("โปรโมชั่น", fontSize = 10.sp) },
+                    label = { Text("โปรฯ", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = OrangePrimary,
                         selectedTextColor = OrangePrimary,
@@ -178,10 +191,11 @@ fun AdminScreen(viewModel: MainViewModel) {
             when (selectedTab) {
                 0 -> OrderManagementView(viewModel = viewModel)
                 1 -> PosStampView(viewModel = viewModel)
-                2 -> InventoryView(viewModel = viewModel)
-                3 -> AnalyticsView(viewModel = viewModel)
-                4 -> SettingsView(viewModel = viewModel)
-        5 -> PromotionView(viewModel = viewModel)
+                2 -> SalesHistoryView(viewModel = viewModel)
+                3 -> InventoryView(viewModel = viewModel)
+                4 -> AnalyticsView(viewModel = viewModel)
+                5 -> SettingsView(viewModel = viewModel)
+                6 -> PromotionView(viewModel = viewModel)
             }
         }
     }

@@ -60,18 +60,64 @@
       <button onclick="exitAdmin()" class="text-xs bg-gray-100 px-3 py-1.5 rounded-lg">กลับหน้าร้าน</button>
     </header>
 
-    <nav class="bg-white border-b flex justify-around text-xs font-bold text-gray-600">
-      <button onclick="switchTab('orders')" id="tabBtn_orders" class="tab-btn py-3 border-b-2 border-orange-600 text-orange-600">📋 ออเดอร์</button>
-      <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn py-3 border-b-2 border-transparent">💳 POS</button>
-      <button onclick="switchTab('inventory')" id="tabBtn_inventory" class="tab-btn py-3 border-b-2 border-transparent">📦 สต็อก</button>
-      <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn py-3 border-b-2 border-transparent">📊 จุดคุ้มทุน</button>
-      <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn py-3 border-b-2 border-transparent">⚙️ ตั้งค่า</button>
-      <button onclick="switchTab('promotions')" id="tabBtn_promotions" class="tab-btn py-3 border-b-2 border-transparent">🎁 โปรโมชั่น</button>
+    <nav class="bg-white border-b flex overflow-x-auto no-scrollbar text-xs font-bold text-gray-600">
+      <button onclick="switchTab('orders')" id="tabBtn_orders" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-orange-600 text-orange-600">📋 ออเดอร์</button>
+      <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">💳 POS</button>
+      <button onclick="switchTab('sales')" id="tabBtn_sales" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">🧾 ประวัติการขาย</button>
+      <button onclick="switchTab('inventory')" id="tabBtn_inventory" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">📦 สต็อก</button>
+      <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">📊 จุดคุ้มทุน</button>
+      <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">⚙️ ตั้งค่า</button>
+      <button onclick="switchTab('promotions')" id="tabBtn_promotions" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">🎁 โปรโมชั่น</button>
     </nav>
 
     <!-- Orders -->
     <section id="tab_orders" class="p-4 space-y-3">
       <div id="ordersList" class="space-y-3"></div>
+    </section>
+
+    <!-- Sales History -->
+    <section id="tab_sales" class="p-4 space-y-3 hidden">
+      <div id="salesSummary" class="grid grid-cols-2 gap-3"></div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">ค้นหา / กรองประวัติการขาย</h3>
+        <div class="flex gap-2">
+          <label class="flex-1 text-[11px] text-gray-500">จากวันที่
+            <input id="salesFrom" type="date" class="w-full border rounded-lg px-2 py-1.5 text-xs" onchange="renderSales()">
+          </label>
+          <label class="flex-1 text-[11px] text-gray-500">ถึงวันที่
+            <input id="salesTo" type="date" class="w-full border rounded-lg px-2 py-1.5 text-xs" onchange="renderSales()">
+          </label>
+        </div>
+        <input id="salesSearch" placeholder="ค้นหาเลขออเดอร์ / เบอร์โทร / ชื่อเมนู" class="w-full border rounded-lg px-3 py-2 text-sm" oninput="renderSales()">
+        <div class="flex gap-2">
+          <select id="salesStatus" onchange="renderSales()" class="flex-1 border rounded-lg px-2 py-2 text-xs">
+            <option value="all">ทุกสถานะ</option>
+            <option value="COMPLETED">สำเร็จ</option>
+            <option value="READY">เสร็จแล้ว</option>
+            <option value="COOKING">กำลังทำ</option>
+            <option value="PENDING">รอดำเนินการ</option>
+            <option value="CANCELLED">ยกเลิก</option>
+          </select>
+          <select id="salesChannel" onchange="renderSales()" class="flex-1 border rounded-lg px-2 py-2 text-xs">
+            <option value="all">ทุกช่องทาง</option>
+            <option value="pos">หน้าร้าน (POS)</option>
+            <option value="online">ลูกค้าสั่งออนไลน์</option>
+          </select>
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button onclick="resetSalesFilter()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-bold">ล้างตัวกรอง</button>
+          <button onclick="exportSalesCsv()" class="flex-1 bg-green-600 text-white py-2 rounded-lg text-xs font-bold">⬇️ ดาวน์โหลด CSV</button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-sm">รายการขาย</h3>
+          <span id="salesCount" class="text-xs text-gray-500"></span>
+        </div>
+        <div id="salesList" class="space-y-2"></div>
+      </div>
     </section>
 
     <!-- POS -->
@@ -367,11 +413,7 @@
         { id: "cat_3", name: "ชุดสุดคุ้ม Combo", sort: 3, iconEmoji: "⭐" },
         { id: "cat_4", name: "เครื่องดื่ม & เคียง", sort: 4, iconEmoji: "🥤" }
       ],
-      menuItems: [
-        { id: "item_01", name: "ลูกชิ้นเอ็นเนื้อ", categoryId: "cat_1", price: 10, directCost: 5.5, status: "ACTIVE", stockQty: 50, defaultResetQty: 50, isBestseller: true, emoji: "🍢", description: "เอ็นเนื้อแท้" },
-        { id: "item_02", name: "ลูกชิ้นหมูล้วนแท้", categoryId: "cat_1", price: 10, directCost: 5.0, status: "ACTIVE", stockQty: 50, defaultResetQty: 50, isBestseller: true, emoji: "🍡", description: "หมูบดเนียนนุ่ม" },
-        { id: "item_03", name: "ไส้กรอกแดงในตำนาน", categoryId: "cat_1", price: 10, directCost: 4.8, status: "ACTIVE", stockQty: 60, defaultResetQty: 60, isBestseller: true, emoji: "🌭", description: "ไส้กรอกแดง" }
-      ],
+      menuItems: [],
       orders: [],
       users: {},
       hiddenCosts: [],
@@ -499,7 +541,7 @@
 
     // ---------- Tabs ----------
     function switchTab(tab) {
-      ['orders', 'pos', 'inventory', 'analytics', 'settings', 'promotions'].forEach(t => {
+      ['orders', 'pos', 'sales', 'inventory', 'analytics', 'settings', 'promotions'].forEach(t => {
         document.getElementById(`tab_${t}`).classList.add('hidden');
         document.getElementById(`tabBtn_${t}`).className = 'tab-btn py-3 border-b-2 border-transparent text-gray-600';
       });
@@ -546,6 +588,135 @@
     }
 
     function printSlipMock(orderId) { alert('สั่งพิมพ์ใบเสร็จ ' + orderId); }
+
+    // ---------- Sales History ----------
+    function isPosOrder(o) {
+      return (o.comment || '').trim().toUpperCase().indexOf('POS') === 0;
+    }
+    function resetSalesFilter() {
+      ['salesFrom', 'salesTo', 'salesSearch'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('salesStatus').value = 'all';
+      document.getElementById('salesChannel').value = 'all';
+      renderSales();
+    }
+    function salesFilteredOrders() {
+      const from = document.getElementById('salesFrom') ? document.getElementById('salesFrom').value : '';
+      const to = document.getElementById('salesTo') ? document.getElementById('salesTo').value : '';
+      const q = (document.getElementById('salesSearch') ? document.getElementById('salesSearch').value : '').trim().toLowerCase();
+      const status = document.getElementById('salesStatus') ? document.getElementById('salesStatus').value : 'all';
+      const channel = document.getElementById('salesChannel') ? document.getElementById('salesChannel').value : 'all';
+      return (state.orders || [])
+        .filter(o => {
+          const day = (o.timestamp || '').slice(0, 10);
+          if (from && day < from) return false;
+          if (to && day > to) return false;
+          if (status !== 'all' && o.status !== status) return false;
+          if (channel === 'pos' && !isPosOrder(o)) return false;
+          if (channel === 'online' && isPosOrder(o)) return false;
+          if (q) {
+            const phone = (o.customerPhone || '').toLowerCase();
+            const name = ((state.users || {})[o.customerPhone] || {}).name || '';
+            const items = (o.items || []).map(i => i.name).join(' ');
+            if ([o.id, phone, name, items].join(' ').toLowerCase().indexOf(q) === -1) return false;
+          }
+          return true;
+        })
+        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    }
+    function renderSales() {
+      if (!document.getElementById('salesList')) return;
+      const list = salesFilteredOrders();
+      const valid = list.filter(o => o.status !== 'CANCELLED');
+      const revenue = valid.reduce((s, o) => s + (o.totalAmount || 0), 0);
+      const today = new Date().toISOString().slice(0, 10);
+      const todayRevenue = valid.filter(o => (o.timestamp || '').slice(0, 10) === today).reduce((s, o) => s + (o.totalAmount || 0), 0);
+      const profit = valid.reduce((s, o) => {
+        const itemProfit = (o.items || []).reduce((x, i) => x + ((i.price || 0) - (i.directCost || 0)) * (i.quantity || 0), 0);
+        return s + itemProfit - (o.discount || 0);
+      }, 0);
+      const summary = document.getElementById('salesSummary');
+      if (summary) {
+        const card = (label, value, sub, color) => `
+          <div class="bg-white rounded-2xl p-3 shadow-sm">
+            <div class="text-[11px] text-gray-500">${label}</div>
+            <div class="text-lg font-extrabold ${color || 'text-gray-800'}">${value}</div>
+            ${sub ? `<div class="text-[10px] text-gray-400">${sub}</div>` : ''}
+          </div>`;
+        summary.innerHTML = [
+          card('ยอดขายรวม', '฿' + revenue.toLocaleString('th-TH'), `${valid.length} บิล (ไม่รวมยกเลิก)`, 'text-orange-600'),
+          card('กำไรขั้นต้น', '฿' + profit.toLocaleString('th-TH', { maximumFractionDigits: 2 }), 'หลังหักต้นทุนวัตถุดิบ+ส่วนลด', 'text-green-600'),
+          card('ยอดขายวันนี้', '฿' + todayRevenue.toLocaleString('th-TH'), today, 'text-blue-600'),
+          card('เฉลี่ยต่อบิล', '฿' + (valid.length ? (revenue / valid.length).toFixed(0) : 0), `${(state.orders || []).filter(o => o.status === 'CANCELLED').length} บิลยกเลิก`, 'text-gray-700')
+        ].join('');
+      }
+      const count = document.getElementById('salesCount');
+      if (count) count.textContent = `${list.length} รายการ • รวม ฿${valid.reduce((s, o) => s + (o.totalAmount || 0), 0).toLocaleString('th-TH')}`;
+      const el = document.getElementById('salesList');
+      if (!el) return;
+      if (list.length === 0) {
+        el.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">ไม่พบประวัติการขายตามเงื่อนไข</p>';
+        return;
+      }
+      el.innerHTML = list.map(o => {
+        const user = (state.users || {})[o.customerPhone] || {};
+        const itemText = (o.items || []).map(i => `${i.name} x${i.quantity}`).join(', ') || '-';
+        const channelLabel = isPosOrder(o) ? 'หน้าร้าน (POS)' : 'ออนไลน์';
+        return `
+          <div class="border rounded-xl p-3 space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm">${o.id}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full ${statusColor(o.status)}">${statusTitle(o.status)}</span>
+            </div>
+            <div class="text-[11px] text-gray-500">${o.timestamp || '-'} • ${o.customerPhone || 'ลูกค้าทั่วไป'}${user.name ? ' (' + user.name + ')' : ''} • ${channelLabel}</div>
+            <div class="text-xs text-gray-700">${itemText}</div>
+            <div class="flex justify-between text-xs">
+              <span class="text-gray-500">ยอดรวม ฿${o.subtotal || 0} • ส่วนลด ฿${o.discount || 0}${o.deliveryFee ? ' • ส่ง ฿' + o.deliveryFee : ''}</span>
+              <span class="font-bold">฿${o.totalAmount || 0}</span>
+            </div>
+            ${o.comment ? `<div class="text-[11px] text-orange-600">หมายเหตุ: ${o.comment}</div>` : ''}
+            <div class="flex gap-2 pt-1">
+              <button onclick="printSlipMock('${o.id}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[11px] font-bold">🖨️ พิมพ์ใบเสร็จ</button>
+              ${o.status !== 'CANCELLED' ? `<button onclick="cancelSale('${o.id}')" class="bg-red-50 text-red-600 px-2 py-1 rounded text-[11px] font-bold">ยกเลิกบิล</button>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    }
+    function cancelSale(id) {
+      if (!confirm('ยืนยันยกเลิกบิล ' + id + '?')) return;
+      const o = (state.orders || []).find(x => x.id === id);
+      if (!o) return;
+      o.status = 'CANCELLED';
+      renderSales(); renderOrders();
+      schedulePush();
+    }
+    function exportSalesCsv() {
+      const rows = salesFilteredOrders();
+      if (rows.length === 0) { alert('ไม่มีข้อมูลให้ดาวน์โหลด'); return; }
+      const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      const lines = [['วันที่', 'เลขออเดอร์', 'ลูกค้า', 'ชื่อสมาชิก', 'ช่องทาง', 'รายการ', 'ยอดรวม', 'ส่วนลด', 'ค่าส่ง', 'ยอดสุทธิ', 'สถานะ']];
+      rows.forEach(o => {
+        const user = (state.users || {})[o.customerPhone] || {};
+        lines.push([
+          o.timestamp || '', o.id, o.customerPhone || 'ลูกค้าทั่วไป', user.name || '',
+          isPosOrder(o) ? 'หน้าร้าน (POS)' : 'ออนไลน์',
+          (o.items || []).map(i => `${i.name} x${i.quantity}`).join(' | '),
+          o.subtotal || 0, o.discount || 0, o.deliveryFee || 0, o.totalAmount || 0,
+          statusTitle(o.status)
+        ]);
+      });
+      const csv = '\uFEFF' + lines.map(r => r.map(esc).join(',')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'sales-history-' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }
 
     // ---------- POS ----------
     let posCart = {};
@@ -646,7 +817,7 @@
         if (m) subtotal += (m.price || 0) * qty;
       }
       const si = state.shopInfo || {};
-      const discount = subtotal >= (si.minOrderForDiscount ?? 50) ? (si.discountAmount ?? 5) : 0;
+      const discount = (si.promoDiscountEnabled !== false && subtotal >= (si.minOrderForDiscount ?? 50)) ? (si.discountAmount ?? 5) : 0;
       const total = Math.max(0, subtotal - discount);
       return { subtotal, discount, total };
     }
@@ -694,7 +865,7 @@
         discount: t.discount,
         deliveryFee: 0,
         totalAmount: t.total,
-        status: 'PENDING',
+        status: 'COMPLETED',
         timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
         slipAttached: false,
         slipImageUri: null
@@ -716,7 +887,7 @@
       }
       posCart = {};
       document.getElementById('posResult').textContent = `สร้างออเดอร์ ${order.id} เรียบร้อย ฿${t.total}`;
-      renderPos(); renderUsers(); renderOrders(); renderInventory();
+      renderPos(); renderUsers(); renderOrders(); renderInventory(); renderSales();
       schedulePush();
     }
 
@@ -734,6 +905,10 @@
     }
 
     function redeemPosReward() {
+      if (state.shopInfo && state.shopInfo.promoRewardEnabled === false) {
+        document.getElementById('posResult').textContent = 'โปรโมชั่นแลกรางวัลถูกปิดอยู่';
+        return;
+      }
       const phone = document.getElementById('posPhoneInput').value.trim();
       if (!phone || !state.users || !state.users[phone]) { document.getElementById('posResult').textContent = 'ไม่พบสมาชิก'; return; }
       const cost = state.shopInfo.stampsRequiredForReward || 10;
@@ -745,12 +920,8 @@
     }
 
     // ---------- Inventory ----------
-    function renderInventory() {
-      const el = document.getElementById('inventoryList');
-      if (!el) return;
-      const items = state.menuItems || [];
-      if (items.length === 0) { el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">ยังไม่มีเมนู</p>'; return; }
-      el.innerHTML = items.map(item => `
+    function inventoryItemCard(item) {
+      return `
         <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
@@ -772,8 +943,43 @@
             <button onclick="setItemStatus('${item.id}','HIDDEN')" class="px-2 py-1 rounded text-xs ${item.status==='HIDDEN'?'bg-red-100 text-red-700 font-bold':'bg-gray-100'}">🔴 ซ่อน</button>
             <button onclick="openEditMenu('${item.id}')" class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700 font-bold">✏️ แก้ไข</button>
           </div>
-        </div>
-      `).join('');
+        </div>`;
+    }
+    function inventoryGroups() {
+      const items = state.menuItems || [];
+      const cats = (state.categories || [])
+        .filter(c => c.id !== 'all')
+        .slice()
+        .sort((a, b) => (a.sort || 0) - (b.sort || 0));
+      const groups = [];
+      const used = new Set();
+      cats.forEach(c => {
+        const list = items.filter(i => i.categoryId === c.id);
+        used.add(c.id);
+        if (list.length > 0) groups.push({ category: c, items: list });
+      });
+      const orphans = items.filter(i => !used.has(i.categoryId));
+      if (orphans.length > 0) {
+        groups.push({ category: { id: '__none', name: 'ไม่ระบุหมวดหมู่', iconEmoji: '📦' }, items: orphans });
+      }
+      return groups;
+    }
+    function renderInventory() {
+      const el = document.getElementById('inventoryList');
+      if (!el) return;
+      const items = state.menuItems || [];
+      if (items.length === 0) { el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">ยังไม่มีเมนู</p>'; return; }
+      el.innerHTML = inventoryGroups().map(g => {
+        const stockTotal = g.items.reduce((s, i) => s + (i.stockQty || 0), 0);
+        return `
+          <div class="space-y-2">
+            <div class="flex justify-between items-end px-1 pt-2">
+              <h4 class="font-bold text-sm">${g.category.iconEmoji || '🍽️'} ${g.category.name}</h4>
+              <span class="text-[11px] text-gray-500">${g.items.length} รายการ • คงเหลือ ${stockTotal} ชิ้น</span>
+            </div>
+            ${g.items.map(inventoryItemCard).join('')}
+          </div>`;
+      }).join('');
     }
 
     function changeStock(id, delta) {
@@ -831,7 +1037,10 @@
     function saveMenuItem() {
       const name = document.getElementById('m_name').value.trim();
       if (!name) { alert('กรุณาใส่ชื่อเมนู'); return; }
-      const category = document.getElementById('m_category').value.trim() || 'cat_1';
+      const categoryInput = document.getElementById('m_category').value.trim() || 'cat_1';
+      const existingCategory = (state.categories || []).find(c => c.id === categoryInput)
+        || (state.categories || []).find(c => (c.name || '').trim() === categoryInput);
+      const category = existingCategory ? existingCategory.id : categoryInput;
       const price = parseFloat(document.getElementById('m_price').value) || 0;
       const packagePrice = parseFloat(document.getElementById('m_packagePrice').value) || 0;
       const pieces = parseInt(document.getElementById('m_pieces').value) || 0;
@@ -1187,6 +1396,7 @@ function finishSaveSettings() {
 
     function renderAll() {
       renderOrders();
+      renderSales();
       renderUsers();
       renderPos();
       renderInventory();

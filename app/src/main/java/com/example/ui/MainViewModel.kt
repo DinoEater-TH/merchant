@@ -184,12 +184,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Auto Promotions: Buy >= 50 -> -5 baht
-        val discount = if (subtotal >= shop.minOrderForDiscount) shop.discountAmount else 0.0
+        // Auto promotions (admin can enable/disable each one)
+        val discount = if (shop.promoDiscountEnabled && subtotal >= shop.minOrderForDiscount) shop.discountAmount else 0.0
 
-        // Free delivery if >= 120, else shop deliveryFee (if delivery)
+        // Free delivery when enabled and >= threshold, else shop deliveryFee (if delivery)
         val deliveryFee = if (fulfillment == FulfillmentType.DELIVERY) {
-            if (subtotal >= shop.minOrderForFreeDelivery) 0.0 else shop.deliveryFee
+            if (shop.promoFreeDeliveryEnabled && subtotal >= shop.minOrderForFreeDelivery) 0.0 else shop.deliveryFee
         } else 0.0
 
         val total = (subtotal - discount + deliveryFee).coerceAtLeast(0.0)

@@ -1,19 +1,14 @@
 package com.example.data.repository
 
 import android.content.Context
-import com.example.data.model.AddonOptions
 import com.example.data.model.Category
-import com.example.data.model.FulfillmentType
 import com.example.data.model.HiddenCostLog
 import com.example.data.model.ItemStatus
 import com.example.data.model.MemberUser
 import com.example.data.model.MenuItem
 import com.example.data.model.Order
-import com.example.data.model.OrderItem
 import com.example.data.model.OrderStatus
-import com.example.data.model.SauceChoice
 import com.example.data.model.ShopInfo
-import com.example.data.model.SkewerOption
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -167,334 +162,14 @@ class MeatballRepository(context: Context? = null) {
     )
 
     private fun loadInitialData() {
+        // Start empty: the shop's real data is loaded from Firebase / persisted state.
         _categories.value = defaultCategories()
-
-        val initialMenu = listOf(
-            MenuItem(
-                id = "item_01",
-                name = "ลูกชิ้นเอ็นเนื้อ",
-                categoryId = "cat_1",
-                price = 10.0,
-                directCost = 5.5,
-                status = ItemStatus.ACTIVE,
-                stockQty = 50,
-                defaultResetQty = 50,
-                isBestseller = true,
-                emoji = "🍢",
-                description = "เอ็นเนื้อแท้ กรุบกรอบ ทอดพองกำลังดี ไม้ละ 10.-"
-            ),
-            MenuItem(
-                id = "item_02",
-                name = "ลูกชิ้นหมูล้วนแท้",
-                categoryId = "cat_1",
-                price = 10.0,
-                directCost = 5.0,
-                status = ItemStatus.ACTIVE,
-                stockQty = 50,
-                defaultResetQty = 50,
-                isBestseller = true,
-                emoji = "🍡",
-                description = "หมูบดเนียนนุ่ม ไม่ผสมแป้งเยอะ ทอดไม่อมน้ำมัน"
-            ),
-            MenuItem(
-                id = "item_03",
-                name = "ไส้กรอกแดงในตำนาน",
-                categoryId = "cat_1",
-                price = 10.0,
-                directCost = 4.8,
-                status = ItemStatus.ACTIVE,
-                stockQty = 60,
-                defaultResetQty = 60,
-                isBestseller = true,
-                emoji = "🌭",
-                description = "ไส้กรอกแดงวัยเด็ก ทอดกรอบบั้งสวย น้ำจิ้มซึมเข้าเนื้อ"
-            ),
-            MenuItem(
-                id = "item_04",
-                name = "ลูกชิ้นปลากรายเยาวราช",
-                categoryId = "cat_2",
-                price = 12.0,
-                directCost = 6.2,
-                status = ItemStatus.ACTIVE,
-                stockQty = 40,
-                defaultResetQty = 40,
-                isBestseller = false,
-                emoji = "🍥",
-                description = "เนื้อปลากรายนวดฟู เด้งสู้ฟัน ราดน้ำจิ้มซีฟู้ดเข้ากันมาก"
-            ),
-            MenuItem(
-                id = "item_05",
-                name = "ลูกชิ้นกุ้งทอดทรงเครื่อง",
-                categoryId = "cat_1",
-                price = 15.0,
-                directCost = 7.5,
-                status = ItemStatus.ACTIVE,
-                stockQty = 35,
-                defaultResetQty = 35,
-                isBestseller = false,
-                emoji = "🦐",
-                description = "เนื้อกุ้งหอมละมุน ทอดสีเหลืองทองหอมฟุ้ง"
-            ),
-            MenuItem(
-                id = "item_06",
-                name = "เกี๊ยวกรอบทอดไส้หมู",
-                categoryId = "cat_1",
-                price = 10.0,
-                directCost = 4.5,
-                status = ItemStatus.ACTIVE,
-                stockQty = 45,
-                defaultResetQty = 45,
-                isBestseller = true,
-                emoji = "🥟",
-                description = "แผ่นเกี๊ยวทอดกรอบสะท้านฟัน จิ้มน้ำจิ้มมะขามฟินเว่อร์"
-            ),
-            MenuItem(
-                id = "item_07",
-                name = "ชุดคอมโบรวมมิตร 6 ไม้",
-                categoryId = "cat_3",
-                price = 55.0,
-                directCost = 28.0,
-                status = ItemStatus.ACTIVE,
-                stockQty = 25,
-                defaultResetQty = 25,
-                isBestseller = true,
-                emoji = "⭐",
-                description = "เอ็นเนื้อ 2, หมูล้วน 2, ไส้กรอกแดง 1, เกี๊ยวกรอบ 1 (ประหยัด 5.-)"
-            ),
-            MenuItem(
-                id = "item_08",
-                name = "ชุดปาร์ตี้อิ่มจุก 12 ไม้",
-                categoryId = "cat_3",
-                price = 99.0,
-                directCost = 52.0,
-                status = ItemStatus.ACTIVE,
-                stockQty = 15,
-                defaultResetQty = 15,
-                isBestseller = false,
-                emoji = "🎉",
-                description = "รวมลูกชิ้นครบทุกแบบ 12 ไม้ ผักสดและน้ำจิ้มจุใจ (ประหยัด 21.-)"
-            ),
-            MenuItem(
-                id = "item_09",
-                name = "ชาดำเย็นโบราณ / ชามะนาว",
-                categoryId = "cat_4",
-                price = 20.0,
-                directCost = 6.0,
-                status = ItemStatus.ACTIVE,
-                stockQty = 30,
-                defaultResetQty = 30,
-                isBestseller = false,
-                emoji = "🧋",
-                description = "ชาต้มสดหอมกรุ่น เย็นชื่นใจ ดับกระหาย"
-            ),
-            MenuItem(
-                id = "item_10",
-                name = "โค้กเย็นฉ่ำ (กระป๋อง)",
-                categoryId = "cat_4",
-                price = 15.0,
-                directCost = 9.0,
-                status = ItemStatus.ACTIVE,
-                stockQty = 40,
-                defaultResetQty = 40,
-                isBestseller = false,
-                emoji = "🥤",
-                description = "โค้กแช่เย็นเจี๊ยบ ดื่มคู่ลูกชิ้นทอดแก้เลี่ยน"
-            )
-        )
-        _menuItems.value = initialMenu.mapIndexed { index, item -> item.copy(sortOrder = index) }
-
-        val sampleOrder = Order(
-            id = "ORD-101",
-            customerPhone = "0812345678",
-            isGuest = false,
-            fulfillment = FulfillmentType.DELIVERY,
-            deliveryAddress = "บ้านเลขที่ 12/3 ซอยมิตรภาพ 14",
-            gpsCoordinates = "16.4421, 102.8358",
-            items = listOf(
-                OrderItem(
-                    itemId = "item_01",
-                    name = "ลูกชิ้นเอ็นเนื้อ",
-                    price = 10.0,
-                    directCost = 5.5,
-                    quantity = 5
-                )
-            ),
-            options = AddonOptions(
-                skewer = SkewerOption.SKEWERED,
-                friedChili = true,
-                cucumber = true,
-                sauceCup = true,
-                sauceChoice = SauceChoice.MIXED,
-                comment = "ขอทอดกรอบๆ แยกน้ำจิ้ม"
-            ),
-            comment = "ขอทอดกรอบๆ แยกน้ำจิ้ม",
-            subtotal = 50.0,
-            discount = 5.0,
-            deliveryFee = 0.0,
-            totalAmount = 45.0,
-            status = OrderStatus.PENDING,
-            timestamp = "2026-11-04 12:00",
-            slipAttached = true
-        )
-
-        val historyOrder1 = Order(
-            id = "ORD-098",
-            customerPhone = "0812345678",
-            isGuest = false,
-            fulfillment = FulfillmentType.DELIVERY,
-            deliveryAddress = "บ้านเลขที่ 12/3 ซอยมิตรภาพ 14",
-            gpsCoordinates = "16.4421, 102.8358",
-            items = listOf(
-                OrderItem(itemId = "item_02", name = "ลูกชิ้นหมูล้วนแท้", price = 10.0, directCost = 5.0, quantity = 3),
-                OrderItem(itemId = "item_03", name = "ไส้กรอกแดงในตำนาน", price = 10.0, directCost = 4.8, quantity = 3)
-            ),
-            options = AddonOptions(
-                skewer = SkewerOption.SKEWERED,
-                friedChili = true,
-                cucumber = true,
-                sauceCup = true,
-                sauceChoice = SauceChoice.TAMARIND,
-                comment = "พริกทอดเยอะๆ ครับ"
-            ),
-            comment = "พริกทอดเยอะๆ ครับ",
-            subtotal = 60.0,
-            discount = 5.0,
-            deliveryFee = 0.0,
-            totalAmount = 55.0,
-            status = OrderStatus.COMPLETED,
-            timestamp = "2026-11-03 18:45",
-            slipAttached = true
-        )
-
-        val historyOrder2 = Order(
-            id = "ORD-089",
-            customerPhone = "0812345678",
-            isGuest = false,
-            fulfillment = FulfillmentType.PICKUP,
-            deliveryAddress = "",
-            gpsCoordinates = "",
-            items = listOf(
-                OrderItem(itemId = "item_07", name = "ชุดคอมโบรวมมิตร 6 ไม้", price = 55.0, directCost = 28.0, quantity = 1),
-                OrderItem(itemId = "item_09", name = "ชาดำเย็นโบราณ / ชามะนาว", price = 20.0, directCost = 6.0, quantity = 1)
-            ),
-            options = AddonOptions(
-                skewer = SkewerOption.IN_BAG,
-                friedChili = true,
-                cucumber = true,
-                sauceCup = false,
-                sauceChoice = SauceChoice.MIXED
-            ),
-            subtotal = 75.0,
-            discount = 5.0,
-            deliveryFee = 0.0,
-            totalAmount = 70.0,
-            status = OrderStatus.COMPLETED,
-            timestamp = "2026-11-01 12:30",
-            slipAttached = true
-        )
-
-        val historyOrder3 = Order(
-            id = "ORD-075",
-            customerPhone = "0812345678",
-            isGuest = false,
-            fulfillment = FulfillmentType.DELIVERY,
-            deliveryAddress = "บ้านเลขที่ 12/3 ซอยมิตรภาพ 14",
-            gpsCoordinates = "16.4421, 102.8358",
-            items = listOf(
-                OrderItem(itemId = "item_06", name = "เกี๊ยวกรอบทอดไส้หมู", price = 10.0, directCost = 4.5, quantity = 3),
-                OrderItem(itemId = "item_01", name = "ลูกชิ้นเอ็นเนื้อ", price = 10.0, directCost = 5.5, quantity = 2)
-            ),
-            options = AddonOptions(
-                skewer = SkewerOption.SKEWERED,
-                friedChili = false,
-                cucumber = true,
-                sauceCup = true,
-                sauceChoice = SauceChoice.SEAFOOD
-            ),
-            subtotal = 50.0,
-            discount = 5.0,
-            deliveryFee = 0.0,
-            totalAmount = 45.0,
-            status = OrderStatus.COMPLETED,
-            timestamp = "2026-10-29 19:15",
-            slipAttached = true
-        )
-
-        val historyOrder4 = Order(
-            id = "ORD-063",
-            customerPhone = "0812345678",
-            isGuest = false,
-            fulfillment = FulfillmentType.DELIVERY,
-            deliveryAddress = "บ้านเลขที่ 12/3 ซอยมิตรภาพ 14",
-            gpsCoordinates = "16.4421, 102.8358",
-            items = listOf(
-                OrderItem(itemId = "item_04", name = "ลูกชิ้นปลากรายเยาวราช", price = 12.0, directCost = 6.2, quantity = 2),
-                OrderItem(itemId = "item_10", name = "โค้กเย็นฉ่ำ (กระป๋อง)", price = 15.0, directCost = 9.0, quantity = 1)
-            ),
-            options = AddonOptions(
-                skewer = SkewerOption.SEPARATE,
-                friedChili = false,
-                cucumber = false,
-                sauceCup = true,
-                sauceChoice = SauceChoice.TAMARIND
-            ),
-            subtotal = 39.0,
-            discount = 0.0,
-            deliveryFee = 15.0,
-            totalAmount = 54.0,
-            status = OrderStatus.CANCELLED,
-            timestamp = "2026-10-24 16:00",
-            slipAttached = false
-        )
-
-        val initialUser = MemberUser(
-            phoneNumber = "0812345678",
-            name = "ลูกค้าประจำ",
-            stamps = 7,
-            totalOrders = 5,
-            lastOrder = sampleOrder
-        )
-        _users.value = mapOf("0812345678" to initialUser)
-
-        _orders.value = listOf(sampleOrder, historyOrder1, historyOrder2, historyOrder3, historyOrder4)
-        _currentActiveOrderId.value = sampleOrder.id
-        _currentCustomerPhone.value = "0812345678"
-
-        val initialCosts = listOf(
-            HiddenCostLog(
-                id = "cost_1",
-                date = "2026-11-04",
-                category = "utilities",
-                itemName = "เติมแก๊สหุงต้ม 15 กก.",
-                amount = 390.0,
-                notes = "ถังใหม่ ใช้ทอดได้ ~300 กระทะ"
-            ),
-            HiddenCostLog(
-                id = "cost_2",
-                date = "2026-11-02",
-                category = "oil_gas",
-                itemName = "น้ำมันปาล์มทอด 2 ปี๊บ",
-                amount = 540.0,
-                notes = "เปลี่ยนน้ำมันใหม่ใสสะอาด"
-            ),
-            HiddenCostLog(
-                id = "cost_3",
-                date = "2026-11-01",
-                category = "supplies",
-                itemName = "ถุงหิ้ว + ถ้วยน้ำจิ้ม + ไม้เสียบ",
-                amount = 220.0,
-                notes = "วัสดุสิ้นเปลืองประจำเดือน"
-            ),
-            HiddenCostLog(
-                id = "cost_4",
-                date = "2026-11-03",
-                category = "supplies",
-                itemName = "พริกสดทอด + แตงกวา 10 กก.",
-                amount = 180.0,
-                notes = "ผักเคียงสดกรอบ"
-            )
-        )
-        _hiddenCosts.value = initialCosts
+        _menuItems.value = emptyList()
+        _orders.value = emptyList()
+        _users.value = emptyMap()
+        _hiddenCosts.value = emptyList()
+        _currentActiveOrderId.value = null
+        _currentCustomerPhone.value = ""
     }
 
     fun setCustomerPhone(phone: String) {
@@ -621,6 +296,7 @@ fun addOrUpdateMenuItem(item: MenuItem) {
     }
 
     fun redeemReward(phone: String): Boolean {
+        if (!_shopInfo.value.promoRewardEnabled) return false
         val clean = phone.trim()
         val existing = _users.value[clean] ?: return false
         val cost = _shopInfo.value.stampsRequiredForReward
