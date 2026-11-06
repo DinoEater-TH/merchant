@@ -7,6 +7,7 @@ import com.example.data.model.ItemStatus
 import com.example.data.model.MemberUser
 import com.example.data.model.MenuItem
 import com.example.data.model.Order
+import com.example.data.model.OrderItem
 import com.example.data.model.OrderStatus
 import com.example.data.model.ShopInfo
 import com.squareup.moshi.Moshi
@@ -218,12 +219,66 @@ class MeatballRepository(context: Context? = null) {
     }
 
     fun updateOrderStatus(orderId: String, newStatus: OrderStatus) {
+        // Cancelling an order returns its limited-stock items to inventory.
+        if (newStatus == OrderStatus.CANCELLED) {
+            val order = _orders.value.firstOrNull { it.id == orderId }
+            val wasActive = order != null && order.status != OrderStatus.CANCELLED && order.status != OrderStatus.COMPLETED
+            if (order != null && wasActive) restoreStockForItems(order.items)
+        }
         _orders.value = _orders.value.map { order ->
             if (order.id == orderId) {
                 order.copy(status = newStatus)
             } else order
         }
         persistState()
+    }
+
+    fun removeOrderItem(orderId: String, itemId: String) {
+        val order = _orders.value.firstOrNull { it.id == orderId } ?: return
+        val removed = order.items.filter { it.itemId == itemId }
+        if (removed.isEmpty()) return
+        if (order.status != OrderStatus.COMPLETED && order.status != OrderStatus.CANCELLED) {
+            restoreStockForItems(removed)
+        }
+        val shop = _shopInfo.value
+        _orders.value = _orders.value.map { current ->
+            if (current.id != orderId) return@map current
+            val remaining = current.items.filterNot { it.itemId == itemId }
+            val subtotal = remaining.sumOf { it.price * it.quantity }
+            val discount = if (shop.promoDiscountEnabled && subtotal >= shop.minOrderForDiscount) shop.discountAmount else 0.0
+            val total = (subtotal - discount + current.deliveryFee).coerceAtLeast(0.0)
+            current.copy(
+                items = remaining,
+                subtotal = subtotal,
+                discount = discount,
+                totalAmount = total,
+                status = if (remaining.isEmpty()) OrderStatus.CANCELLED else current.status
+            )
+        }
+        persistState()
+    }
+
+    fun deleteOrder(orderId: String) {
+        _orders.value = _orders.value.filterNot { it.id == orderId }
+        persistState()
+    }
+
+    private fun restoreStockForItems(items: List<OrderItem>) {
+        val menu = _menuItems.value.toMutableList()
+        items.forEach { orderItem ->
+            val index = menu.indexOfFirst { it.id == orderItem.itemId }
+            if (index != -1) {
+                val item = menu[index]
+                if (!item.isUnlimitedStock) {
+                    val restored = item.stockQty + orderItem.quantity
+                    menu[index] = item.copy(
+                        stockQty = restored,
+                        status = if (restored > 0 && item.status == ItemStatus.OUT_OF_STOCK) ItemStatus.ACTIVE else item.status
+                    )
+                }
+            }
+        }
+        _menuItems.value = menu
     }
 
     fun updateItemStatus(itemId: String, newStatus: ItemStatus) {

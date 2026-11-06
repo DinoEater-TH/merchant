@@ -534,6 +534,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun removeOrderItem(orderId: String, itemId: String) {
+        repository.removeOrderItem(orderId, itemId)
+    }
+
+    fun deleteOrder(orderId: String) {
+        repository.deleteOrder(orderId)
+    }
+
     fun updateItemStatus(itemId: String, status: ItemStatus) {
         repository.updateItemStatus(itemId, status)
     }

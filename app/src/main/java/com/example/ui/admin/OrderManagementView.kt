@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -130,6 +131,8 @@ fun OrderManagementView(viewModel: MainViewModel) {
                     AdminOrderCard(
                         order = order,
                         onUpdateStatus = { newStatus -> viewModel.updateOrderStatus(order.id, newStatus) },
+                        onRemoveItem = { itemId -> viewModel.removeOrderItem(order.id, itemId) },
+                        onDeleteOrder = { viewModel.deleteOrder(order.id) },
                         onPrintSlip = { viewModel.openPrintingOrder(order) }
                     )
                 }
@@ -142,8 +145,20 @@ fun OrderManagementView(viewModel: MainViewModel) {
 fun AdminOrderCard(
     order: Order,
     onUpdateStatus: (OrderStatus) -> Unit,
+    onRemoveItem: (String) -> Unit = {},
+    onDeleteOrder: () -> Unit = {},
     onPrintSlip: () -> Unit
 ) {
+    var awaitingCancelConfirm by androidx.compose.runtime.remember(order.id) {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    var awaitingDeleteConfirm by androidx.compose.runtime.remember(order.id) {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    var itemToRemove by androidx.compose.runtime.remember(order.id) {
+        androidx.compose.runtime.mutableStateOf<com.example.data.model.OrderItem?>(null)
+    }
+    val canEditItems = order.status != OrderStatus.COMPLETED && order.status != OrderStatus.CANCELLED
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -233,17 +248,28 @@ fun AdminOrderCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "${item.name} x${item.quantity}",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
-                    Text(
-                        text = "฿${String.format(Locale.US, "%.0f", item.price * item.quantity)}",
-                        fontSize = 13.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "฿${String.format(Locale.US, "%.0f", item.price * item.quantity)}",
+                            fontSize = 13.sp
+                        )
+                        if (canEditItems) {
+                            androidx.compose.material3.IconButton(
+                                onClick = { itemToRemove = item },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Text("🗑️", fontSize = 12.sp)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -362,15 +388,74 @@ fun AdminOrderCard(
                 }
 
                 if (order.status != OrderStatus.COMPLETED && order.status != OrderStatus.CANCELLED) {
-                    OutlinedButton(
-                        onClick = { onUpdateStatus(OrderStatus.CANCELLED) },
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text("ยกเลิก", fontSize = 11.sp, color = Color.Gray)
+                    if (awaitingCancelConfirm) {
+                        Button(
+                            onClick = {
+                                awaitingCancelConfirm = false
+                                onUpdateStatus(OrderStatus.CANCELLED)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ChiliRed),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("⚠️ ยืนยันยกเลิก", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { awaitingCancelConfirm = true },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("🚫 ปฏิเสธ/ยกเลิก", fontSize = 11.sp, color = ChiliRed, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    if (awaitingDeleteConfirm) {
+                        Button(
+                            onClick = {
+                                awaitingDeleteConfirm = false
+                                onDeleteOrder()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("⚠️ ยืนยันลบออเดอร์", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { awaitingDeleteConfirm = true },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("🗑️ ลบออเดอร์", fontSize = 11.sp, color = Color.Gray)
+                        }
                     }
                 }
             }
         }
+    }
+
+    itemToRemove?.let { item ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { itemToRemove = null },
+            title = { Text("ลบรายการออกจากออเดอร์?", fontWeight = FontWeight.Bold) },
+            text = { Text("ต้องการลบ “${item.name} x${item.quantity}” ออกจากออเดอร์ #${order.id} ใช่หรือไม่? ยอดรวมจะคำนวณใหม่ และสต็อกที่หักไว้จะคืนให้") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        onRemoveItem(item.itemId)
+                        itemToRemove = null
+                    }
+                ) {
+                    Text("ลบรายการ", color = ChiliRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { itemToRemove = null }) { Text("ยกเลิก") }
+            }
+        )
     }
 }

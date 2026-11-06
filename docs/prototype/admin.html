@@ -714,6 +714,20 @@
     }
 
     // ---------- Orders ----------
+    let pendingCancelOrderId = null;
+    let pendingDeleteOrderId = null;
+    let pendingRemoveItemKey = null;
+
+    function restoreStockForOrder(o) {
+      (o.items || []).forEach(oi => {
+        const mi = (state.menuItems || []).find(x => x.id === oi.itemId);
+        if (mi && !isUnlimitedStock(mi)) {
+          mi.stockQty = (mi.stockQty || 0) + (oi.quantity || 0);
+          if (mi.stockQty > 0 && mi.status === 'OUT_OF_STOCK') mi.status = 'ACTIVE';
+        }
+      });
+    }
+
     function renderOrders() {
       const el = document.getElementById('ordersList');
       if (!el) return;
@@ -726,13 +740,30 @@
             <span class="text-xs px-2 py-0.5 rounded-full ${statusColor(o.status)}">${statusTitle(o.status)}</span>
           </div>
           <div class="text-xs text-gray-500">${o.customerPhone || 'Guest'} • ${o.fulfillment === 'DELIVERY' ? 'จัดส่ง' : 'รับเอง'} • ${o.timestamp}</div>
-          <div class="text-xs">${(o.items || []).map(i => `${i.name} x${i.quantity}`).join(', ')}</div>
+          <div class="border-t border-gray-100 pt-1.5 space-y-1">
+            ${(o.items || []).map((i, idx) => {
+              const key = `${o.id}:${idx}`;
+              const armed = pendingRemoveItemKey === key;
+              const canEdit = o.status !== 'COMPLETED' && o.status !== 'CANCELLED';
+              return `<div class="flex justify-between items-center text-xs">
+                <span>${i.name} x${i.quantity} <span class="text-gray-400">฿${(i.price || 0) * (i.quantity || 0)}</span></span>
+                ${canEdit ? `<button onclick="removeOrderItem('${o.id}', ${idx})" class="${armed ? 'bg-red-600 text-white' : 'text-red-500'} font-bold px-1.5 py-0.5 rounded">${armed ? '⚠️ ยืนยันลบ' : '🗑️'}</button>` : ''}
+              </div>`;
+            }).join('')}
+          </div>
+          <div class="flex justify-between items-center text-xs text-gray-500"><span>ยอดรวมสินค้า ฿${o.subtotal || 0} • ส่วนลด ฿${o.discount || 0} • ค่าส่ง ฿${o.deliveryFee || 0}</span><span class="font-bold text-orange-600 text-sm">฿${o.totalAmount || 0}</span></div>
           ${o.comment ? `<div class="text-xs text-orange-600">หมายเหตุ: ${o.comment}</div>` : ''}
           <div class="flex gap-2 flex-wrap">
             ${o.status === 'PENDING' ? `<button onclick="setStatusOrder('${o.id}','COOKING')" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-xs">เริ่มทำ</button>` : ''}
             ${o.status === 'COOKING' ? `<button onclick="setStatusOrder('${o.id}','READY')" class="bg-green-500 text-white px-3 py-1 rounded-lg text-xs">เสร็จแล้ว</button>` : ''}
             ${o.status === 'READY' ? `<button onclick="setStatusOrder('${o.id}','COMPLETED')" class="bg-gray-500 text-white px-3 py-1 rounded-lg text-xs">ปิดงาน</button>` : ''}
             <button onclick="printSlipMock('${o.id}')" class="border border-gray-300 text-gray-700 px-3 py-1 rounded-lg text-xs">พิมพ์</button>
+            ${o.status !== 'COMPLETED' && o.status !== 'CANCELLED' ? (pendingCancelOrderId === o.id
+              ? `<button onclick="requestCancelOrder('${o.id}')" class="bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-bold">⚠️ กดยืนยันยกเลิกอีกครั้ง</button>`
+              : `<button onclick="requestCancelOrder('${o.id}')" class="border border-red-300 text-red-600 px-3 py-1 rounded-lg text-xs">🚫 ปฏิเสธ/ยกเลิก</button>`) : ''}
+            ${pendingDeleteOrderId === o.id
+              ? `<button onclick="requestDeleteOrder('${o.id}')" class="bg-gray-800 text-white px-3 py-1 rounded-lg text-xs font-bold">⚠️ กดยืนยันลบออเดอร์</button>`
+              : `<button onclick="requestDeleteOrder('${o.id}')" class="border border-gray-300 text-gray-500 px-3 py-1 rounded-lg text-xs">🗑️ ลบออเดอร์</button>`}
           </div>
         </div>
       `).join('');
@@ -748,6 +779,62 @@
     function setStatusOrder(id, newStatus) {
       const o = (state.orders || []).find(x => x.id === id);
       if (o) { o.status = newStatus; renderOrders(); schedulePush(); }
+    }
+
+    // Two-step reject/cancel: first click arms, second click confirms (prevents accidental taps).
+    function requestCancelOrder(id) {
+      if (pendingCancelOrderId === id) {
+        const o = (state.orders || []).find(x => x.id === id);
+        if (o) {
+          restoreStockForOrder(o);
+          o.status = 'CANCELLED';
+        }
+        pendingCancelOrderId = null;
+        renderOrders(); renderSales(); renderInventory();
+        schedulePush();
+        return;
+      }
+      pendingCancelOrderId = id;
+      renderOrders();
+    }
+
+    function requestDeleteOrder(id) {
+      if (pendingDeleteOrderId === id) {
+        state.orders = (state.orders || []).filter(x => x.id !== id);
+        pendingDeleteOrderId = null;
+        renderOrders(); renderSales();
+        schedulePush();
+        return;
+      }
+      pendingDeleteOrderId = id;
+      renderOrders();
+    }
+
+    // Two-step remove one line item from an order; stock is restored for limited items.
+    function removeOrderItem(orderId, itemIndex) {
+      const key = `${orderId}:${itemIndex}`;
+      if (pendingRemoveItemKey !== key) {
+        pendingRemoveItemKey = key;
+        renderOrders();
+        return;
+      }
+      pendingRemoveItemKey = null;
+      const o = (state.orders || []).find(x => x.id === orderId);
+      if (!o || !Array.isArray(o.items) || !o.items[itemIndex]) return;
+      const removed = o.items[itemIndex];
+      const mi = (state.menuItems || []).find(x => x.id === removed.itemId);
+      if (mi && !isUnlimitedStock(mi)) {
+        mi.stockQty = (mi.stockQty || 0) + (removed.quantity || 0);
+        if (mi.stockQty > 0 && mi.status === 'OUT_OF_STOCK') mi.status = 'ACTIVE';
+      }
+      o.items.splice(itemIndex, 1);
+      const si = state.shopInfo || {};
+      o.subtotal = o.items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
+      o.discount = (si.promoDiscountEnabled !== false && o.subtotal >= (si.minOrderForDiscount ?? 50)) ? (si.discountAmount ?? 5) : 0;
+      o.totalAmount = Math.max(0, o.subtotal - o.discount + (o.deliveryFee || 0));
+      if (o.items.length === 0) o.status = 'CANCELLED';
+      renderOrders(); renderSales(); renderInventory();
+      schedulePush();
     }
 
     function printSlipMock(orderId) { alert('สั่งพิมพ์ใบเสร็จ ' + orderId); }
@@ -842,17 +929,24 @@
             ${o.comment ? `<div class="text-[11px] text-orange-600">หมายเหตุ: ${o.comment}</div>` : ''}
             <div class="flex gap-2 pt-1">
               <button onclick="printSlipMock('${o.id}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[11px] font-bold">🖨️ พิมพ์ใบเสร็จ</button>
-              ${o.status !== 'CANCELLED' ? `<button onclick="cancelSale('${o.id}')" class="bg-red-50 text-red-600 px-2 py-1 rounded text-[11px] font-bold">ยกเลิกบิล</button>` : ''}
+              ${o.status !== 'CANCELLED' ? `<button onclick="cancelSale('${o.id}')" class="${pendingCancelSaleId === o.id ? 'bg-red-600 text-white' : 'bg-red-50 text-red-600'} px-2 py-1 rounded text-[11px] font-bold">${pendingCancelSaleId === o.id ? '⚠️ ยืนยันยกเลิก' : 'ยกเลิกบิล'}</button>` : ''}
             </div>
           </div>`;
       }).join('');
     }
+    let pendingCancelSaleId = null;
     function cancelSale(id) {
-      if (!confirm('ยืนยันยกเลิกบิล ' + id + '?')) return;
+      if (pendingCancelSaleId !== id) {
+        pendingCancelSaleId = id;
+        renderSales();
+        return;
+      }
+      pendingCancelSaleId = null;
       const o = (state.orders || []).find(x => x.id === id);
       if (!o) return;
+      restoreStockForOrder(o);
       o.status = 'CANCELLED';
-      renderSales(); renderOrders();
+      renderSales(); renderOrders(); renderInventory();
       schedulePush();
     }
     function exportSalesCsv() {
