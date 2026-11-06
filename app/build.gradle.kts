@@ -110,6 +110,7 @@ dependencies {
   implementation(libs.firebase.ai)
   implementation(libs.firebase.database)
   implementation(libs.firebase.auth)
+  implementation(libs.firebase.messaging)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 

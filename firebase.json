@@ -5,5 +5,10 @@
   "hosting": {
     "public": "docs/prototype",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "**/*.apk"]
+  },
+  "functions": {
+    "source": "functions",
+    "codebase": "default",
+    "predeploy": ["npm --prefix \"$RESOURCE_DIR\" install"]
   }
 }

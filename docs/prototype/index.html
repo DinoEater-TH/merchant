@@ -178,6 +178,8 @@
           <button onclick="openGpsMap()" id="gpsBtn" class="mt-2 w-full border border-orange-300 text-orange-600 text-xs py-2 rounded-lg font-medium hover:bg-orange-50 flex items-center justify-center space-x-1">
             <span>📍 กดเพื่อส่งพิกัด GPS ปัจจุบัน</span>
           </button>
+          <div id="deliveryInfoBox" class="mt-2"></div>
+          <div id="shopNavWrap"></div>
         </div>
       </div>
 
@@ -371,7 +373,127 @@
 
     let menu = [];
 
-    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, promoBanner: true, stampsRequired: 10, promoDiscountEnabled: true, promoFreeDeliveryEnabled: true, promoRewardEnabled: true };
+    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, deliveryFeePerKm: 0, maxDeliveryDistanceKm: 20, promoDeliveryPerKmEnabled: true, shopLat: null, shopLng: null, showShopLocation: true, shopAddress: '', promoBanner: true, stampsRequired: 10, promoDiscountEnabled: true, promoFreeDeliveryEnabled: true, promoRewardEnabled: true };
+
+    // Delivery distance state (driving distance from shop to customer GPS point)
+    let deliveryDistanceKm = null;
+    let deliveryDistanceLoading = false;
+    let deliveryDistanceError = null;
+
+    const STATE_PATH = 'shops/dinoeater-merchant/state';
+
+    function parseCoordPair(raw) {
+      if (!raw) return null;
+      const parts = String(raw).split(',').map(s => s.trim());
+      if (parts.length < 2) return null;
+      const lat = parseFloat(parts[0]), lng = parseFloat(parts[1]);
+      if (isNaN(lat) || isNaN(lng)) return null;
+      return { lat, lng };
+    }
+
+    async function fetchDrivingDistanceKm(from, to) {
+      const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data.routes || !data.routes.length) return null;
+      const meters = data.routes[0].distance;
+      if (meters == null || meters <= 0) return null;
+      return meters / 1000;
+    }
+
+    async function refreshDeliveryDistance() {
+      deliveryDistanceKm = null;
+      deliveryDistanceError = null;
+      if (fulfillment !== 'delivery') { updateCartSummary(); renderDeliveryInfo(); return; }
+      const dest = (selectedLat != null && selectedLng != null) ? { lat: selectedLat, lng: selectedLng } : null;
+      const shop = (shopCfg.shopLat != null && shopCfg.shopLng != null) ? { lat: Number(shopCfg.shopLat), lng: Number(shopCfg.shopLng) } : null;
+      if (!dest) {
+        deliveryDistanceError = 'กรุณาแนบพิกัด GPS จุดส่งเพื่อคำนวณค่าส่ง';
+        updateCartSummary(); renderDeliveryInfo();
+        return;
+      }
+      if (!shop) {
+        deliveryDistanceError = 'ร้านยังไม่ได้ตั้งพิกัด กรุณาให้แอดมินตั้งค่าพิกัดร้านก่อน';
+        updateCartSummary(); renderDeliveryInfo();
+        return;
+      }
+      deliveryDistanceLoading = true;
+      renderDeliveryInfo();
+      try {
+        const km = await fetchDrivingDistanceKm(shop, dest);
+        deliveryDistanceLoading = false;
+        if (km == null) {
+          deliveryDistanceError = 'ไม่สามารถคำนวณเส้นทางได้ กรุณาลองใหม่อีกครั้ง';
+        } else {
+          deliveryDistanceKm = km;
+          if (km > (shopCfg.maxDeliveryDistanceKm || 20)) {
+            deliveryDistanceError = `ระยะทาง ${km.toFixed(1)} กม. เกิน ${shopCfg.maxDeliveryDistanceKm} กม. ไม่สามารถจัดส่งได้`;
+          }
+        }
+      } catch (e) {
+        deliveryDistanceLoading = false;
+        deliveryDistanceError = 'ไม่สามารถคำนวณเส้นทางได้ กรุณาลองใหม่อีกครั้ง';
+      }
+      updateCartSummary();
+      renderDeliveryInfo();
+    }
+
+    function calcDeliveryFee(subtotal) {
+      if (fulfillment !== 'delivery') return 0;
+      if (shopCfg.promoFreeDeliveryEnabled && subtotal >= shopCfg.minOrderForFreeDelivery) return 0;
+      if (deliveryDistanceKm == null) return null;
+      if (shopCfg.promoDeliveryPerKmEnabled && (shopCfg.deliveryFeePerKm || 0) > 0) {
+        return Math.ceil(deliveryDistanceKm * shopCfg.deliveryFeePerKm);
+      }
+      return shopCfg.deliveryFee;
+    }
+
+    function isDeliveryBlocked() {
+      if (fulfillment !== 'delivery') return false;
+      if (selectedLat == null || selectedLng == null) return true;
+      if (deliveryDistanceLoading) return true;
+      if (deliveryDistanceKm == null) return true;
+      return deliveryDistanceKm > (shopCfg.maxDeliveryDistanceKm || 20);
+    }
+
+    function renderDeliveryInfo() {
+      const box = document.getElementById('deliveryInfoBox');
+      if (!box) return;
+      if (fulfillment !== 'delivery') { box.innerHTML = ''; return; }
+      const maxKm = shopCfg.maxDeliveryDistanceKm || 20;
+      if (deliveryDistanceLoading) {
+        box.innerHTML = '<div class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-2.5">กำลังคำนวณระยะทางตามเส้นทาง...</div>';
+      } else if (deliveryDistanceError) {
+        box.innerHTML = `<div class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5 font-medium">⚠️ ${deliveryDistanceError}</div>`;
+      } else if (deliveryDistanceKm != null) {
+        const over = deliveryDistanceKm > maxKm;
+        box.innerHTML = `<div class="text-xs ${over ? 'text-red-600 bg-red-50 border-red-200' : 'text-green-700 bg-green-50 border-green-200'} border rounded-lg p-2.5 font-medium">ระยะทางตามเส้นทาง ${deliveryDistanceKm.toFixed(1)} กม. • สูงสุด ${maxKm} กม.${over ? ' — เกินระยะทางให้บริการ ไม่สามารถสั่งอาหารได้' : ''}</div>`;
+      } else {
+        box.innerHTML = `<div class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-2.5">แนบพิกัด GPS เพื่อคำนวณระยะทางและค่าส่ง</div>`;
+      }
+      const btns = document.querySelectorAll('#paymentButtons button');
+      const blocked = isDeliveryBlocked();
+      btns.forEach(b => { b.disabled = blocked; b.classList.toggle('opacity-50', blocked); b.classList.toggle('pointer-events-none', blocked); });
+    }
+
+    function renderShopNavButton() {
+      const wrap = document.getElementById('shopNavWrap');
+      if (!wrap) return;
+      const show = shopCfg.showShopLocation !== false && shopCfg.shopLat != null && shopCfg.shopLng != null;
+      if (!show) { wrap.innerHTML = ''; return; }
+      const lat = shopCfg.shopLat, lng = shopCfg.shopLng;
+      wrap.innerHTML = `
+        <div class="mt-3">
+          <button onclick="openShopNavigation()" class="w-full border border-orange-300 text-orange-600 text-xs py-2 rounded-lg font-bold hover:bg-orange-50">🧭 นำทางไปร้านในแผนที่</button>
+        </div>`;
+    }
+
+    function openShopNavigation() {
+      if (shopCfg.shopLat == null || shopCfg.shopLng == null) return;
+      const lat = shopCfg.shopLat, lng = shopCfg.shopLng;
+      window.open(`https://www.openstreetmap.org/directions?from=&to=${lat},${lng}`, '_blank');
+    }
     function renderStamps() {
       if (!isMember) return;
       const need = shopCfg.stampsRequired || 10;
@@ -460,7 +582,8 @@
         document.getElementById('cartItemCount').textContent = count;
 
         let discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
-        let deliveryFee = fulfillment === 'delivery' ? ((shopCfg.promoFreeDeliveryEnabled && subtotal >= shopCfg.minOrderForFreeDelivery) ? 0 : shopCfg.deliveryFee) : 0;
+        let rawFee = calcDeliveryFee(subtotal);
+        let deliveryFee = rawFee == null ? 0 : rawFee;
         let total = Math.max(0, subtotal - discount + deliveryFee);
 
         document.getElementById('cartTotalText').textContent = total;
@@ -490,13 +613,18 @@
         if (item) subtotal += item.price * qty;
       }
       let discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
-      let deliveryFee = fulfillment === 'delivery' ? ((shopCfg.promoFreeDeliveryEnabled && subtotal >= shopCfg.minOrderForFreeDelivery) ? 0 : shopCfg.deliveryFee) : 0;
+      let rawFee = calcDeliveryFee(subtotal);
+      let deliveryFee = rawFee == null ? 0 : rawFee;
       let net = Math.max(0, subtotal - discount + deliveryFee);
 
       document.getElementById('modalSubtotal').textContent = `฿${subtotal}`;
       document.getElementById('modalDiscount').textContent = `-฿${discount}`;
-      document.getElementById('modalDelivery').textContent = deliveryFee === 0 ? `ฟรี (ซื้อครบ ${shopCfg.minOrderForFreeDelivery}.-)` : `฿${deliveryFee}`;
+      const free = fulfillment === 'delivery' && shopCfg.promoFreeDeliveryEnabled && subtotal >= shopCfg.minOrderForFreeDelivery;
+      document.getElementById('modalDelivery').textContent = fulfillment !== 'delivery' ? 'รับเองที่ร้าน'
+        : rawFee == null ? 'รอพิกัด GPS'
+        : free ? `ฟรี (ซื้อครบ ${shopCfg.minOrderForFreeDelivery}.-)` : `฿${deliveryFee}`;
       document.getElementById('modalNetTotal').textContent = `฿${net}`;
+      renderDeliveryInfo();
 
       // Render addon options from manager config
       const container = document.getElementById('addonOptionsContainer');
@@ -546,7 +674,10 @@
         btnDel.className = 'border border-gray-200 text-gray-600 p-3 rounded-xl text-xs font-bold flex flex-col items-center';
         inputSection.classList.add('hidden');
       }
+      deliveryDistanceKm = null;
+      deliveryDistanceError = null;
       openAddonsModal(); // Refresh calculation
+      if (type === 'delivery') refreshDeliveryDistance();
     }
 
     let mapInstance = null;
@@ -591,6 +722,7 @@
       document.getElementById('gpsBtn').innerHTML = `📍 พิกัด ${coords} (แนบแล้ว ✅)`;
       document.getElementById('gpsBtn').className = 'mt-2 w-full bg-green-50 border border-green-400 text-green-700 text-xs py-2 rounded-lg font-bold flex items-center justify-center space-x-1';
       closeGpsMap();
+      refreshDeliveryDistance();
     }
     function captureGps() { openGpsMap(); }
 
@@ -618,25 +750,108 @@
       alert('จำลองแนบสลิปเรียบร้อยแล้ว');
     }
 
-    function confirmOrder() {
-      closePaymentModal();
+    function buildOrderPayload() {
+      let subtotal = 0;
+      const items = [];
+      for (const [id, qty] of Object.entries(cart)) {
+        const m = menu.find(x => x.id === id);
+        if (m) {
+          subtotal += m.price * qty;
+          items.push({ itemId: m.id, name: m.name, price: m.price, directCost: m.directCost || 0, quantity: qty });
+        }
+      }
+      const discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
+      const rawFee = calcDeliveryFee(subtotal);
+      const deliveryFee = rawFee == null ? 0 : rawFee;
+      const totalAmount = Math.max(0, subtotal - discount + deliveryFee);
+      const commentEl = document.getElementById('orderCommentInput');
+      const addrEl = document.getElementById('deliveryAddressInput');
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return {
+        order: {
+          id: 'ORD-' + (100 + Math.floor(Math.random() * 900)),
+          customerPhone: customerPhone || '',
+          isGuest: !isMember,
+          fulfillment: fulfillment === 'delivery' ? 'DELIVERY' : 'PICKUP',
+          deliveryAddress: fulfillment === 'delivery' ? ((addrEl && addrEl.value) || '') : '',
+          gpsCoordinates: (selectedLat != null && selectedLng != null) ? `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}` : '',
+          items,
+          options: {},
+          comment: (commentEl && commentEl.value) || '',
+          subtotal, discount, deliveryFee, totalAmount,
+          status: 'PENDING',
+          timestamp: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+          distanceKm: deliveryDistanceKm != null ? Math.round(deliveryDistanceKm * 10) / 10 : null,
+          slipAttached: false,
+          slipImageUri: null
+        },
+        totalAmount
+      };
+    }
+
+    async function submitOrderToFirebase() {
+      const { order } = buildOrderPayload();
+      activeOrder = order;
+      try {
+        const ref = firebase.database().ref(STATE_PATH);
+        await ref.transaction((current) => {
+          if (current == null) return current;
+          const parsed = typeof current === 'string' ? JSON.parse(current) : current;
+          if (!Array.isArray(parsed.orders)) parsed.orders = [];
+          parsed.orders.unshift(order);
+          // Deduct stock like the Android app does
+          if (Array.isArray(parsed.menuItems)) {
+            order.items.forEach(oi => {
+              const mi = parsed.menuItems.find(x => x.id === oi.itemId);
+              if (mi) {
+                mi.stockQty = Math.max(0, (mi.stockQty || 0) - oi.quantity);
+                if (mi.stockQty === 0) mi.status = 'OUT_OF_STOCK';
+              }
+            });
+          }
+          // +1 stamp for members
+          if (order.customerPhone && parsed.users && parsed.users[order.customerPhone]) {
+            const u = parsed.users[order.customerPhone];
+            u.stamps = (u.stamps || 0) + 1;
+            u.totalOrders = (u.totalOrders || 0) + 1;
+            u.lastOrder = order;
+          }
+          window.remoteState = parsed;
+          return typeof current === 'string' ? JSON.stringify(parsed) : parsed;
+        });
+        if (isMember && window.remoteState) hydrateMemberData(window.remoteState);
+      } catch (e) {
+        console.error('submit order failed', e);
+        alert('ส่งออเดอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        return false;
+      }
+      return true;
+    }
+
+    function finishOrderUI() {
       cart = {};
       updateCartSummary();
       renderMenu();
-
       const orderAlert = document.getElementById('activeOrderAlert');
       orderAlert.classList.remove('hidden');
+      const idEl = document.getElementById('activeOrderId');
+      if (idEl && activeOrder) idEl.textContent = activeOrder.id;
       openTrackerModal();
     }
 
-    function confirmCashOrder() {
+    async function confirmOrder() {
+      if (isDeliveryBlocked()) { alert('ไม่สามารถสั่งแบบจัดส่งได้ในขณะนี้'); return; }
+      closePaymentModal();
+      const ok = await submitOrderToFirebase();
+      if (ok) finishOrderUI();
+    }
+
+    async function confirmCashOrder() {
+      if (isDeliveryBlocked()) { alert('ไม่สามารถสั่งแบบจัดส่งได้ในขณะนี้'); return; }
       closeAddonsModal();
-      cart = {};
-      updateCartSummary();
-      renderMenu();
-      const orderAlert = document.getElementById('activeOrderAlert');
-      orderAlert.classList.remove('hidden');
-      openTrackerModal();
+      const ok = await submitOrderToFirebase();
+      if (ok) finishOrderUI();
     }
 
     function openTrackerModal() {
@@ -873,12 +1088,20 @@
           shopCfg.discountAmount = si.discountAmount ?? 5;
           shopCfg.minOrderForFreeDelivery = si.minOrderForFreeDelivery ?? 120;
           shopCfg.deliveryFee = si.deliveryFee ?? 15;
+          shopCfg.deliveryFeePerKm = si.deliveryFeePerKm ?? 0;
+          shopCfg.maxDeliveryDistanceKm = si.maxDeliveryDistanceKm ?? 20;
+          shopCfg.promoDeliveryPerKmEnabled = si.promoDeliveryPerKmEnabled !== false;
+          shopCfg.shopLat = si.shopLat ?? null;
+          shopCfg.shopLng = si.shopLng ?? null;
+          shopCfg.showShopLocation = si.showShopLocation !== false;
+          shopCfg.shopAddress = si.address || '';
           shopCfg.stampsRequired = si.stampsRequiredForReward ?? 10;
           shopCfg.promoBanner = si.showPromoBanner !== false;
           shopCfg.promoDiscountEnabled = si.promoDiscountEnabled !== false;
           shopCfg.promoFreeDeliveryEnabled = si.promoFreeDeliveryEnabled !== false;
           shopCfg.promoRewardEnabled = si.promoRewardEnabled !== false;
           renderPromoBanner();
+          renderShopNavButton();
           // Menu from Firebase (real data)
           if (Array.isArray(parsed.menuItems) && parsed.menuItems.length > 0) {
             menu = parsed.menuItems

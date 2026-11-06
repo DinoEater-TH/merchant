@@ -13,6 +13,9 @@ import com.example.data.model.OrderStatus
 import com.example.data.model.ShopInfo
 import com.example.data.repository.FirebaseSyncManager
 import com.example.data.repository.MeatballRepository
+import com.example.util.DeliveryRouteHelper
+import com.example.util.NewOrderMessagingService
+import com.example.util.NotificationHelper
 import com.example.util.SoundHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,6 +29,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.ceil
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -76,6 +80,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 knownOrderIds = currentIds
                 if (incoming.isNotEmpty()) {
                     SoundHelper.playNewOrderAlert(getApplication())
+                    val latest = incoming.lastOrNull()
+                    NotificationHelper.showNewOrderNotification(
+                        getApplication(),
+                        latest?.id ?: "ออเดอร์ใหม่",
+                        latest?.totalAmount
+                    )
                 }
             }
         }
@@ -123,6 +133,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _gpsCoordinates = MutableStateFlow("")
     val gpsCoordinates: StateFlow<String> = _gpsCoordinates.asStateFlow()
+
+    private val _deliveryDistanceKm = MutableStateFlow<Double?>(null)
+    val deliveryDistanceKm: StateFlow<Double?> = _deliveryDistanceKm.asStateFlow()
+
+    private val _deliveryDistanceLoading = MutableStateFlow(false)
+    val deliveryDistanceLoading: StateFlow<Boolean> = _deliveryDistanceLoading.asStateFlow()
+
+    private val _deliveryDistanceError = MutableStateFlow<String?>(null)
+    val deliveryDistanceError: StateFlow<String?> = _deliveryDistanceError.asStateFlow()
 
     private val _slipImageUri = MutableStateFlow<String?>(null)
     val slipImageUri: StateFlow<String?> = _slipImageUri.asStateFlow()
@@ -206,8 +225,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _cart,
         menuItems,
         shopInfo,
-        _fulfillmentType
-    ) { cartMap: Map<String, Int>, items: List<MenuItem>, shop: ShopInfo, fulfillment: FulfillmentType ->
+        _fulfillmentType,
+        _deliveryDistanceKm
+    ) { cartMap: Map<String, Int>, items: List<MenuItem>, shop: ShopInfo, fulfillment: FulfillmentType, distanceKm: Double? ->
         var subtotal = 0.0
         var totalItems = 0
         val orderItems = mutableListOf<OrderItem>()
@@ -235,10 +255,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Auto promotions (admin can enable/disable each one)
         val discount = if (shop.promoDiscountEnabled && subtotal >= shop.minOrderForDiscount) shop.discountAmount else 0.0
 
-        // Free delivery when enabled and >= threshold, else shop deliveryFee (if delivery)
+        // Delivery fee is calculated from the real driving distance at the admin's per-km rate.
+        val freeDelivery = shop.promoFreeDeliveryEnabled && subtotal >= shop.minOrderForFreeDelivery
         val deliveryFee = if (fulfillment == FulfillmentType.DELIVERY) {
-            if (shop.promoFreeDeliveryEnabled && subtotal >= shop.minOrderForFreeDelivery) 0.0 else shop.deliveryFee
+            when {
+                freeDelivery -> 0.0
+                distanceKm == null -> 0.0
+                shop.promoDeliveryPerKmEnabled && shop.deliveryFeePerKm > 0.0 -> ceil(distanceKm * shop.deliveryFeePerKm)
+                else -> shop.deliveryFee
+            }
         } else 0.0
+
+        val isDeliveryBlocked = fulfillment == FulfillmentType.DELIVERY &&
+            (distanceKm == null || distanceKm > shop.maxDeliveryDistanceKm)
 
         val total = (subtotal - discount + deliveryFee).coerceAtLeast(0.0)
 
@@ -248,7 +277,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             deliveryFee = deliveryFee,
             totalAmount = total,
             totalItemsCount = totalItems,
-            orderItems = orderItems
+            orderItems = orderItems,
+            distanceKm = distanceKm,
+            isDeliveryBlocked = isDeliveryBlocked,
+            maxDeliveryDistanceKm = shop.maxDeliveryDistanceKm
         )
     }.stateIn(
         viewModelScope,
@@ -292,6 +324,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setFulfillment(type: FulfillmentType) {
         _fulfillmentType.value = type
+        if (type == FulfillmentType.DELIVERY) refreshDeliveryQuote()
     }
 
     fun setDeliveryAddress(addr: String) {
@@ -300,6 +333,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setGpsCoordinates(coordinates: String) {
         _gpsCoordinates.value = coordinates
+        refreshDeliveryQuote()
+    }
+
+    /**
+     * Ask OSRM for the driving distance from the shop to the attached GPS point.
+     * The result drives both the delivery fee and the 20 km service limit.
+     */
+    fun refreshDeliveryQuote() {
+        val shop = shopInfo.value
+        val destination = DeliveryRouteHelper.parseCoordinate(_gpsCoordinates.value)
+        val shopCoordinate = if (shop.shopLat != null && shop.shopLng != null) {
+            DeliveryRouteHelper.Coordinate(shop.shopLat, shop.shopLng)
+        } else null
+
+        if (destination == null || shopCoordinate == null) {
+            _deliveryDistanceKm.value = null
+            _deliveryDistanceLoading.value = false
+            _deliveryDistanceError.value = when {
+                destination == null -> "กรุณาแนบพิกัด GPS จุดส่งเพื่อคำนวณค่าส่ง"
+                else -> "ร้านยังไม่ได้ตั้งพิกัด กรุณาให้แอดมินตั้งค่าพิกัดร้านก่อน"
+            }
+            return
+        }
+
+        _deliveryDistanceLoading.value = true
+        _deliveryDistanceError.value = null
+        viewModelScope.launch {
+            val distance = DeliveryRouteHelper.drivingDistanceKm(shopCoordinate, destination)
+            _deliveryDistanceLoading.value = false
+            if (distance == null) {
+                _deliveryDistanceKm.value = null
+                _deliveryDistanceError.value = "ไม่สามารถคำนวณเส้นทางได้ กรุณาลองใหม่อีกครั้ง"
+            } else {
+                _deliveryDistanceKm.value = distance
+                _deliveryDistanceError.value = if (distance > shop.maxDeliveryDistanceKm) {
+                    "ระยะทาง ${String.format(Locale.US, "%.1f", distance)} กม. เกิน ${String.format(Locale.US, "%.0f", shop.maxDeliveryDistanceKm)} กม. ไม่สามารถจัดส่งได้"
+                } else null
+            }
+        }
+    }
+
+    fun clearDeliveryQuote() {
+        _deliveryDistanceKm.value = null
+        _deliveryDistanceError.value = null
+        _deliveryDistanceLoading.value = false
     }
 
     fun setSlipImage(uri: String?) {
@@ -341,6 +419,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun confirmOrderAndSubmit() {
         val calculation = cartSummary.value
         if (calculation.orderItems.isEmpty()) return
+        if (_fulfillmentType.value == FulfillmentType.DELIVERY && calculation.isDeliveryBlocked) {
+            if (_deliveryDistanceError.value == null) refreshDeliveryQuote()
+            return
+        }
 
         val orderNum = (100..999).random()
         val orderId = "ORD-$orderNum"
@@ -364,6 +446,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             totalAmount = calculation.totalAmount,
             status = OrderStatus.PENDING,
             timestamp = timeStr,
+            distanceKm = calculation.distanceKm,
             slipAttached = _isSlipAttached.value,
             slipImageUri = _slipImageUri.value
         )
@@ -509,10 +592,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _isAdminMode.value = true
             // Seed existing orders so only genuinely new ones trigger the alert.
             knownOrderIds = orders.value.map { it.id }.toSet()
+            registerAdminPushToken()
             _isPinDialogOpen.value = false
             return true
         }
         return false
+    }
+
+    /**
+     * Registers this device as an admin notification target so new orders can be
+     * pushed even when the app is closed (via the Cloud Function trigger).
+     */
+    fun registerAdminPushToken() {
+        val app = getApplication<android.app.Application>()
+        NotificationHelper.ensureChannel(app)
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token ->
+                if (token.isNotBlank()) NewOrderMessagingService.registerToken(app, token)
+            }
     }
 
     fun exitAdminMode() {
@@ -542,5 +639,8 @@ data class CartCalculation(
     val deliveryFee: Double = 0.0,
     val totalAmount: Double = 0.0,
     val totalItemsCount: Int = 0,
-    val orderItems: List<OrderItem> = emptyList()
+    val orderItems: List<OrderItem> = emptyList(),
+    val distanceKm: Double? = null,
+    val isDeliveryBlocked: Boolean = false,
+    val maxDeliveryDistanceKm: Double = 20.0
 )

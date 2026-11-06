@@ -6,6 +6,8 @@
   <title>DinoEater ลูกชิ้นทอด - ระบบบริหารร้าน (Web Admin)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     body { font-family: 'Prompt', sans-serif; }
   </style>
@@ -13,6 +15,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen">
   <!-- PIN overlay -->
@@ -252,6 +255,27 @@
           <label class="text-xs text-gray-500">ที่อยู่ร้าน (แสดงให้ลูกค้า)</label>
           <input id="s_address" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
+        <div class="border-t pt-3 space-y-2">
+          <label class="text-xs font-bold text-gray-700">📍 พิกัดร้าน (สำหรับคำนวณค่าส่งตามเส้นทางและนำทาง)</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="s_shopLat" type="number" step="any" class="border rounded-lg px-3 py-2 text-sm" placeholder="ละติจูด (Lat)">
+            <input id="s_shopLng" type="number" step="any" class="border rounded-lg px-3 py-2 text-sm" placeholder="ลองติจูด (Lng)">
+          </div>
+          <div id="shopMap" class="w-full h-56 rounded-lg border"></div>
+          <p id="shopMapHint" class="text-[11px] text-gray-500">คลิกบนแผนที่เพื่อปักหมุดตำแหน่งร้าน หรือกรอกละติจูด/ลองติจูดด้านบน</p>
+          <div class="flex gap-2">
+            <button type="button" onclick="locateShopFromDevice()" class="flex-1 border border-orange-300 text-orange-600 text-xs py-2 rounded-lg font-bold">📍 ใช้ตำแหน่งปัจจุบันของเครื่องนี้</button>
+            <button type="button" onclick="openShopOnOsm()" class="flex-1 border border-gray-300 text-gray-600 text-xs py-2 rounded-lg font-bold">🗺️ เปิดใน OpenStreetMap</button>
+          </div>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_showShopLocation" checked> แสดงพิกัดและปุ่มนำทางไปร้านให้ลูกค้าเห็น</label>
+          <p class="text-[11px] text-gray-400">ปิดไว้ = ลูกค้าจะไม่เห็นปุ่มนำทาง แต่ระบบยังใช้พิกัดคำนวณค่าส่งได้</p>
+        </div>
+        <div class="border-t pt-3">
+          <label class="text-xs font-bold text-gray-700">🔔 แจ้งเตือนออเดอร์ใหม่</label>
+          <p class="text-[11px] text-gray-500 mt-1">เปิดการแจ้งเตือนเพื่อให้มีเสียง/การแจ้งเตือนแม้สลับแท็บไปทำอย่างอื่น</p>
+          <button type="button" onclick="enableWebNotifications()" id="notifBtn" class="mt-2 w-full border border-orange-300 text-orange-600 text-xs py-2 rounded-lg font-bold">🔔 เปิดการแจ้งเตือนบนเบราว์เซอร์</button>
+          <p id="notifStatus" class="text-[11px] text-gray-400 mt-1"></p>
+        </div>
         <!-- Promotions moved to dedicated tab -->
         <div>
           <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
@@ -274,8 +298,16 @@
     <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3">
       <h3 class="font-bold text-base">🎁 โปรโมชั่น & แต้มสะสม</h3>
       <div>
-        <label class="text-xs text-gray-500">ค่าส่ง (บาท)</label>
+        <label class="text-xs text-gray-500">ค่าส่งพื้นฐาน (บาท) — ใช้เมื่อยังไม่ตั้งราคาต่อกิโล</label>
         <input id="s_deliveryFee" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">ค่าส่งต่อกิโล (บาท/กม.) — วัดจากเส้นทางจริงจากพิกัดร้าน</label>
+        <input id="s_deliveryFeePerKm" type="number" step="any" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="เช่น 10">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">ระยะทางสูงสุดที่จัดส่งได้ (กม.) — เกินนี้ลูกค้าสั่งแบบจัดส่งไม่ได้</label>
+        <input id="s_maxDeliveryKm" type="number" step="any" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="เช่น 20">
       </div>
       <div>
         <label class="text-xs text-gray-500">ครบ (บาท) จึงลด</label>
@@ -304,6 +336,7 @@
       <div class="border-t pt-2 space-y-1">
         <label class="text-xs font-bold text-gray-700">เปิด/ปิดโปรโมชั่นแต่ละรายการ</label>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoDiscount" checked> ส่วนลดเมื่อครบยอด</label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoDeliveryPerKm" checked> คิดค่าส่งตามระยะทาง (บาท/กม.)</label>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoFreeDelivery" checked> ส่งฟรีเมื่อครบยอด</label>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoReward" checked> แต้มแลกฟรี 1 รายการ</label>
       </div>
@@ -499,6 +532,63 @@
       if (incoming.length > 0 && adminUnlocked) {
         playNewOrderSound();
         setStatus(`🔔 ออเดอร์ใหม่ ${incoming.length} รายการ`);
+        showWebNotification(incoming);
+      }
+    }
+
+    // ---------- Web push (works even when the tab is in the background) ----------
+    // To receive pushes when the browser is fully closed, add a Web Push (VAPID)
+    // key from Firebase Console > Project settings > Cloud Messaging, paste it
+    // below, and deploy the Cloud Function in /functions.
+    const FCM_VAPID_KEY = '';
+
+    function showWebNotification(orders) {
+      try {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        const latest = orders[orders.length - 1] || {};
+        new Notification(`🔔 มีออเดอร์ใหม่ ${latest.id || ''}`, {
+          body: `ยอด ฿${latest.totalAmount || ''} กดเพื่อเปิดดูออเดอร์`,
+          tag: 'dinoeater-new-order',
+          vibrate: [200, 100, 200]
+        });
+      } catch (_) {}
+    }
+
+    async function enableWebNotifications() {
+      const statusEl = document.getElementById('notifStatus');
+      if (!('Notification' in window)) {
+        if (statusEl) statusEl.textContent = 'เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน';
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        if (statusEl) statusEl.textContent = 'ยังไม่ได้รับอนุญาตแจ้งเตือน';
+        return;
+      }
+      if (statusEl) statusEl.textContent = 'เปิดการแจ้งเตือนแล้ว ✓';
+      new Notification('🔔 เปิดการแจ้งเตือนออเดอร์ใหม่แล้ว', { body: 'DinoEater จะแจ้งเตือนเมื่อมีออเดอร์ใหม่' });
+      registerWebPushToken();
+    }
+
+    async function registerWebPushToken() {
+      if (!FCM_VAPID_KEY) return;
+      try {
+        if (!('serviceWorker' in navigator)) return;
+        const messaging = firebase.messaging();
+        const swReg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+        const token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swReg });
+        if (token) {
+          await db.ref(`shops/dinoeater-merchant/fcmTokens/${token}`).set({
+            token, platform: 'web', admin: true, updatedAt: Date.now()
+          });
+        }
+        messaging.onMessage((payload) => {
+          const data = payload.data || {};
+          playNewOrderSound();
+          showWebNotification([{ id: data.orderId, totalAmount: data.totalAmount }]);
+        });
+      } catch (e) {
+        console.error('web push register failed', e);
       }
     }
 
@@ -610,6 +700,7 @@
       document.getElementById(`tab_${tab}`).classList.remove('hidden');
       document.getElementById(`tabBtn_${tab}`).className = 'tab-btn py-3 border-b-2 border-orange-600 text-orange-600 font-bold';
       renderAll();
+      if (tab === 'settings') initShopMap();
     }
 
     // ---------- Orders ----------
@@ -1323,6 +1414,56 @@
     }
 
     // ---------- Settings ----------
+    // ---------- Shop location map (Leaflet) ----------
+    let shopMap = null;
+    let shopMarker = null;
+
+    function initShopMap() {
+      const el = document.getElementById('shopMap');
+      if (!el || typeof L === 'undefined') return;
+      const lat = parseFloat(document.getElementById('s_shopLat').value);
+      const lng = parseFloat(document.getElementById('s_shopLng').value);
+      const startLat = isNaN(lat) ? 16.4421 : lat;
+      const startLng = isNaN(lng) ? 102.8358 : lng;
+      if (!shopMap) {
+        shopMap = L.map('shopMap').setView([startLat, startLng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(shopMap);
+        shopMap.on('click', e => {
+          setShopCoords(e.latlng.lat, e.latlng.lng);
+        });
+      }
+      setShopCoords(startLat, startLng, false);
+      setTimeout(() => shopMap.invalidateSize(), 300);
+    }
+
+    function setShopCoords(lat, lng, updateInputs = true) {
+      if (!shopMap) return;
+      if (shopMarker) shopMap.removeLayer(shopMarker);
+      shopMarker = L.marker([lat, lng]).addTo(shopMap);
+      shopMap.setView([lat, lng], 15);
+      if (updateInputs) {
+        document.getElementById('s_shopLat').value = lat.toFixed(6);
+        document.getElementById('s_shopLng').value = lng.toFixed(6);
+      }
+      const hint = document.getElementById('shopMapHint');
+      if (hint) hint.textContent = `📌 พิกัดร้าน: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+
+    function locateShopFromDevice() {
+      if (!navigator.geolocation) { alert('เบราว์เซอร์ไม่รองรับ GPS'); return; }
+      navigator.geolocation.getCurrentPosition(
+        pos => setShopCoords(pos.coords.latitude, pos.coords.longitude),
+        () => alert('อ่านพิกัด GPS ไม่ได้ กรุณาเปิด GPS แล้วลองอีกครั้ง')
+      );
+    }
+
+    function openShopOnOsm() {
+      const lat = parseFloat(document.getElementById('s_shopLat').value);
+      const lng = parseFloat(document.getElementById('s_shopLng').value);
+      if (isNaN(lat) || isNaN(lng)) { alert('กรุณาตั้งพิกัดร้านก่อน'); return; }
+      window.open(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`, '_blank');
+    }
+
     function renderSettings() {
       const s = state.shopInfo || {};
       document.getElementById('s_name').value = s.name || '';
@@ -1333,7 +1474,12 @@
       }
       document.getElementById('s_promptPay').value = s.promptPayNumber || '';
       document.getElementById('s_address').value = s.address || '';
+      document.getElementById('s_shopLat').value = s.shopLat ?? '';
+      document.getElementById('s_shopLng').value = s.shopLng ?? '';
+      document.getElementById('s_showShopLocation').checked = (s.showShopLocation !== false);
       document.getElementById('s_deliveryFee').value = s.deliveryFee ?? 15;
+      document.getElementById('s_deliveryFeePerKm').value = (s.deliveryFeePerKm != null && s.deliveryFeePerKm !== 0) ? s.deliveryFeePerKm : '';
+      document.getElementById('s_maxDeliveryKm').value = s.maxDeliveryDistanceKm ?? 20;
       document.getElementById('s_minDiscount').value = s.minOrderForDiscount ?? 50;
       document.getElementById('s_discountAmount').value = s.discountAmount ?? 5;
       document.getElementById('s_freeDelivery').value = s.minOrderForFreeDelivery ?? 120;
@@ -1347,6 +1493,7 @@
       const promoChk = document.getElementById('s_showPromo');
       if (promoChk) promoChk.checked = (s.showPromoBanner !== false);
       document.getElementById('s_promoDiscount').checked = (s.promoDiscountEnabled !== false);
+      document.getElementById('s_promoDeliveryPerKm').checked = (s.promoDeliveryPerKmEnabled !== false);
       document.getElementById('s_promoFreeDelivery').checked = (s.promoFreeDeliveryEnabled !== false);
       document.getElementById('s_promoReward').checked = (s.promoRewardEnabled !== false);
       document.getElementById('s_pin').value = state.adminPin || '09286840';
@@ -1442,6 +1589,12 @@ function finishSaveSettings() {
       const addrEl = document.getElementById('s_address');
       if (addrEl) state.shopInfo.address = addrEl.value.trim() || state.shopInfo.address;
       state.shopInfo.deliveryFee = parseFloat(document.getElementById('s_deliveryFee').value) || state.shopInfo.deliveryFee;
+      state.shopInfo.deliveryFeePerKm = parseFloat(document.getElementById('s_deliveryFeePerKm').value) || 0;
+      state.shopInfo.maxDeliveryDistanceKm = parseFloat(document.getElementById('s_maxDeliveryKm').value) || 20;
+      state.shopInfo.promoDeliveryPerKmEnabled = document.getElementById('s_promoDeliveryPerKm').checked;
+      state.shopInfo.shopLat = parseFloat(document.getElementById('s_shopLat').value) || null;
+      state.shopInfo.shopLng = parseFloat(document.getElementById('s_shopLng').value) || null;
+      state.shopInfo.showShopLocation = document.getElementById('s_showShopLocation').checked;
       state.shopInfo.minOrderForDiscount = parseFloat(document.getElementById('s_minDiscount').value) || state.shopInfo.minOrderForDiscount;
       state.shopInfo.discountAmount = parseFloat(document.getElementById('s_discountAmount').value) || state.shopInfo.discountAmount;
       state.shopInfo.minOrderForFreeDelivery = parseFloat(document.getElementById('s_freeDelivery').value) || state.shopInfo.minOrderForFreeDelivery;

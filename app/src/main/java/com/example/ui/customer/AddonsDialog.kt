@@ -78,6 +78,7 @@ import com.example.ui.theme.CucumberGreen
 import com.example.ui.theme.OrangePrimary
 import com.example.util.LocationHelper
 import java.util.Locale
+import kotlin.math.ceil
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -89,6 +90,9 @@ fun AddonsDialog(viewModel: MainViewModel) {
     val fulfillment by viewModel.fulfillmentType.collectAsState()
     val deliveryAddress by viewModel.deliveryAddress.collectAsState()
     val gpsCoordinates by viewModel.gpsCoordinates.collectAsState()
+    val distanceKm by viewModel.deliveryDistanceKm.collectAsState()
+    val distanceLoading by viewModel.deliveryDistanceLoading.collectAsState()
+    val distanceError by viewModel.deliveryDistanceError.collectAsState()
     val cartSummary by viewModel.cartSummary.collectAsState()
     val shopInfo by viewModel.shopInfo.collectAsState()
 
@@ -99,6 +103,12 @@ fun AddonsDialog(viewModel: MainViewModel) {
     var gpsCaptured by remember(gpsCoordinates) { mutableStateOf(gpsCoordinates.isNotBlank()) }
     var isLocating by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    LaunchedEffect(isOpen, tempFulfillment, gpsCoordinates, shopInfo.shopLat, shopInfo.shopLng) {
+        if (isOpen && tempFulfillment == FulfillmentType.DELIVERY && gpsCoordinates.isNotBlank()) {
+            viewModel.refreshDeliveryQuote()
+        }
+    }
 
     fun startLocationCapture() {
         isLocating = true
@@ -283,6 +293,47 @@ fun AddonsDialog(viewModel: MainViewModel) {
                             fontWeight = FontWeight.Medium
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        color = when {
+                            distanceError != null -> Color(0xFFFFEBEE)
+                            distanceKm != null -> Color(0xFFE8F5E9)
+                            else -> Color(0xFFF5F5F5)
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            when {
+                                distanceLoading -> Text("กำลังคำนวณระยะทางตามเส้นทาง...", fontSize = 12.sp)
+                                distanceError != null -> Text(
+                                    text = "⚠️ $distanceError",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFC62828),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                distanceKm != null -> {
+                                    val maxKm = shopInfo.maxDeliveryDistanceKm
+                                    val overLimit = distanceKm!! > maxKm
+                                    Text(
+                                        text = "ระยะทางตามเส้นทาง ${String.format(Locale.US, "%.1f", distanceKm)} กม. • สูงสุด ${String.format(Locale.US, "%.0f", maxKm)} กม.",
+                                        fontSize = 12.sp,
+                                        color = if (overLimit) Color(0xFFC62828) else Color(0xFF2E7D32),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (overLimit) {
+                                        Text(
+                                            text = "เกินระยะทางให้บริการ ไม่สามารถสั่งอาหารได้",
+                                            fontSize = 11.sp,
+                                            color = Color(0xFFC62828)
+                                        )
+                                    }
+                                }
+                                else -> Text("แนบพิกัด GPS เพื่อคำนวณระยะทางและค่าส่ง", fontSize = 12.sp)
+                            }
+                        }
+                    }
                 } else {
                     Spacer(modifier = Modifier.height(8.dp))
                     Surface(
@@ -290,11 +341,22 @@ fun AddonsDialog(viewModel: MainViewModel) {
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
                             Text(text = "📍 ร้านอยู่ที่: ${shopInfo.address}", fontSize = 12.sp)
+                            if (shopInfo.showShopLocation && shopInfo.shopLat != null && shopInfo.shopLng != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                TextButton(
+                                    onClick = {
+                                        val lat = shopInfo.shopLat
+                                        val lng = shopInfo.shopLng
+                                        val uri = android.net.Uri.parse("geo:$lat,$lng?q=$lat,$lng(${shopInfo.name})")
+                                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
+                                    },
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                                ) {
+                                    Text("🧭 เปิดแผนที่นำทางไปร้าน", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
@@ -449,9 +511,18 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Calculation breakdown
-                val previewDeliveryFee = if (tempFulfillment == FulfillmentType.DELIVERY) {
-                    if (cartSummary.subtotal >= shopInfo.minOrderForFreeDelivery) 0.0 else shopInfo.deliveryFee
+                val isDelivery = tempFulfillment == FulfillmentType.DELIVERY
+                val freeDeliveryReached = cartSummary.subtotal >= shopInfo.minOrderForFreeDelivery
+                val quotedDistance = distanceKm
+                val perKmEnabled = shopInfo.promoDeliveryPerKmEnabled
+                val previewDeliveryFee = if (isDelivery && !freeDeliveryReached && quotedDistance != null) {
+                    if (perKmEnabled && shopInfo.deliveryFeePerKm > 0.0) ceil(quotedDistance * shopInfo.deliveryFeePerKm) else shopInfo.deliveryFee
                 } else 0.0
+                val deliveryBlocked = isDelivery && (
+                    quotedDistance == null ||
+                        quotedDistance > shopInfo.maxDeliveryDistanceKm ||
+                        distanceLoading
+                    )
                 val previewTotal = (cartSummary.subtotal - cartSummary.discount + previewDeliveryFee).coerceAtLeast(0.0)
 
                 Column(
@@ -479,17 +550,23 @@ fun AddonsDialog(viewModel: MainViewModel) {
                         }
                     }
 
-                    if (tempFulfillment == FulfillmentType.DELIVERY) {
+                    if (isDelivery) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(text = "ค่าจัดส่ง:", fontSize = 13.sp)
-                            if (previewDeliveryFee == 0.0) {
-                                Text(text = "ฟรี (ซื้อครบ 120.-) 🎉", fontSize = 13.sp, color = CucumberGreen, fontWeight = FontWeight.Bold)
-                            } else {
-                                Text(text = "฿${String.format(Locale.US, "%.0f", previewDeliveryFee)}", fontSize = 13.sp)
+                            Text(
+                                text = if (quotedDistance != null && !freeDeliveryReached) {
+                                    "ค่าจัดส่ง (${String.format(Locale.US, "%.1f", quotedDistance)} กม. × ฿${String.format(Locale.US, "%.0f", shopInfo.deliveryFeePerKm)}/กม.):"
+                                } else "ค่าจัดส่ง:",
+                                fontSize = 13.sp
+                            )
+                            when {
+                                freeDeliveryReached -> Text("ฟรี (ซื้อครบ ${String.format(Locale.US, "%.0f", shopInfo.minOrderForFreeDelivery)}.-) 🎉", fontSize = 13.sp, color = CucumberGreen, fontWeight = FontWeight.Bold)
+                                distanceLoading -> Text("กำลังคำนวณ...", fontSize = 13.sp, color = Color.Gray)
+                                quotedDistance == null -> Text("รอพิกัด GPS", fontSize = 13.sp, color = Color(0xFFC62828))
+                                else -> Text("฿${String.format(Locale.US, "%.0f", previewDeliveryFee)}", fontSize = 13.sp)
                             }
                         }
                     }
@@ -513,6 +590,16 @@ fun AddonsDialog(viewModel: MainViewModel) {
                     }
                 }
 
+                if (deliveryBlocked) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = distanceError ?: "กรุณาแนบพิกัด GPS จุดส่งก่อนสั่งอาหาร (ไม่เกิน ${String.format(Locale.US, "%.0f", shopInfo.maxDeliveryDistanceKm)} กม.)",
+                        fontSize = 12.sp,
+                        color = Color(0xFFC62828),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val shopInfo by viewModel.shopInfo.collectAsState()
@@ -529,7 +616,11 @@ fun AddonsDialog(viewModel: MainViewModel) {
                         }
                         viewModel.confirmCashOrder()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                    enabled = !deliveryBlocked,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2E7D32),
+                        disabledContainerColor = Color(0xFFBDBDBD)
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -552,7 +643,11 @@ fun AddonsDialog(viewModel: MainViewModel) {
                         }
                         viewModel.openPaymentModal()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
+                    enabled = !deliveryBlocked,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = OrangePrimary,
+                        disabledContainerColor = Color(0xFFBDBDBD)
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()

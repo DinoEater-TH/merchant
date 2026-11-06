@@ -21,6 +21,12 @@ data class ShopInfo(
     val openingHours: String = "10:00 - 20:30 น. (เปิดทุกวัน)",
     val isOpen: Boolean = true,
     val deliveryFee: Double = 15.0,
+    val deliveryFeePerKm: Double = 0.0,
+    val maxDeliveryDistanceKm: Double = 20.0,
+    val promoDeliveryPerKmEnabled: Boolean = true,
+    val shopLat: Double? = null,
+    val shopLng: Double? = null,
+    val showShopLocation: Boolean = true,
     val minOrderForDiscount: Double = 50.0,
     val discountAmount: Double = 5.0,
     val minOrderForFreeDelivery: Double = 120.0,
@@ -146,6 +152,7 @@ data class Order(
     val totalAmount: Double = 0.0,
     val status: OrderStatus = OrderStatus.PENDING,
     val timestamp: String = "",
+    val distanceKm: Double? = null,
     val slipAttached: Boolean = true,
     val slipImageUri: String? = null
 )

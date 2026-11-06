@@ -3,8 +3,11 @@ package com.example.ui.admin
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,6 +45,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -82,6 +86,7 @@ import com.example.ui.components.ShopLogoView
 import com.example.ui.components.StampIconView
 import com.example.ui.theme.GoldenCrisp
 import com.example.ui.theme.OrangePrimary
+import com.example.util.LocationHelper
 
 @Composable
 fun SettingsView(viewModel: MainViewModel) {
@@ -106,9 +111,37 @@ fun SettingsView(viewModel: MainViewModel) {
     var promptPayNum by remember(shopInfo.promptPayNumber) { mutableStateOf(shopInfo.promptPayNumber) }
     var promptPayName by remember(shopInfo.promptPayName) { mutableStateOf(shopInfo.promptPayName) }
     var deliveryFeeText by remember(shopInfo.deliveryFee) { mutableStateOf(shopInfo.deliveryFee.toInt().toString()) }
+    var shopLatText by remember(shopInfo.shopLat) { mutableStateOf(shopInfo.shopLat?.toString() ?: "") }
+    var shopLngText by remember(shopInfo.shopLng) { mutableStateOf(shopInfo.shopLng?.toString() ?: "") }
+    var showShopLocation by remember(shopInfo.showShopLocation) { mutableStateOf(shopInfo.showShopLocation) }
+    var isLocatingShop by remember { mutableStateOf(false) }
     var pinText by remember(adminPin) { mutableStateOf(adminPin) }
 
     var isWebExportDialogOpen by remember { mutableStateOf(false) }
+
+    fun captureShopLocation() {
+        isLocatingShop = true
+        LocationHelper.requestCurrentLocation(context) { coordinates ->
+            isLocatingShop = false
+            if (coordinates != null) {
+                val parts = coordinates.split(",").map { it.trim() }
+                if (parts.size >= 2) {
+                    shopLatText = parts[0]
+                    shopLngText = parts[1]
+                    Toast.makeText(context, "ตั้งพิกัดร้านเป็น $coordinates แล้ว", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(context, "อ่านพิกัด GPS ไม่ได้ กรุณาเปิด GPS แล้วลองอีกครั้ง", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val shopLocationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) captureShopLocation()
+        else Toast.makeText(context, "ต้องอนุญาตตำแหน่งเพื่อตั้งพิกัดร้าน", Toast.LENGTH_SHORT).show()
+    }
 
     // Modern Android Photo Picker for Shop Logo (Zero Permission)
     val logoPickerLauncher = rememberLauncherForActivityResult(
@@ -752,6 +785,66 @@ fun SettingsView(viewModel: MainViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("📍 พิกัดร้าน (ใช้คำนวณค่าส่งตามเส้นทางและนำทาง)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = shopLatText,
+                            onValueChange = { shopLatText = it },
+                            label = { Text("ละติจูด (Lat)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = shopLngText,
+                            onValueChange = { shopLngText = it },
+                            label = { Text("ลองติจูด (Lng)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                            if (hasPermission) captureShopLocation()
+                            else shopLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        },
+                        enabled = !isLocatingShop,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (isLocatingShop) "กำลังอ่านพิกัด GPS..." else "📍 ใช้ตำแหน่งปัจจุบันของเครื่องนี้เป็นพิกัดร้าน")
+                    }
+
+                    val shopLatValue = shopLatText.toDoubleOrNull()
+                    val shopLngValue = shopLngText.toDoubleOrNull()
+                    if (shopLatValue != null && shopLngValue != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = {
+                                val uri = Uri.parse("https://www.openstreetmap.org/?mlat=$shopLatValue&mlon=$shopLngValue#map=16/$shopLatValue/$shopLngValue")
+                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("🗺️ เปิดแผนที่ตรวจพิกัดร้าน (OpenStreetMap)")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = showShopLocation, onCheckedChange = { showShopLocation = it })
+                        Text("แสดงพิกัดและปุ่มนำทางไปร้านให้ลูกค้าเห็น", fontSize = 13.sp)
+                    }
+                    Text(
+                        "ปิดไว้ = ลูกค้าจะไม่เห็นปุ่มนำทางมาที่ร้าน แต่ระบบยังใช้พิกัดคำนวณค่าส่งได้",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Button(
@@ -763,6 +856,9 @@ fun SettingsView(viewModel: MainViewModel) {
                                 promptPayNumber = promptPayNum,
                                 promptPayName = promptPayName,
                                 deliveryFee = fee,
+                                shopLat = shopLatText.toDoubleOrNull(),
+                                shopLng = shopLngText.toDoubleOrNull(),
+                                showShopLocation = showShopLocation,
                                 logoType = logoType,
                                 logoPresetId = logoPresetId,
                                 logoUri = logoUri.ifBlank { null },

@@ -45,6 +45,12 @@ fun PromotionView(viewModel: MainViewModel) {
     val shopInfo by viewModel.shopInfo.collectAsState()
     val menuItems by viewModel.menuItems.collectAsState()
     var deliveryFee by remember(shopInfo.deliveryFee) { mutableStateOf(shopInfo.deliveryFee.toInt().toString()) }
+    var deliveryFeePerKm by remember(shopInfo.deliveryFeePerKm) {
+        mutableStateOf(if (shopInfo.deliveryFeePerKm == 0.0) "" else shopInfo.deliveryFeePerKm.toString())
+    }
+    var maxDeliveryDistanceKm by remember(shopInfo.maxDeliveryDistanceKm) {
+        mutableStateOf(shopInfo.maxDeliveryDistanceKm.toString())
+    }
     var minDiscount by remember(shopInfo.minOrderForDiscount) { mutableStateOf(shopInfo.minOrderForDiscount.toInt().toString()) }
     var discountAmount by remember(shopInfo.discountAmount) { mutableStateOf(shopInfo.discountAmount.toInt().toString()) }
     var freeDelivery by remember(shopInfo.minOrderForFreeDelivery) { mutableStateOf(shopInfo.minOrderForFreeDelivery.toInt().toString()) }
@@ -53,6 +59,7 @@ fun PromotionView(viewModel: MainViewModel) {
     var rewardItemId by remember(shopInfo.rewardItemId) { mutableStateOf(shopInfo.rewardItemId) }
     var showPromo by remember(shopInfo.showPromoBanner) { mutableStateOf(shopInfo.showPromoBanner) }
     var promoDiscount by remember(shopInfo.promoDiscountEnabled) { mutableStateOf(shopInfo.promoDiscountEnabled) }
+    var promoDeliveryPerKm by remember(shopInfo.promoDeliveryPerKmEnabled) { mutableStateOf(shopInfo.promoDeliveryPerKmEnabled) }
     var promoFreeDelivery by remember(shopInfo.promoFreeDeliveryEnabled) { mutableStateOf(shopInfo.promoFreeDeliveryEnabled) }
     var promoReward by remember(shopInfo.promoRewardEnabled) { mutableStateOf(shopInfo.promoRewardEnabled) }
     var rewardExpanded by remember { mutableStateOf(false) }
@@ -74,7 +81,24 @@ fun PromotionView(viewModel: MainViewModel) {
                 }
                 Text("จัดกลุ่มโปรโมชั่นเพื่อให้ลูกค้าเห็นชัดเจน", fontSize = 11.sp, color = Color.Gray)
 
-                OutlinedTextField(value = deliveryFee, onValueChange = { deliveryFee = it }, label = { Text("ค่าส่ง (บาท)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = deliveryFee, onValueChange = { deliveryFee = it }, label = { Text("ค่าส่งพื้นฐาน (บาท) — ใช้เมื่อยังไม่ตั้งราคาต่อกิโล") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = deliveryFeePerKm,
+                    onValueChange = { deliveryFeePerKm = it },
+                    label = { Text("ค่าส่งต่อกิโล (บาท/กม.) — วัดจากเส้นทางจริง") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = maxDeliveryDistanceKm,
+                    onValueChange = { maxDeliveryDistanceKm = it },
+                    label = { Text("ระยะทางสูงสุดที่จัดส่งได้ (กม.)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    "ระบบจะคำนวณระยะทางตามถนนจากพิกัดร้านไปถึงจุดส่งของลูกค้า แล้วคิดค่าส่ง = ระยะทาง (กม.) × ราคาต่อกิโล (ปัดขึ้นเป็นบาท). ถ้าเกินระยะทางสูงสุด ลูกค้าจะสั่งแบบจัดส่งไม่ได้ ต้องเลือกรับเองที่ร้าน",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
                 OutlinedTextField(value = minDiscount, onValueChange = { minDiscount = it }, label = { Text("ซื้อครบ (บาท) จึงลด") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = discountAmount, onValueChange = { discountAmount = it }, label = { Text("ส่วนลด (บาท)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = freeDelivery, onValueChange = { freeDelivery = it }, label = { Text("ส่งฟรีเมื่อครบ (บาท)") }, modifier = Modifier.fillMaxWidth())
@@ -110,6 +134,10 @@ fun PromotionView(viewModel: MainViewModel) {
                     Text("ส่วนลดเมื่อครบยอด", fontSize = 13.sp)
                 }
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked = promoDeliveryPerKm, onCheckedChange = { promoDeliveryPerKm = it })
+                    Text("คิดค่าส่งตามระยะทาง (บาท/กม.)", fontSize = 13.sp)
+                }
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Checkbox(checked = promoFreeDelivery, onCheckedChange = { promoFreeDelivery = it })
                     Text("ส่งฟรีเมื่อครบยอด", fontSize = 13.sp)
                 }
@@ -122,6 +150,8 @@ fun PromotionView(viewModel: MainViewModel) {
                     onClick = {
                         val updated = shopInfo.copy(
                             deliveryFee = deliveryFee.toDoubleOrNull() ?: shopInfo.deliveryFee,
+                            deliveryFeePerKm = deliveryFeePerKm.toDoubleOrNull() ?: 0.0,
+                            maxDeliveryDistanceKm = maxDeliveryDistanceKm.toDoubleOrNull() ?: 20.0,
                             minOrderForDiscount = minDiscount.toDoubleOrNull() ?: shopInfo.minOrderForDiscount,
                             discountAmount = discountAmount.toDoubleOrNull() ?: shopInfo.discountAmount,
                             minOrderForFreeDelivery = freeDelivery.toDoubleOrNull() ?: shopInfo.minOrderForFreeDelivery,
@@ -130,6 +160,7 @@ fun PromotionView(viewModel: MainViewModel) {
                             rewardItemId = rewardItemId,
                             showPromoBanner = showPromo,
                             promoDiscountEnabled = promoDiscount,
+                            promoDeliveryPerKmEnabled = promoDeliveryPerKm,
                             promoFreeDeliveryEnabled = promoFreeDelivery,
                             promoRewardEnabled = promoReward
                         )
