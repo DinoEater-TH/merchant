@@ -1,5 +1,13 @@
 package com.example.ui.components
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import java.io.ByteArrayOutputStream
+import kotlin.math.max
+import kotlin.math.roundToInt
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,14 +15,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -114,11 +125,12 @@ fun ShopLogoView(
                 }
                 LogoType.CUSTOM_IMAGE -> {
                     if (!shopInfo.logoUri.isNullOrBlank()) {
-                        AsyncImage(
-                            model = shopInfo.logoUri,
+                        UniversalImage(
+                            uriOrDataUrl = shopInfo.logoUri,
                             contentDescription = shopInfo.name,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            fallback = { Text(text = shopInfo.logoEmoji, fontSize = fallbackTextSize.sp) }
                         )
                     } else {
                         Text(text = shopInfo.logoEmoji, fontSize = fallbackTextSize.sp)
@@ -163,13 +175,14 @@ fun StampIconView(
                     }
                     StampIconType.CUSTOM_IMAGE -> {
                         if (!shopInfo.stampIconUri.isNullOrBlank()) {
-                            AsyncImage(
-                                model = shopInfo.stampIconUri,
+                            UniversalImage(
+                                uriOrDataUrl = shopInfo.stampIconUri,
                                 contentDescription = "แสตมป์สะสมแต้ม",
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(CircleShape),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                fallback = { Text(text = shopInfo.stampEmoji, fontSize = (size.value * 0.48f).sp) }
                             )
                         } else {
                             Text(text = shopInfo.stampEmoji, fontSize = (size.value * 0.48f).sp)
@@ -188,5 +201,113 @@ fun StampIconView(
                 )
             }
         }
+    }
+}
+
+/**
+ * Renders either a `data:image/...;base64,...` data URL (uploaded from Web or Android)
+ * or a standard URI/HTTP URL via Coil, falling back to [fallback] if missing or invalid.
+ */
+@Composable
+fun UniversalImage(
+    uriOrDataUrl: String?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+    fallback: @Composable () -> Unit = {}
+) {
+    val raw = uriOrDataUrl?.trim().orEmpty()
+    if (raw.isEmpty()) {
+        fallback()
+        return
+    }
+    if (raw.startsWith("data:image", ignoreCase = true)) {
+        val bitmap = remember(raw) {
+            try {
+                val commaIdx = raw.indexOf(',')
+                val base64Part = if (commaIdx >= 0) raw.substring(commaIdx + 1) else raw
+                val bytes = Base64.decode(base64Part, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+            } catch (_: Exception) {
+                null
+            }
+        }
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = contentDescription,
+                modifier = modifier,
+                contentScale = contentScale
+            )
+        } else {
+            fallback()
+        }
+    } else {
+        AsyncImage(
+            model = raw,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale
+        )
+    }
+}
+
+@Composable
+fun MenuItemThumbnail(
+    imageUrl: String?,
+    emoji: String,
+    contentDescription: String?,
+    size: Dp = 64.dp,
+    cornerRadius: Dp = 12.dp,
+    emojiFontSize: Int = 32
+) {
+    Surface(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(cornerRadius)),
+        shape = RoundedCornerShape(cornerRadius),
+        color = Color(0xFFFFF8E7)
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            if (!imageUrl.isNullOrBlank()) {
+                UniversalImage(
+                    uriOrDataUrl = imageUrl,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    fallback = { Text(text = emoji.ifBlank { "🍢" }, fontSize = emojiFontSize.sp) }
+                )
+            } else {
+                Text(text = emoji.ifBlank { "🍢" }, fontSize = emojiFontSize.sp)
+            }
+        }
+    }
+}
+
+/**
+ * Reads an image [Uri] from the device, downscales it to at most [maxDim] px, and encodes it
+ * as a compact `data:image/jpeg;base64,...` data URL so both Web and Android can display it.
+ */
+fun encodeUriToDataUrl(context: Context, uri: Uri, maxDim: Int = 600, quality: Int = 75): String? {
+    return try {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return uri.toString()
+        val original = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return uri.toString()
+        val w = original.width
+        val h = original.height
+        val longest = max(w, h)
+        val scaled = if (longest > maxDim && longest > 0) {
+            val ratio = maxDim.toFloat() / longest.toFloat()
+            val nw = (w * ratio).roundToInt().coerceAtLeast(1)
+            val nh = (h * ratio).roundToInt().coerceAtLeast(1)
+            Bitmap.createScaledBitmap(original, nw, nh, true)
+        } else {
+            original
+        }
+        val out = ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
+        val b64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+        "data:image/jpeg;base64,$b64"
+    } catch (_: Exception) {
+        uri.toString()
     }
 }

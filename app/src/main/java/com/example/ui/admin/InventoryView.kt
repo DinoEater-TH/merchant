@@ -1,9 +1,14 @@
 package com.example.ui.admin
 
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -358,7 +363,14 @@ fun InventoryItemCard(
                         }
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = item.emoji, fontSize = 24.sp)
+                    com.example.ui.components.MenuItemThumbnail(
+                        imageUrl = item.imageUrl,
+                        emoji = item.emoji,
+                        contentDescription = item.name,
+                        size = 44.dp,
+                        cornerRadius = 10.dp,
+                        emojiFontSize = 22
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(text = item.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -495,13 +507,57 @@ fun AddMenuItemDialog(
     var defaultResetQty by remember { mutableStateOf(existing?.defaultResetQty?.toString() ?: "30") }
     var emoji by remember { mutableStateOf(existing?.emoji ?: "🍢") }
     var description by remember { mutableStateOf(existing?.description ?: "") }
+    var imageUrl by remember { mutableStateOf(existing?.imageUrl) }
+    val context = LocalContext.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            imageUrl = com.example.ui.components.encodeUriToDataUrl(context, uri, maxDim = 600, quality = 75)
+            Toast.makeText(context, "เลือกรูปเมนูแล้ว", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existing != null) "แก้ไขเมนู" else "เพิ่มเมนูใหม่", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("ชื่อเมนู") }, modifier = Modifier.fillMaxWidth())
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    com.example.ui.components.MenuItemThumbnail(
+                        imageUrl = imageUrl,
+                        emoji = emoji,
+                        contentDescription = name,
+                        size = 56.dp,
+                        cornerRadius = 12.dp,
+                        emojiFontSize = 26
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = {
+                                imagePickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (imageUrl.isNullOrBlank()) "📷 เลือกรูปอาหาร" else "📷 เปลี่ยนรูปอาหาร", fontSize = 12.sp)
+                        }
+                        if (!imageUrl.isNullOrBlank()) {
+                            TextButton(onClick = { imageUrl = null }) {
+                                Text("ลบรูป (ใช้อีโมจิแทน)", fontSize = 11.sp, color = ChiliRed)
+                            }
+                        }
+                    }
+                }
                 Text("หมวดหมู่", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -561,7 +617,7 @@ fun AddMenuItemDialog(
                         isBestseller = existing?.isBestseller ?: false,
                         emoji = emoji.ifBlank { "🍢" },
                         description = description.trim(),
-                        imageUrl = existing?.imageUrl,
+                        imageUrl = imageUrl,
                         sortOrder = existing?.sortOrder ?: 0,
                         packagePrice = existing?.packagePrice ?: 0.0,
                         piecesPerPackage = existing?.piecesPerPackage ?: 0

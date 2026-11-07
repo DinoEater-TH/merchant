@@ -1671,9 +1671,7 @@
       };
 
       if (file) {
-        const reader = new FileReader();
-        reader.onload = e => doSave(e.target.result);
-        reader.readAsDataURL(file);
+        downscaleImageFile(file, 600, 0.75).then(doSave);
       } else {
         doSave(null);
       }
@@ -1997,29 +1995,63 @@
       renderAddonAdminList();
     }
 
-function saveSettings() {
+// Downscale an image file so the Firebase state blob stays small.
+    // Photos become JPEG; PNGs (logo/QR with transparency) stay PNG.
+    function downscaleImageFile(file, maxDim, quality) {
+      return new Promise((resolve) => {
+        if (!file) return resolve(null);
+        const reader = new FileReader();
+        reader.onerror = () => resolve(null);
+        reader.onload = e => {
+          const original = e.target.result;
+          const img = new Image();
+          img.onerror = () => resolve(original);
+          img.onload = () => {
+            try {
+              const w = img.naturalWidth || img.width;
+              const h = img.naturalHeight || img.height;
+              if (!w || !h) return resolve(original);
+              const scale = Math.min(1, maxDim / Math.max(w, h));
+              if (scale >= 1) return resolve(original); // already small enough
+              const nw = Math.max(1, Math.round(w * scale));
+              const nh = Math.max(1, Math.round(h * scale));
+              const canvas = document.createElement('canvas');
+              canvas.width = nw; canvas.height = nh;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, nw, nh);
+              const mime = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
+              let out;
+              try { out = canvas.toDataURL(mime, quality); } catch (_) { out = original; }
+              resolve(out.length < original.length ? out : original);
+            } catch (_) { resolve(original); }
+          };
+          img.src = original;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function saveSettings() {
       const logoFile = document.getElementById('s_logo').files[0];
       const qrFile = document.getElementById('s_qr').files[0];
       const afterLogo = () => {
         if (qrFile) {
-          const r2 = new FileReader();
-          r2.onload = e => {
-            state.shopInfo.promptPayQrUri = e.target.result;
+          downscaleImageFile(qrFile, 600, 0.85).then(dataUrl => {
+            if (dataUrl) state.shopInfo.promptPayQrUri = dataUrl;
             finishSaveSettings();
-          };
-          r2.readAsDataURL(qrFile);
+          });
         } else {
           finishSaveSettings();
         }
       };
       if (logoFile) {
-        const r1 = new FileReader();
-        r1.onload = e => {
-          state.shopInfo.logoType = 'CUSTOM_IMAGE';
-          state.shopInfo.logoUri = e.target.result;
+        downscaleImageFile(logoFile, 300, 0.85).then(dataUrl => {
+          if (dataUrl) {
+            state.shopInfo.logoType = 'CUSTOM_IMAGE';
+            state.shopInfo.logoUri = dataUrl;
+          }
           afterLogo();
-        };
-        r1.readAsDataURL(logoFile);
+        });
       } else {
         afterLogo();
       }

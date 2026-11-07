@@ -948,16 +948,15 @@ fun MenuItemCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Emoji / Item visual box
-            Surface(
-                modifier = Modifier.size(64.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFFFF8E7)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(text = item.emoji, fontSize = 32.sp)
-                }
-            }
+            // Image / Emoji visual box
+            com.example.ui.components.MenuItemThumbnail(
+                imageUrl = item.imageUrl,
+                emoji = item.emoji,
+                contentDescription = item.name,
+                size = 64.dp,
+                cornerRadius = 12.dp,
+                emojiFontSize = 32
+            )
 
             Spacer(modifier = Modifier.width(12.dp))
 

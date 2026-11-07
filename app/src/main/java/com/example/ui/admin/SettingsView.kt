@@ -151,7 +151,7 @@ fun SettingsView(viewModel: MainViewModel) {
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
-            logoUri = uri.toString()
+            logoUri = com.example.ui.components.encodeUriToDataUrl(context, uri, maxDim = 300, quality = 85) ?: uri.toString()
             logoType = LogoType.CUSTOM_IMAGE
             Toast.makeText(context, "เลือกรูปโลโก้เรียบร้อย", Toast.LENGTH_SHORT).show()
         }
@@ -162,7 +162,7 @@ fun SettingsView(viewModel: MainViewModel) {
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
-            stampIconUri = uri.toString()
+            stampIconUri = com.example.ui.components.encodeUriToDataUrl(context, uri, maxDim = 200, quality = 85) ?: uri.toString()
             stampType = StampIconType.CUSTOM_IMAGE
             Toast.makeText(context, "เลือกรูปไอคอนแสตมป์เรียบร้อย", Toast.LENGTH_SHORT).show()
         }
@@ -173,7 +173,7 @@ fun SettingsView(viewModel: MainViewModel) {
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
-            promptPayQrUri = uri.toString()
+            promptPayQrUri = com.example.ui.components.encodeUriToDataUrl(context, uri, maxDim = 600, quality = 85) ?: uri.toString()
             Toast.makeText(context, "เลือกรูป QR Code เรียบร้อย", Toast.LENGTH_SHORT).show()
         }
     }
@@ -452,8 +452,8 @@ fun SettingsView(viewModel: MainViewModel) {
                                         modifier = Modifier.size(48.dp),
                                         border = androidx.compose.foundation.BorderStroke(1.5.dp, OrangePrimary)
                                     ) {
-                                        AsyncImage(
-                                            model = logoUri,
+                                        com.example.ui.components.UniversalImage(
+                                            uriOrDataUrl = logoUri,
                                             contentDescription = "Logo Preview",
                                             modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Crop
@@ -653,8 +653,8 @@ fun SettingsView(viewModel: MainViewModel) {
                                         modifier = Modifier.size(40.dp),
                                         border = androidx.compose.foundation.BorderStroke(1.5.dp, OrangePrimary)
                                     ) {
-                                        AsyncImage(
-                                            model = stampIconUri,
+                                        com.example.ui.components.UniversalImage(
+                                            uriOrDataUrl = stampIconUri,
                                             contentDescription = "Stamp Preview",
                                             modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Crop
@@ -838,8 +838,8 @@ fun SettingsView(viewModel: MainViewModel) {
                                 modifier = Modifier.size(56.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.5.dp, OrangePrimary)
                             ) {
-                                AsyncImage(
-                                    model = promptPayQrUri,
+                                com.example.ui.components.UniversalImage(
+                                    uriOrDataUrl = promptPayQrUri,
                                     contentDescription = "QR Preview",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Fit

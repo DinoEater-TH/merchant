@@ -103,7 +103,7 @@ class MeatballRepository(context: Context? = null) {
             _currentCustomerPhone.value = state.currentCustomerPhone
             _currentActiveOrderId.value = state.currentActiveOrderId
             _adminPin.value = state.adminPin.ifBlank { DEFAULT_ADMIN_PIN }
-            _menuItems.value.isNotEmpty()
+            true
         } catch (_: Exception) {
             false
         }

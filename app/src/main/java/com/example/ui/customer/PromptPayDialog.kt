@@ -139,10 +139,11 @@ fun PromptPayDialog(viewModel: MainViewModel) {
 
                 // PromptPay QR Code with precise amount
                 if (!shopInfo.promptPayQrUri.isNullOrBlank()) {
-                    AsyncImage(
-                        model = shopInfo.promptPayQrUri,
+                    com.example.ui.components.UniversalImage(
+                        uriOrDataUrl = shopInfo.promptPayQrUri,
                         contentDescription = "PromptPay QR",
-                        modifier = Modifier.size(180.dp)
+                        modifier = Modifier.size(180.dp),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
                     )
                 } else {
                     PromptPayQrView(
