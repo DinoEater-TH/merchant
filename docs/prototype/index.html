@@ -20,18 +20,16 @@
 <body class="bg-amber-50 text-gray-800 min-h-screen pb-28">
 
   <!-- Header -->
-  <header class="bg-white shadow-sm sticky top-0 z-30 px-3 sm:px-4 py-2 sm:py-3 flex justify-between items-center">
-    <div class="min-w-0 flex-1">
-      <div class="flex items-center space-x-2 flex-wrap">
-        <h1 id="shopTitle" class="text-base sm:text-lg font-bold text-orange-600 flex items-center gap-2"><span id="shopLogo" class="text-3xl sm:text-2xl">🍢</span><span id="shopNameText">DinoEater ลูกชิ้นทอด</span></h1>
-        <span id="shopStatus" class="bg-green-100 text-green-700 text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap">● เปิดบริการ</span>
+  <header class="bg-white shadow-sm sticky top-0 z-30 px-3 sm:px-4 py-2 sm:py-3">
+    <div class="flex flex-col items-center text-center sm:flex-row sm:justify-between sm:text-left gap-1">
+      <div class="min-w-0">
+        <div class="flex items-center justify-center sm:justify-start space-x-2 flex-wrap">
+          <h1 id="shopTitle" class="text-base sm:text-lg font-bold text-orange-600 flex items-center gap-2"><span id="shopLogo" class="text-5xl sm:text-2xl">🍢</span><span id="shopNameText">DinoEater ลูกชิ้นทอด</span></h1>
+          <span id="shopStatus" class="bg-green-100 text-green-700 text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap">● เปิดบริการ</span>
+        </div>
+        <p id="shopAddress" class="text-[11px] sm:text-xs text-gray-500 truncate">ตลาดโต้รุ่ง ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น</p>
       </div>
-      <p id="shopAddress" class="text-[11px] sm:text-xs text-gray-500 truncate">ตลาดโต้รุ่ง ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น</p>
     </div>
-    <!-- ซ่อนปุ่มจัดการร้านจากหน้าลูกค้า (มีลิงก์ web admin แยก) -->
-    <!-- <a href="admin.html" class="hidden border border-orange-500 text-orange-600 text-xs px-3 py-1.5 rounded-full font-medium items-center space-x-1 hover:bg-orange-50 shrink-0">
-      <span>🔒 จัดการร้าน</span>
-    </a> -->
   </header>
 
   <!-- Guest login hint (member card hidden for guests) -->
@@ -140,6 +138,21 @@
 
   <!-- Modal 1: Addons & Fulfillment Modal -->
   <!-- Modal: Member Login -->
+  <!-- Modal: Member Registration -->
+  <div id="registerModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-base text-gray-800">📝 สมัครสมาชิก</h3>
+        <button onclick="closeRegisterModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-gray-500">กรอกชื่อและเบอร์โทร (จำเป็น) เพื่อสะสมแต้มและดูประวัติการสั่งซื้อ</p>
+      <input id="regNameInput" type="text" placeholder="ชื่อ (จำเป็น)" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+      <input id="regPhoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="เบอร์โทร 10 หลัก (จำเป็น)" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+      <div id="regError" class="text-xs text-red-500 hidden"></div>
+      <button onclick="submitRegister()" class="w-full bg-green-600 text-white font-bold py-2.5 rounded-xl text-sm">สมัครสมาชิก</button>
+    </div>
+  </div>
+
   <div id="memberLoginModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3">
       <div class="flex justify-between items-center border-b pb-2">
@@ -150,6 +163,7 @@
       <input id="loginPhoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="เบอร์โทร 10 หลัก (เช่น 0812345678)" class="w-full border rounded-xl px-3 py-2.5 text-sm">
       <div id="loginError" class="text-xs text-red-500 hidden"></div>
       <button onclick="submitMemberLogin()" class="w-full bg-orange-600 text-white font-bold py-2.5 rounded-xl text-sm">เข้าสู่ระบบ</button>
+      <button onclick="openRegisterModal()" class="w-full bg-green-600 text-white font-bold py-2.5 rounded-xl text-sm">สมัครสมาชิก (ใส่ชื่อ + เบอร์โทร)</button>
     </div>
   </div>
 
@@ -1018,12 +1032,49 @@
       if (!/^0\d{9}$/.test(phone)) { showLoginError('เบอร์โทรไม่ถูกต้อง (ต้องเป็น 10 หลัก เริ่มด้วย 0)'); return; }
       const rs = window.remoteState;
       if (!rs || !rs.users || !rs.users[phone]) {
-        showLoginError('ไม่พบสมาชิกเบอร์นี้ กรุณาให้ร้านเพิ่มสมาชิกที่หน้า POS ก่อน');
+        showLoginError('ไม่พบสมาชิกเบอร์นี้ — กด "สมัครสมาชิก" ด้านล่างเพื่อลงทะเบียน');
         return;
       }
       customerPhone = phone;
       hydrateMemberData(rs);
       closeMemberLogin();
+    }
+    function openRegisterModal() {
+      document.getElementById('regNameInput').value = '';
+      document.getElementById('regPhoneInput').value = document.getElementById('loginPhoneInput').value || '';
+      document.getElementById('regError').classList.add('hidden');
+      document.getElementById('registerModal').classList.remove('hidden');
+    }
+    function closeRegisterModal() { document.getElementById('registerModal').classList.add('hidden'); }
+    function showRegError(msg) {
+      const err = document.getElementById('regError');
+      err.textContent = msg;
+      err.classList.remove('hidden');
+    }
+    function submitRegister() {
+      const name = document.getElementById('regNameInput').value.trim();
+      const phone = (document.getElementById('regPhoneInput').value || '').replace(/\D/g, '').slice(0, 10);
+      if (!name) { showRegError('กรุณาใส่ชื่อ'); return; }
+      if (!/^0\d{9}$/.test(phone)) { showRegError('เบอร์โทรไม่ถูกต้อง (ต้องเป็น 10 หลัก เริ่มด้วย 0)'); return; }
+      const rs = window.remoteState;
+      if (!rs) { showRegError('ยังไม่เชื่อมต่อระบบ กรุณาลองใหม่'); return; }
+      if (!rs.users) rs.users = {};
+      if (rs.users[phone]) { showRegError('เบอร์นี้ลงทะเบียนแล้ว กรุณาเข้าสู่ระบบ'); return; }
+      rs.users[phone] = { phoneNumber: phone, name: name, stamps: 0, totalOrders: 0, lastOrder: null };
+      try {
+        firebase.database().ref('shops/dinoeater-merchant/state').set(JSON.stringify(rs));
+      } catch (e) { console.error('register sync failed', e); }
+      window.remoteState = rs;
+      customerPhone = phone;
+      isMember = true;
+      hydrateMemberData(rs);
+      closeRegisterModal();
+      closeMemberLogin();
+      const hint = document.getElementById('guestLoginHint');
+      if (hint) hint.classList.add('hidden');
+      const card = document.getElementById('memberCard');
+      if (card) card.classList.remove('hidden');
+      alert('สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ ' + name);
     }
     function hydrateMemberData(rs) {
       if (!rs || !rs.users || !rs.users[customerPhone]) return;
