@@ -262,6 +262,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 freeDelivery -> 0.0
                 distanceKm == null -> 0.0
                 shop.promoDeliveryPerKmEnabled && shop.deliveryFeePerKm > 0.0 -> ceil(distanceKm * shop.deliveryFeePerKm)
+                !shop.promoDeliveryFeeEnabled -> 0.0
                 else -> shop.deliveryFee
             }
         } else 0.0
