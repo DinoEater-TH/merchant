@@ -139,11 +139,15 @@ fun CustomerScreen(viewModel: MainViewModel) {
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
                         ShopLogoView(
                             shopInfo = shopInfo,
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(56.dp)
                                 .testTag("top_app_bar_logo")
                         )
                         Spacer(modifier = Modifier.width(10.dp))
