@@ -537,6 +537,11 @@
       const parts = [];
       if (shopCfg.promoDiscountEnabled) parts.push(`ซื้อครบ ${shopCfg.minOrderForDiscount}.- ลด ${shopCfg.discountAmount}.-`);
       if (shopCfg.promoFreeDeliveryEnabled) parts.push(`ซื้อครบ ${shopCfg.minOrderForFreeDelivery}.- ส่งฟรี`);
+      (window.customPromos || []).filter(p => p.enabled).forEach(p => {
+        if (p.type === 'buyXgetY') parts.push(`${p.name}: ซื้อ ${p.buyQty} แถม ${p.getQty}`);
+        else if (p.type === 'percentOff') parts.push(`${p.name}: ซื้อครบ ${p.minQty} ลด ${p.discountPercent}%`);
+        else if (p.type === 'fixedOff') parts.push(`${p.name}: ซื้อครบ ${p.minQty} ลด ${p.discountAmount} บาท`);
+      });
       if (banner) banner.style.display = (shopCfg.promoBanner === false || parts.length === 0) ? 'none' : '';
       if (text) text.textContent = parts.length ? 'โปรสุดคุ้ม: ' + parts.join(' | ') : '';
     }
@@ -598,6 +603,14 @@
         document.getElementById('cartItemCount').textContent = count;
 
         let discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
+        let totalQty = count;
+        (window.customPromos || []).filter(p => p.enabled).forEach(p => {
+          if (p.type === 'percentOff' && totalQty >= (p.minQty || 1)) {
+            discount += Math.round(subtotal * (p.discountPercent || 0) / 100);
+          } else if (p.type === 'fixedOff' && totalQty >= (p.minQty || 1)) {
+            discount += (p.discountAmount || 0);
+          }
+        });
         let rawFee = calcDeliveryFee(subtotal);
         let deliveryFee = rawFee == null ? 0 : rawFee;
         let total = Math.max(0, subtotal - discount + deliveryFee);
@@ -776,7 +789,15 @@
           items.push({ itemId: m.id, name: m.name, price: m.price, directCost: m.directCost || 0, quantity: qty });
         }
       }
-      const discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
+      let discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
+      let totalQty2 = items.reduce((s, it) => s + it.quantity, 0);
+      (window.customPromos || []).filter(p => p.enabled).forEach(p => {
+        if (p.type === 'percentOff' && totalQty2 >= (p.minQty || 1)) {
+          discount += Math.round(subtotal * (p.discountPercent || 0) / 100);
+        } else if (p.type === 'fixedOff' && totalQty2 >= (p.minQty || 1)) {
+          discount += (p.discountAmount || 0);
+        }
+      });
       const rawFee = calcDeliveryFee(subtotal);
       const deliveryFee = rawFee == null ? 0 : rawFee;
       const totalAmount = Math.max(0, subtotal - discount + deliveryFee);
@@ -1118,6 +1139,7 @@
           const json = (typeof val === 'string') ? val : JSON.stringify(val);
           const parsed = JSON.parse(json);
           window.remoteState = parsed;
+          window.customPromos = Array.isArray(parsed.customPromos) ? parsed.customPromos : [];
           const si = parsed.shopInfo || {};
           const nameEl = document.getElementById('shopNameText');
           if (nameEl) nameEl.textContent = si.name || 'DinoEater ลูกชิ้นทอด';

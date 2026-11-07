@@ -374,6 +374,15 @@
       </div>
       <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกโปรโมชั่น</button>
     </div>
+
+    <!-- Custom Promotions Management -->
+    <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-base">🎁 โปรโมชั่นพิเศษ (กำหนดเอง)</h3>
+        <button onclick="openPromoManager()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">⚙️ จัดการ</button>
+      </div>
+      <div id="customPromoList" class="space-y-1 text-xs text-gray-600"></div>
+    </div>
   </section>
 
   <!-- Hidden Cost Modal (single window) -->
@@ -391,6 +400,29 @@
         <button onclick="addCategory()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
       </div>
       <p class="text-[10px] text-gray-400">* ลบหมวดหมู่ได้เฉพาะเมื่อไม่มีเมนูในหมวดนั้น (หมวด "ทั้งหมด" ลบไม่ได้)</p>
+    </div>
+  </div>
+
+  <!-- Modal: Custom Promotion Manager -->
+  <div id="promoModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-lg p-5 space-y-3 shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-base">จัดการโปรโมชั่นพิเศษ</h3>
+        <button onclick="closePromoManager()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+      <div id="promoModalList" class="space-y-2"></div>
+      <div class="border-t pt-3 space-y-2">
+        <h4 class="font-bold text-sm">เพิ่มโปรโมชั่นใหม่</h4>
+        <input id="promoName" placeholder="ชื่อโปรโมชั่น" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <select id="promoType" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="buyXgetY">ซื้อ X แถม Y</option>
+          <option value="percentOff">ซื้อครบ X รายการ ลด Y%</option>
+          <option value="fixedOff">ซื้อครบ X รายการ ลด Y บาท</option>
+        </select>
+        <div id="promoFields" class="space-y-2"></div>
+        <button onclick="addPromo()" class="bg-green-600 text-white w-full py-2 rounded-xl text-sm font-bold">เพิ่มโปรโมชั่น</button>
+      </div>
+      <p class="text-[10px] text-gray-400">* โปรโมชั่นจะแสดงในตะกร้าและคำนวณอัตโนมัติเมื่อเปิดใช้งาน</p>
     </div>
   </div>
 
@@ -1423,6 +1455,98 @@
       document.getElementById('categoryModal').classList.remove('hidden');
     }
     function closeCategoryManager() { document.getElementById('categoryModal').classList.add('hidden'); renderInventory(); }
+    // ---- Custom Promotions ----
+    function openPromoManager() {
+      renderPromoModalList();
+      renderPromoFields();
+      document.getElementById('promoModal').classList.remove('hidden');
+    }
+    function closePromoManager() { document.getElementById('promoModal').classList.add('hidden'); renderCustomPromoList(); }
+    function getPromos() { if (!state.customPromos) state.customPromos = []; return state.customPromos; }
+    function renderCustomPromoList() {
+      const el = document.getElementById('customPromoList');
+      if (!el) return;
+      const promos = getPromos();
+      el.innerHTML = promos.length ? promos.map(p => `
+        <div class="flex items-center gap-2 border rounded-lg px-3 py-2">
+          <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="togglePromo('${p.id}', this.checked)" class="accent-orange-600">
+          <span class="flex-1">${p.name}</span>
+          <span class="text-[10px] text-gray-400">${p.type}</span>
+          <button onclick="deletePromo('${p.id}')" class="text-red-500 text-xs">🗑️</button>
+        </div>`).join('') : '<p class="text-xs text-gray-400 text-center py-2">ยังไม่มีโปรโมชั่นพิเศษ</p>';
+    }
+    function renderPromoModalList() {
+      const el = document.getElementById('promoModalList');
+      if (!el) return;
+      const promos = getPromos();
+      el.innerHTML = promos.length ? promos.map(p => `
+        <div class="flex items-center gap-2 border rounded-lg px-3 py-2">
+          <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="togglePromo('${p.id}', this.checked)" class="accent-orange-600">
+          <span class="flex-1 text-sm">${p.name} <span class="text-[10px] text-gray-400">(${p.type})</span></span>
+          <button onclick="deletePromo('${p.id}')" class="text-red-500 text-xs">🗑️</button>
+        </div>`).join('') : '<p class="text-xs text-gray-400 text-center py-2">ยังไม่มีโปรโมชั่น</p>';
+    }
+    function togglePromo(id, enabled) {
+      const p = getPromos().find(x => x.id === id);
+      if (p) { p.enabled = enabled; schedulePush(); renderCustomPromoList(); }
+    }
+    function deletePromo(id) {
+      if (!confirm('ลบโปรโมชั่นนี้?')) return;
+      state.customPromos = getPromos().filter(x => x.id !== id);
+      renderPromoModalList(); renderCustomPromoList(); schedulePush();
+    }
+    function renderPromoFields() {
+      const type = document.getElementById('promoType').value;
+      const el = document.getElementById('promoFields');
+      if (!el) return;
+      if (type === 'buyXgetY') {
+        const menuOpts = (state.menuItems || []).map(m => `<option value="${m.id}">${m.emoji || ''} ${m.name}</option>`).join('');
+        el.innerHTML = `
+          <div class="flex gap-2">
+            <select id="promoBuyItem" class="flex-1 border rounded-lg px-2 py-2 text-sm">${menuOpts}</select>
+            <input id="promoBuyQty" type="number" value="3" class="w-16 border rounded-lg px-2 py-2 text-sm" placeholder="ซื้อ">
+          </div>
+          <div class="flex gap-2">
+            <select id="promoGetItem" class="flex-1 border rounded-lg px-2 py-2 text-sm">${menuOpts}</select>
+            <input id="promoGetQty" type="number" value="1" class="w-16 border rounded-lg px-2 py-2 text-sm" placeholder="แถม">
+          </div>`;
+      } else if (type === 'percentOff') {
+        el.innerHTML = `
+          <input id="promoMinQty" type="number" value="1" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="ซื้อครบ (รายการ)">
+          <input id="promoPercent" type="number" value="10" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="ลด (%)">`;
+      } else {
+        el.innerHTML = `
+          <input id="promoMinQty" type="number" value="1" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="ซื้อครบ (รายการ)">
+          <input id="promoAmount" type="number" value="10" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="ลด (บาท)">`;
+      }
+    }
+    function addPromo() {
+      const name = document.getElementById('promoName').value.trim();
+      if (!name) { alert('กรุณาใส่ชื่อโปรโมชั่น'); return; }
+      const type = document.getElementById('promoType').value;
+      const promo = { id: 'promo_' + Date.now(), name, type, enabled: true };
+      if (type === 'buyXgetY') {
+        promo.buyItemId = document.getElementById('promoBuyItem').value;
+        promo.buyQty = parseInt(document.getElementById('promoBuyQty').value) || 3;
+        promo.getItemId = document.getElementById('promoGetItem').value;
+        promo.getQty = parseInt(document.getElementById('promoGetQty').value) || 1;
+      } else if (type === 'percentOff') {
+        promo.minQty = parseInt(document.getElementById('promoMinQty').value) || 1;
+        promo.discountPercent = parseFloat(document.getElementById('promoPercent').value) || 10;
+      } else {
+        promo.minQty = parseInt(document.getElementById('promoMinQty').value) || 1;
+        promo.discountAmount = parseFloat(document.getElementById('promoAmount').value) || 10;
+      }
+      getPromos().push(promo);
+      document.getElementById('promoName').value = '';
+      renderPromoModalList(); renderCustomPromoList(); schedulePush();
+      alert('เพิ่มโปรโมชั่นแล้ว');
+    }
+    // re-render promo fields when type changes
+    setTimeout(() => {
+      const sel = document.getElementById('promoType');
+      if (sel) sel.addEventListener('change', renderPromoFields);
+    }, 100);
     function renderCategoryList() {
       const list = document.getElementById('categoryList');
       if (!list) return;
