@@ -91,7 +91,6 @@ import com.example.util.LocationHelper
 @Composable
 fun SettingsView(viewModel: MainViewModel) {
     val shopInfo by viewModel.shopInfo.collectAsState()
-    val adminPin by viewModel.adminPin.collectAsState()
     val context = LocalContext.current
 
     // Brand Logo & Stamp States
@@ -107,15 +106,19 @@ fun SettingsView(viewModel: MainViewModel) {
 
     // General Shop info States
     var name by remember(shopInfo.name) { mutableStateOf(shopInfo.name) }
+    var slogan by remember(shopInfo.slogan) { mutableStateOf(shopInfo.slogan) }
     var address by remember(shopInfo.address) { mutableStateOf(shopInfo.address) }
     var promptPayNum by remember(shopInfo.promptPayNumber) { mutableStateOf(shopInfo.promptPayNumber) }
     var promptPayName by remember(shopInfo.promptPayName) { mutableStateOf(shopInfo.promptPayName) }
+    var promptPayQrUri by remember(shopInfo.promptPayQrUri) { mutableStateOf(shopInfo.promptPayQrUri ?: "") }
+    var showScanPayment by remember(shopInfo.showScanPayment) { mutableStateOf(shopInfo.showScanPayment) }
     var deliveryFeeText by remember(shopInfo.deliveryFee) { mutableStateOf(shopInfo.deliveryFee.toInt().toString()) }
     var shopLatText by remember(shopInfo.shopLat) { mutableStateOf(shopInfo.shopLat?.toString() ?: "") }
     var shopLngText by remember(shopInfo.shopLng) { mutableStateOf(shopInfo.shopLng?.toString() ?: "") }
     var showShopLocation by remember(shopInfo.showShopLocation) { mutableStateOf(shopInfo.showShopLocation) }
     var isLocatingShop by remember { mutableStateOf(false) }
-    var pinText by remember(adminPin) { mutableStateOf(adminPin) }
+    // Start empty: never pre-fill the field with the current secret PIN
+    var pinText by remember { mutableStateOf("") }
 
     var isWebExportDialogOpen by remember { mutableStateOf(false) }
 
@@ -162,6 +165,16 @@ fun SettingsView(viewModel: MainViewModel) {
             stampIconUri = uri.toString()
             stampType = StampIconType.CUSTOM_IMAGE
             Toast.makeText(context, "เลือกรูปไอคอนแสตมป์เรียบร้อย", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Modern Android Photo Picker for PromptPay QR Code (Zero Permission)
+    val qrPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            promptPayQrUri = uri.toString()
+            Toast.makeText(context, "เลือกรูป QR Code เรียบร้อย", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -752,6 +765,15 @@ fun SettingsView(viewModel: MainViewModel) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
+                        value = slogan,
+                        onValueChange = { slogan = it },
+                        label = { Text("สโลแกนร้าน (แสดงใต้ชื่อร้านให้ลูกค้า)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
                         label = { Text("ที่อยู่ร้านค้า") },
@@ -775,6 +797,63 @@ fun SettingsView(viewModel: MainViewModel) {
                         label = { Text("ชื่อบัญชีพร้อมเพย์") },
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = showScanPayment, onCheckedChange = { showScanPayment = it })
+                        Text("แสดงปุ่มสแกน PromptPay ให้ลูกค้า", fontSize = 13.sp)
+                    }
+
+                    Text(
+                        "อัปโหลดรูป QR Code ของร้าน (ถ้าไม่ใส่ ระบบจะสร้าง QR จากเลขพร้อมเพย์ให้อัตโนมัติ)",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = {
+                                qrPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.testTag("btn_pick_qr_image")
+                        ) {
+                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("เลือกรูป QR จากเครื่อง")
+                        }
+
+                        if (promptPayQrUri.isNotBlank()) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.size(56.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.5.dp, OrangePrimary)
+                            ) {
+                                AsyncImage(
+                                    model = promptPayQrUri,
+                                    contentDescription = "QR Preview",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+                        }
+                    }
+
+                    if (promptPayQrUri.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        TextButton(onClick = { promptPayQrUri = "" }) {
+                            Text("ลบรูป QR", color = Color.Red, fontSize = 12.sp)
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -852,9 +931,12 @@ fun SettingsView(viewModel: MainViewModel) {
                             val fee = deliveryFeeText.toDoubleOrNull() ?: 15.0
                             val updated = shopInfo.copy(
                                 name = name,
+                                slogan = slogan,
                                 address = address,
                                 promptPayNumber = promptPayNum,
                                 promptPayName = promptPayName,
+                                promptPayQrUri = promptPayQrUri.ifBlank { null },
+                                showScanPayment = showScanPayment,
                                 deliveryFee = fee,
                                 shopLat = shopLatText.toDoubleOrNull(),
                                 shopLng = shopLngText.toDoubleOrNull(),
@@ -894,15 +976,19 @@ fun SettingsView(viewModel: MainViewModel) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Lock, contentDescription = null, tint = OrangePrimary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "4. ความปลอดภัย (PIN (4-8 หลัก))", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(text = "4. ความปลอดภัย (PIN 4-8 หลัก)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
                         value = pinText,
-                        onValueChange = { if (it.length <= 8) pinText = it },
-                        label = { Text("รหัส PIN เข้าหน้าจัดการร้าน") },
+                        onValueChange = { if (it.length <= 8 && it.all { c -> c.isDigit() }) pinText = it },
+                        label = { Text("รหัส PIN ใหม่ (4-8 หลัก)") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -910,11 +996,12 @@ fun SettingsView(viewModel: MainViewModel) {
 
                     Button(
                         onClick = {
-                            if (pinText.length == 4) {
+                            if (pinText.length in 4..8) {
                                 viewModel.setAdminPin(pinText)
-                                Toast.makeText(context, "เปลี่ยนรหัส PIN เป็น $pinText แล้ว", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "เปลี่ยนรหัส PIN แล้ว", Toast.LENGTH_SHORT).show()
+                                pinText = ""
                             } else {
-                                Toast.makeText(context, "กรุณาใส่รหัส 4 หลัก", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "กรุณาใส่รหัส 4-8 หลัก", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
@@ -951,6 +1038,19 @@ fun SettingsView(viewModel: MainViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("คัดลอกลิงก์เว็บ")
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("link", "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk")
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "คัดลอกลิงก์ดาวน์โหลดแอปแล้ว", Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("คัดลอกลิงก์ดาวน์โหลดแอป Android")
                     }
                 }
             }

@@ -296,8 +296,8 @@
         </div>
         <!-- Promotions moved to dedicated tab -->
         <div>
-          <label class="text-xs text-gray-500">PIN หลังร้าน (4 หลัก)</label>
-          <input id="s_pin" maxlength="8" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <label class="text-xs text-gray-500">PIN หลังร้านใหม่ (4-8 หลัก — เว้นว่างถ้าไม่เปลี่ยน)</label>
+          <input id="s_pin" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="ใส่เฉพาะเมื่อต้องการเปลี่ยน" class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
         <!-- Addon options moved to inventory tab -->
         <div class="border-t pt-2">
@@ -1937,7 +1937,7 @@
       document.getElementById('s_promoReward').checked = (s.promoRewardEnabled !== false);
       const spendPerStampEl = document.getElementById('s_spendPerStamp');
       if (spendPerStampEl) spendPerStampEl.value = s.spendPerStamp ?? 50;
-      document.getElementById('s_pin').value = state.adminPin || '09286840';
+      document.getElementById('s_pin').value = '';
       document.getElementById('s_showScan').checked = (s.showScanPayment !== false);
       const qrPreview = document.getElementById('qrPreview');
       if (qrPreview) {

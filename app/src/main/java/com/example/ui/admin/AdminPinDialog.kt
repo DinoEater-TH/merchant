@@ -83,7 +83,7 @@ fun AdminPinDialog(viewModel: MainViewModel) {
                     fontSize = 17.sp
                 )
                 Text(
-                    text = "ใส่รหัส PIN ${pinLength} หลัก (รหัสเริ่มต้น: ${adminPin})",
+                    text = "ใส่รหัส PIN",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
