@@ -724,6 +724,7 @@
         orders: state.orders,
         users: state.users,
         hiddenCosts: state.hiddenCosts,
+        customPromos: state.customPromos || [],
         currentCustomerPhone: '',
         currentActiveOrderId: null,
         adminPin: ''
@@ -742,6 +743,7 @@
       state.orders = parsed.orders || state.orders;
       state.users = parsed.users || state.users;
       state.hiddenCosts = parsed.hiddenCosts || state.hiddenCosts;
+      state.customPromos = parsed.customPromos || state.customPromos || [];
       applyingRemote = false;
       detectIncomingOrders(state.orders);
     }

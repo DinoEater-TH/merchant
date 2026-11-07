@@ -1143,10 +1143,12 @@
       };
       firebase.initializeApp(fbConfig);
       firebase.auth().signInAnonymously().then(() => {
-        firebase.database().ref('shops/dinoeater-merchant/state').once('value').then(snap => {
+        firebase.database().ref('shops/dinoeater-merchant/state').on('value', snap => {
           const val = snap.val();
+          if (val == null) return;
           const json = (typeof val === 'string') ? val : JSON.stringify(val);
-          const parsed = JSON.parse(json);
+          let parsed;
+          try { parsed = JSON.parse(json); } catch (e) { return; }
           window.remoteState = parsed;
           window.customPromos = Array.isArray(parsed.customPromos) ? parsed.customPromos : [];
           const si = parsed.shopInfo || {};
@@ -1218,7 +1220,7 @@
           }
           // If already logged in, refresh this member's stamps/history from the shop data
           hydrateMemberData(parsed);
-        }).catch(()=>{});
+        }, () => {});
       }).catch(()=>{});
     } catch (e) { console.error(e); }
 
