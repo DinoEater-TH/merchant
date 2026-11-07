@@ -319,9 +319,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _cart.value = emptyMap()
     }
 
-    fun setCustomerPhone(phone: String) {
+    fun setCustomerPhone(phone: String, name: String = "") {
         _customerPhone.value = phone
-        repository.setCustomerPhone(phone)
+        repository.setCustomerPhone(phone, name)
     }
 
     fun setFulfillment(type: FulfillmentType) {

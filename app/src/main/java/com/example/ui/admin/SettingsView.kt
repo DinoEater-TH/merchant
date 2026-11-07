@@ -927,6 +927,35 @@ fun SettingsView(viewModel: MainViewModel) {
             }
         }
 
+        // 6a. Customer links (copy to share)
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("🔗 ลิงก์สำหรับลูกค้า (คัดลอกส่งให้ลูกค้า)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("🌐 เว็บสั่งอาหาร: https://dinoeater-merchant.web.app/", fontSize = 12.sp)
+                    Text("📱 ดาวน์โหลดแอป Android: https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk", fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("link", "https://dinoeater-merchant.web.app/")
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "คัดลอกลิงก์เว็บแล้ว", Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("คัดลอกลิงก์เว็บ")
+                    }
+                }
+            }
+        }
+
         // 6. Web PWA Export card
         item {
             Card(

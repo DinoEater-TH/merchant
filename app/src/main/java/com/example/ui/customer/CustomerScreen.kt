@@ -376,9 +376,10 @@ fun CustomerScreen(viewModel: MainViewModel) {
     if (isPhoneInputDialogOpen) {
         CustomerPhoneDialog(
             currentPhone = customerPhone,
+            currentName = (currentUser?.name ?: ""),
             onDismiss = { viewModel.setPhoneInputDialogOpen(false) },
-            onConfirm = { phone ->
-                viewModel.setCustomerPhone(phone)
+            onConfirm = { phone, name ->
+                viewModel.setCustomerPhone(phone, name)
                 viewModel.setPhoneInputDialogOpen(false)
             }
         )
@@ -1080,9 +1081,11 @@ fun MenuItemCard(
 @Composable
 fun CustomerPhoneDialog(
     currentPhone: String,
+    currentName: String = "",
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String, String) -> Unit
 ) {
+    var nameInput by remember { mutableStateOf(currentName) }
     var phoneInput by remember { mutableStateOf(currentPhone) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -1107,6 +1110,17 @@ fun CustomerPhoneDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
+                    value = nameInput,
+                    onValueChange = { nameInput = it },
+                    label = { Text("ชื่อ (จำเป็น)") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
                     value = phoneInput,
                     onValueChange = { phoneInput = it },
                     label = { Text("เบอร์โทรศัพท์ (เช่น 0812345678)") },
@@ -1128,7 +1142,7 @@ fun CustomerPhoneDialog(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { onConfirm(phoneInput.trim()) },
+                        onClick = { onConfirm(phoneInput.trim(), nameInput.trim()) },
                         colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
                     ) {
                         Text("บันทึก")

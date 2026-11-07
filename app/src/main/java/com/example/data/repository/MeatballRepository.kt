@@ -173,12 +173,17 @@ class MeatballRepository(context: Context? = null) {
         _currentCustomerPhone.value = ""
     }
 
-    fun setCustomerPhone(phone: String) {
+    fun setCustomerPhone(phone: String, name: String = "") {
         val clean = phone.trim()
         _currentCustomerPhone.value = clean
-        if (clean.isNotEmpty() && !_users.value.containsKey(clean)) {
-            val newUser = MemberUser(phoneNumber = clean, stamps = 1, totalOrders = 0)
-            _users.value = _users.value + (clean to newUser)
+        if (clean.isNotEmpty()) {
+            val existing = _users.value[clean]
+            if (existing == null) {
+                val newUser = MemberUser(phoneNumber = clean, name = name.trim(), stamps = 1, totalOrders = 0)
+                _users.value = _users.value + (clean to newUser)
+            } else if (name.trim().isNotEmpty() && existing.name.isBlank()) {
+                _users.value = _users.value + (clean to existing.copy(name = name.trim()))
+            }
         }
         persistState()
     }
