@@ -45,6 +45,7 @@ fun PromotionView(viewModel: MainViewModel) {
     val shopInfo by viewModel.shopInfo.collectAsState()
     val menuItems by viewModel.menuItems.collectAsState()
     var deliveryFee by remember(shopInfo.deliveryFee) { mutableStateOf(shopInfo.deliveryFee.toInt().toString()) }
+    var promoDeliveryFee by remember(shopInfo.promoDeliveryFeeEnabled) { mutableStateOf(shopInfo.promoDeliveryFeeEnabled) }
     var deliveryFeePerKm by remember(shopInfo.deliveryFeePerKm) {
         mutableStateOf(if (shopInfo.deliveryFeePerKm == 0.0) "" else shopInfo.deliveryFeePerKm.toString())
     }
@@ -55,6 +56,7 @@ fun PromotionView(viewModel: MainViewModel) {
     var discountAmount by remember(shopInfo.discountAmount) { mutableStateOf(shopInfo.discountAmount.toInt().toString()) }
     var freeDelivery by remember(shopInfo.minOrderForFreeDelivery) { mutableStateOf(shopInfo.minOrderForFreeDelivery.toInt().toString()) }
     var stamps by remember(shopInfo.stampsRequiredForReward) { mutableStateOf(shopInfo.stampsRequiredForReward.toString()) }
+    var spendPerStamp by remember(shopInfo.spendPerStamp) { mutableStateOf(shopInfo.spendPerStamp.toInt().toString()) }
     var rewardDesc by remember(shopInfo.rewardDescription) { mutableStateOf(shopInfo.rewardDescription) }
     var rewardItemId by remember(shopInfo.rewardItemId) { mutableStateOf(shopInfo.rewardItemId) }
     var showPromo by remember(shopInfo.showPromoBanner) { mutableStateOf(shopInfo.showPromoBanner) }
@@ -103,6 +105,7 @@ fun PromotionView(viewModel: MainViewModel) {
                 OutlinedTextField(value = discountAmount, onValueChange = { discountAmount = it }, label = { Text("ส่วนลด (บาท)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = freeDelivery, onValueChange = { freeDelivery = it }, label = { Text("ส่งฟรีเมื่อครบ (บาท)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = stamps, onValueChange = { stamps = it }, label = { Text("แต้มแลกรางวัล") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = spendPerStamp, onValueChange = { spendPerStamp = it }, label = { Text("ซื้อเท่าไหร่ (บาท) ได้ 1 แต้ม") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = rewardDesc, onValueChange = { rewardDesc = it }, label = { Text("คำอธิบายรางวัล") }, modifier = Modifier.fillMaxWidth())
 
                 Text("รายการฟรีที่แอดมินเลือก (เมื่อสะสมครบ)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -129,6 +132,10 @@ fun PromotionView(viewModel: MainViewModel) {
                     Text("แสดงป้ายโปรโมชั่นให้ลูกค้า", fontSize = 13.sp)
                 }
                 Text("เปิด/ปิดโปรโมชั่นแต่ละรายการ", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked = promoDeliveryFee, onCheckedChange = { promoDeliveryFee = it })
+                    Text("ค่าส่งพื้นฐาน", fontSize = 13.sp)
+                }
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Checkbox(checked = promoDiscount, onCheckedChange = { promoDiscount = it })
                     Text("ส่วนลดเมื่อครบยอด", fontSize = 13.sp)
@@ -159,10 +166,12 @@ fun PromotionView(viewModel: MainViewModel) {
                             rewardDescription = rewardDesc,
                             rewardItemId = rewardItemId,
                             showPromoBanner = showPromo,
+                            promoDeliveryFeeEnabled = promoDeliveryFee,
                             promoDiscountEnabled = promoDiscount,
                             promoDeliveryPerKmEnabled = promoDeliveryPerKm,
                             promoFreeDeliveryEnabled = promoFreeDelivery,
-                            promoRewardEnabled = promoReward
+                            promoRewardEnabled = promoReward,
+                            spendPerStamp = spendPerStamp.toDoubleOrNull() ?: shopInfo.spendPerStamp
                         )
                         viewModel.updateShopInfo(updated)
                     },
