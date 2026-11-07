@@ -46,6 +46,7 @@
         <div class="w-3 h-3 rounded-full bg-gray-200"></div>
       </div>
       <div id="pinError" class="text-red-500 text-xs hidden">PIN ไม่ถูกต้อง</div>
+      <p class="text-[11px] text-gray-400">กรอก 4-8 หลัก แล้วกดปุ่มยืนยัน</p>
       <div class="grid grid-cols-3 gap-2">
         <button onclick="pressPin('1')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">1</button>
         <button onclick="pressPin('2')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">2</button>
@@ -59,6 +60,7 @@
         <button onclick="clearPin()" class="p-3 bg-gray-100 text-gray-500 rounded-xl">C</button>
         <button onclick="pressPin('0')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl">0</button>
         <button onclick="delPin()" class="p-3 bg-gray-100 text-gray-500 rounded-xl">⌫</button>
+        <button onclick="checkPin()" class="col-span-3 p-3 bg-orange-600 text-white rounded-xl font-bold">เข้าสู่ระบบ</button>
       </div>
       <p id="syncStatus" class="text-[10px] text-gray-400">กำลังเชื่อมต่อ Firebase...</p>
     </div>
@@ -790,7 +792,8 @@
       dots.forEach((d, i) => { d.className = 'w-3 h-3 rounded-full ' + (i < currentPin.length ? 'bg-orange-600' : 'bg-gray-200'); });
     }
     function checkPin() {
-      if (currentPin === (state.adminPin || '09286840')) {
+      const expected = state.adminPin || '09286840';
+      if (currentPin === expected) {
         adminUnlocked = true;
         ensureAudioContext();
         if (knownOrderIds === null && Array.isArray(state.orders)) {
