@@ -28,10 +28,10 @@
       </div>
       <p id="shopAddress" class="text-[11px] sm:text-xs text-gray-500 truncate">ตลาดโต้รุ่ง ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น</p>
     </div>
-    <!-- ซ่อนปุ่มจัดการร้านบนมือถือ (มีลิงก์ web admin แยก) -->
-    <a href="admin.html" class="hidden sm:flex border border-orange-500 text-orange-600 text-xs px-3 py-1.5 rounded-full font-medium items-center space-x-1 hover:bg-orange-50 shrink-0">
+    <!-- ซ่อนปุ่มจัดการร้านจากหน้าลูกค้า (มีลิงก์ web admin แยก) -->
+    <!-- <a href="admin.html" class="hidden border border-orange-500 text-orange-600 text-xs px-3 py-1.5 rounded-full font-medium items-center space-x-1 hover:bg-orange-50 shrink-0">
       <span>🔒 จัดการร้าน</span>
-    </a>
+    </a> -->
   </header>
 
   <!-- Guest login hint (member card hidden for guests) -->
@@ -374,7 +374,7 @@
 
     let menu = [];
 
-    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, deliveryFeePerKm: 0, maxDeliveryDistanceKm: 20, promoDeliveryPerKmEnabled: true, shopLat: null, shopLng: null, showShopLocation: true, shopAddress: '', promoBanner: true, stampsRequired: 10, promoDiscountEnabled: true, promoFreeDeliveryEnabled: true, promoRewardEnabled: true };
+    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, deliveryFeePerKm: 0, maxDeliveryDistanceKm: 20, promoDeliveryFeeEnabled: true, promoDeliveryPerKmEnabled: true, shopLat: null, shopLng: null, showShopLocation: true, shopAddress: '', promoBanner: true, stampsRequired: 10, spendPerStamp: 50, promoDiscountEnabled: true, promoFreeDeliveryEnabled: true, promoRewardEnabled: true };
 
     // Delivery distance state (driving distance from shop to customer GPS point)
     let deliveryDistanceKm = null;
@@ -447,6 +447,7 @@
       if (shopCfg.promoDeliveryPerKmEnabled && (shopCfg.deliveryFeePerKm || 0) > 0) {
         return Math.ceil(deliveryDistanceKm * shopCfg.deliveryFeePerKm);
       }
+      if (shopCfg.promoDeliveryFeeEnabled === false) return 0;
       return shopCfg.deliveryFee;
     }
 
@@ -1089,6 +1090,7 @@
           shopCfg.discountAmount = si.discountAmount ?? 5;
           shopCfg.minOrderForFreeDelivery = si.minOrderForFreeDelivery ?? 120;
           shopCfg.deliveryFee = si.deliveryFee ?? 15;
+          shopCfg.promoDeliveryFeeEnabled = si.promoDeliveryFeeEnabled !== false;
           shopCfg.deliveryFeePerKm = si.deliveryFeePerKm ?? 0;
           shopCfg.maxDeliveryDistanceKm = si.maxDeliveryDistanceKm ?? 20;
           shopCfg.promoDeliveryPerKmEnabled = si.promoDeliveryPerKmEnabled !== false;
@@ -1097,6 +1099,7 @@
           shopCfg.showShopLocation = si.showShopLocation !== false;
           shopCfg.shopAddress = si.address || '';
           shopCfg.stampsRequired = si.stampsRequiredForReward ?? 10;
+          shopCfg.spendPerStamp = si.spendPerStamp ?? 50;
           shopCfg.promoBanner = si.showPromoBanner !== false;
           shopCfg.promoDiscountEnabled = si.promoDiscountEnabled !== false;
           shopCfg.promoFreeDeliveryEnabled = si.promoFreeDeliveryEnabled !== false;

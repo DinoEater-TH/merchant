@@ -188,6 +188,14 @@
       <div id="inventoryList" class="space-y-3"></div>
 
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-sm">จัดการหมวดหมู่</h3>
+          <button onclick="openCategoryManager()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">⚙️ จัดการ</button>
+        </div>
+        <div id="categoryManagerList" class="space-y-1 text-xs text-gray-600"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
         <h3 class="font-bold text-sm">ตัวเลือกเสริมที่ลูกค้าเห็น</h3>
         <div id="addonAdminList" class="space-y-1"></div>
         <div class="flex gap-2 mt-2">
@@ -321,8 +329,12 @@
         <input id="s_freeDelivery" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <div>
-        <label class="text-xs text-gray-500">แต้มแลกรางวัล</label>
+        <label class="text-xs text-gray-500">แต้มแลกรางวัล (แต้มที่ต้องใช้)</label>
         <input id="s_stamps" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">ซื้อเท่าไหร่ (บาท) ได้ 1 แต้ม</label>
+        <input id="s_spendPerStamp" type="number" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="เช่น 50">
       </div>
       <div>
         <label class="text-xs text-gray-500">รายการฟรีที่แอดมินเลือก (เมื่อสะสมครบ)</label>
@@ -334,9 +346,10 @@
       </div>
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_showPromo" checked> แสดงป้ายโปรโมชั่นให้ลูกค้า</label>
       <div class="border-t pt-2 space-y-1">
-        <label class="text-xs font-bold text-gray-700">เปิด/ปิดโปรโมชั่นแต่ละรายการ</label>
-        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoDiscount" checked> ส่วนลดเมื่อครบยอด</label>
+        <label class="text-xs font-bold text-gray-700">เปิด/ปิดโปรโมชั่นแต่ละรายการ (ถ้าปิด = ไม่นำไปคำนวณ)</label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoDeliveryFee" checked> ค่าส่งพื้นฐาน</label>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoDeliveryPerKm" checked> คิดค่าส่งตามระยะทาง (บาท/กม.)</label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoDiscount" checked> ส่วนลดเมื่อครบยอด</label>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoFreeDelivery" checked> ส่งฟรีเมื่อครบยอด</label>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_promoReward" checked> แต้มแลกฟรี 1 รายการ</label>
       </div>
@@ -345,6 +358,23 @@
   </section>
 
   <!-- Hidden Cost Modal (single window) -->
+  <!-- Modal: Category Manager -->
+  <div id="categoryModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-2xl max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-base">จัดการหมวดหมู่</h3>
+        <button onclick="closeCategoryManager()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+      <div id="categoryList" class="space-y-2"></div>
+      <div class="flex gap-2">
+        <input id="newCatName" placeholder="ชื่อหมวดหมู่ใหม่" class="flex-1 border rounded-lg px-3 py-2 text-sm">
+        <input id="newCatEmoji" placeholder="อีโมจิ" class="w-16 border rounded-lg px-2 py-2 text-sm text-center" value="🍽️">
+        <button onclick="addCategory()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
+      </div>
+      <p class="text-[10px] text-gray-400">* ลบหมวดหมู่ได้เฉพาะเมื่อไม่มีเมนูในหมวดนั้น (หมวด "ทั้งหมด" ลบไม่ได้)</p>
+    </div>
+  </div>
+
   <div id="hiddenCostModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-2xl">
       <h3 class="font-bold text-base">เพิ่มต้นทุนแฝง</h3>
@@ -1342,6 +1372,49 @@
       const isNew = document.getElementById('m_category').value === '__new';
       document.getElementById('m_newCategory').classList.toggle('hidden', !isNew);
     }
+    function openCategoryManager() {
+      renderCategoryList();
+      document.getElementById('categoryModal').classList.remove('hidden');
+    }
+    function closeCategoryManager() { document.getElementById('categoryModal').classList.add('hidden'); renderInventory(); }
+    function renderCategoryList() {
+      const list = document.getElementById('categoryList');
+      if (!list) return;
+      const cats = (state.categories || []).filter(c => c.id !== 'all');
+      list.innerHTML = cats.map(c => {
+        const count = (state.menuItems || []).filter(m => m.categoryId === c.id).length;
+        return `<div class="flex items-center gap-2 border rounded-lg px-3 py-2">
+          <span class="text-lg">${c.iconEmoji || '🍽️'}</span>
+          <input value="${(c.name||'').replace(/"/g,'&quot;')}" onchange="renameCategory('${c.id}', this.value)" class="flex-1 border rounded px-2 py-1 text-sm">
+          <span class="text-[10px] text-gray-400">${count} เมนู</span>
+          <button onclick="deleteCategory('${c.id}')" class="text-red-500 text-xs px-2 py-1 rounded hover:bg-red-50" ${count > 0 ? 'disabled title="มีเมนูในหมวดนี้"' : ''}>🗑️</button>
+        </div>`;
+      }).join('') || '<p class="text-xs text-gray-400 text-center py-2">ยังไม่มีหมวดหมู่</p>';
+    }
+    function addCategory() {
+      const name = document.getElementById('newCatName').value.trim();
+      const emoji = document.getElementById('newCatEmoji').value.trim() || '🍽️';
+      if (!name) { alert('กรุณาใส่ชื่อหมวดหมู่'); return; }
+      if ((state.categories || []).some(c => (c.name||'').trim() === name)) { alert('หมวดหมู่นี้มีอยู่แล้ว'); return; }
+      if (!state.categories) state.categories = [];
+      state.categories.push({ id: 'cat_' + Date.now(), name, sort: state.categories.length + 1, iconEmoji: emoji });
+      document.getElementById('newCatName').value = '';
+      document.getElementById('newCatEmoji').value = '🍽️';
+      renderCategoryList();
+      schedulePush();
+    }
+    function renameCategory(id, newName) {
+      const c = (state.categories || []).find(x => x.id === id);
+      if (c && newName.trim()) { c.name = newName.trim(); schedulePush(); }
+    }
+    function deleteCategory(id) {
+      const count = (state.menuItems || []).filter(m => m.categoryId === id).length;
+      if (count > 0) { alert('ไม่สามารถลบได้: มีเมนูในหมวดนี้ ' + count + ' รายการ'); return; }
+      if (!confirm('ลบหมวดหมู่นี้?')) return;
+      state.categories = (state.categories || []).filter(c => c.id !== id);
+      renderCategoryList();
+      schedulePush();
+    }
     function closeAddMenuModal() { document.getElementById('addMenuModal').classList.add('hidden'); }
     function saveMenuItem() {
       const name = document.getElementById('m_name').value.trim();
@@ -1649,10 +1722,14 @@
       }
       const promoChk = document.getElementById('s_showPromo');
       if (promoChk) promoChk.checked = (s.showPromoBanner !== false);
+      const promoDeliveryFeeEl = document.getElementById('s_promoDeliveryFee');
+      if (promoDeliveryFeeEl) promoDeliveryFeeEl.checked = (s.promoDeliveryFeeEnabled !== false);
       document.getElementById('s_promoDiscount').checked = (s.promoDiscountEnabled !== false);
       document.getElementById('s_promoDeliveryPerKm').checked = (s.promoDeliveryPerKmEnabled !== false);
       document.getElementById('s_promoFreeDelivery').checked = (s.promoFreeDeliveryEnabled !== false);
       document.getElementById('s_promoReward').checked = (s.promoRewardEnabled !== false);
+      const spendPerStampEl = document.getElementById('s_spendPerStamp');
+      if (spendPerStampEl) spendPerStampEl.value = s.spendPerStamp ?? 50;
       document.getElementById('s_pin').value = state.adminPin || '09286840';
       document.getElementById('s_showScan').checked = (s.showScanPayment !== false);
       const qrPreview = document.getElementById('qrPreview');
@@ -1746,6 +1823,7 @@ function finishSaveSettings() {
       const addrEl = document.getElementById('s_address');
       if (addrEl) state.shopInfo.address = addrEl.value.trim() || state.shopInfo.address;
       state.shopInfo.deliveryFee = parseFloat(document.getElementById('s_deliveryFee').value) || state.shopInfo.deliveryFee;
+      state.shopInfo.promoDeliveryFeeEnabled = document.getElementById('s_promoDeliveryFee').checked;
       state.shopInfo.deliveryFeePerKm = parseFloat(document.getElementById('s_deliveryFeePerKm').value) || 0;
       state.shopInfo.maxDeliveryDistanceKm = parseFloat(document.getElementById('s_maxDeliveryKm').value) || 20;
       state.shopInfo.promoDeliveryPerKmEnabled = document.getElementById('s_promoDeliveryPerKm').checked;
@@ -1756,6 +1834,8 @@ function finishSaveSettings() {
       state.shopInfo.discountAmount = parseFloat(document.getElementById('s_discountAmount').value) || state.shopInfo.discountAmount;
       state.shopInfo.minOrderForFreeDelivery = parseFloat(document.getElementById('s_freeDelivery').value) || state.shopInfo.minOrderForFreeDelivery;
       state.shopInfo.stampsRequiredForReward = parseInt(document.getElementById('s_stamps').value) || state.shopInfo.stampsRequiredForReward;
+      const spendPerStampEl2 = document.getElementById('s_spendPerStamp');
+      if (spendPerStampEl2) state.shopInfo.spendPerStamp = parseFloat(spendPerStampEl2.value) || state.shopInfo.spendPerStamp || 50;
       state.shopInfo.rewardDescription = document.getElementById('s_rewardDesc').value.trim() || state.shopInfo.rewardDescription;
       const rewardItemEl = document.getElementById('s_rewardItem');
       if (rewardItemEl) state.shopInfo.rewardItemId = rewardItemEl.value;
