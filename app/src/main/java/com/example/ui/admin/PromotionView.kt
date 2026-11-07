@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import com.example.data.model.ShopInfo
+import com.example.data.model.CustomPromo
 import com.example.ui.MainViewModel
 import com.example.ui.theme.OrangePrimary
 
@@ -44,6 +46,7 @@ import com.example.ui.theme.OrangePrimary
 fun PromotionView(viewModel: MainViewModel) {
     val shopInfo by viewModel.shopInfo.collectAsState()
     val menuItems by viewModel.menuItems.collectAsState()
+    val customPromos by viewModel.customPromos.collectAsState()
     var deliveryFee by remember(shopInfo.deliveryFee) { mutableStateOf(shopInfo.deliveryFee.toInt().toString()) }
     var promoDeliveryFee by remember(shopInfo.promoDeliveryFeeEnabled) { mutableStateOf(shopInfo.promoDeliveryFeeEnabled) }
     var deliveryFeePerKm by remember(shopInfo.deliveryFeePerKm) {
@@ -65,6 +68,14 @@ fun PromotionView(viewModel: MainViewModel) {
     var promoFreeDelivery by remember(shopInfo.promoFreeDeliveryEnabled) { mutableStateOf(shopInfo.promoFreeDeliveryEnabled) }
     var promoReward by remember(shopInfo.promoRewardEnabled) { mutableStateOf(shopInfo.promoRewardEnabled) }
     var rewardExpanded by remember { mutableStateOf(false) }
+    var newPromoName by remember { mutableStateOf("") }
+    var newPromoType by remember { mutableStateOf("percentOff") }
+    var newPromoMinQty by remember { mutableStateOf("1") }
+    var newPromoValue by remember { mutableStateOf("10") }
+    var newPromoBuyQty by remember { mutableStateOf("3") }
+    var newPromoGetQty by remember { mutableStateOf("1") }
+    var newPromoBuyItem by remember { mutableStateOf("") }
+    var newPromoGetItem by remember { mutableStateOf("") }
     val rewardItem = menuItems.find { it.id == rewardItemId }
 
     Column(
@@ -151,6 +162,61 @@ fun PromotionView(viewModel: MainViewModel) {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Checkbox(checked = promoReward, onCheckedChange = { promoReward = it })
                     Text("แต้มแลกฟรี 1 รายการ", fontSize = 13.sp)
+                }
+
+                // ---- Custom Promotions ----
+                Text("🎁 โปรโมชั่นพิเศษ (กำหนดเอง)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                customPromos.forEach { promo ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Checkbox(checked = promo.enabled, onCheckedChange = { viewModel.toggleCustomPromo(promo.id, it) })
+                            Text(promo.name, fontSize = 13.sp)
+                        }
+                        TextButton(onClick = { viewModel.deleteCustomPromo(promo.id) }) {
+                            Text("🗑️", color = Color.Red)
+                        }
+                    }
+                }
+                if (customPromos.isEmpty()) {
+                    Text("ยังไม่มีโปรโมชั่นพิเศษ", fontSize = 12.sp, color = Color.Gray)
+                }
+                // Add form
+                var promoName by remember { mutableStateOf("") }
+                var promoType by remember { mutableStateOf("percentOff") }
+                var promoMinQty by remember { mutableStateOf("1") }
+                var promoValue by remember { mutableStateOf("10") }
+                OutlinedTextField(value = promoName, onValueChange = { promoName = it }, label = { Text("ชื่อโปรโมชั่น") }, modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = promoType, onValueChange = { promoType = it }, label = { Text("ประเภท (buyXgetY/percentOff/fixedOff)") }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = promoMinQty, onValueChange = { promoMinQty = it }, label = { Text("ซื้อครบ") }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = promoValue, onValueChange = { promoValue = it }, label = { Text("ค่า") }, modifier = Modifier.weight(1f))
+                }
+                Button(
+                    onClick = {
+                        if (promoName.isNotBlank()) {
+                            val promo = CustomPromo(
+                                id = "promo_" + System.currentTimeMillis(),
+                                name = promoName.trim(),
+                                type = promoType.trim(),
+                                enabled = true,
+                                minQty = promoMinQty.toIntOrNull() ?: 1,
+                                discountPercent = if (promoType == "percentOff") (promoValue.toDoubleOrNull() ?: 10.0) else 0.0,
+                                discountAmount = if (promoType == "fixedOff") (promoValue.toDoubleOrNull() ?: 10.0) else 0.0,
+                                buyQty = 3,
+                                getQty = 1
+                            )
+                            viewModel.addCustomPromo(promo)
+                            promoName = ""
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("เพิ่มโปรโมชั่น", fontWeight = FontWeight.Bold)
                 }
 
                 Button(

@@ -11,6 +11,7 @@ import com.example.data.model.Order
 import com.example.data.model.OrderItem
 import com.example.data.model.OrderStatus
 import com.example.data.model.ShopInfo
+import com.example.data.model.CustomPromo
 import com.example.data.repository.FirebaseSyncManager
 import com.example.data.repository.MeatballRepository
 import com.example.util.DeliveryRouteHelper
@@ -253,7 +254,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Auto promotions (admin can enable/disable each one)
-        val discount = if (shop.promoDiscountEnabled && subtotal >= shop.minOrderForDiscount) shop.discountAmount else 0.0
+        var discount = if (shop.promoDiscountEnabled && subtotal >= shop.minOrderForDiscount) shop.discountAmount else 0.0
+        // Custom promotions (percentOff / fixedOff)
+        val totalItemsCount = totalItems
+        customPromos.value.filter { it.enabled }.forEach { promo ->
+            if (promo.type == "percentOff" && totalItemsCount >= promo.minQty) {
+                discount += (subtotal * promo.discountPercent / 100.0)
+            } else if (promo.type == "fixedOff" && totalItemsCount >= promo.minQty) {
+                discount += promo.discountAmount
+            }
+        }
 
         // Delivery fee is calculated from the real driving distance at the admin's per-km rate.
         val freeDelivery = shop.promoFreeDeliveryEnabled && subtotal >= shop.minOrderForFreeDelivery
@@ -577,6 +587,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteCategory(id: String) {
         repository.deleteCategory(id)
+    }
+
+    val customPromos: StateFlow<List<CustomPromo>> = repository.customPromos
+
+    fun addCustomPromo(promo: CustomPromo) {
+        repository.addCustomPromo(promo)
+    }
+
+    fun toggleCustomPromo(id: String, enabled: Boolean) {
+        repository.toggleCustomPromo(id, enabled)
+    }
+
+    fun deleteCustomPromo(id: String) {
+        repository.deleteCustomPromo(id)
     }
 
     fun oneClickStockReset() {

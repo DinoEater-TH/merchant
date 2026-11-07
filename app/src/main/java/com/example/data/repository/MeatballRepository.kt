@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import android.content.Context
 import com.example.data.model.Category
+import com.example.data.model.CustomPromo
 import com.example.data.model.HiddenCostLog
 import com.example.data.model.ItemStatus
 import com.example.data.model.MemberUser
@@ -65,6 +66,9 @@ class MeatballRepository(context: Context? = null) {
     private val _hiddenCosts = MutableStateFlow<List<HiddenCostLog>>(emptyList())
     val hiddenCosts: StateFlow<List<HiddenCostLog>> = _hiddenCosts.asStateFlow()
 
+    private val _customPromos = MutableStateFlow<List<CustomPromo>>(emptyList())
+    val customPromos: StateFlow<List<CustomPromo>> = _customPromos.asStateFlow()
+
     private val _currentActiveOrderId = MutableStateFlow<String?>(null)
     val currentActiveOrderId: StateFlow<String?> = _currentActiveOrderId.asStateFlow()
 
@@ -95,6 +99,7 @@ class MeatballRepository(context: Context? = null) {
             _orders.value = state.orders
             _users.value = state.users
             _hiddenCosts.value = state.hiddenCosts
+            _customPromos.value = state.customPromos
             _currentCustomerPhone.value = state.currentCustomerPhone
             _currentActiveOrderId.value = state.currentActiveOrderId
             _adminPin.value = state.adminPin.ifBlank { DEFAULT_ADMIN_PIN }
@@ -114,6 +119,7 @@ class MeatballRepository(context: Context? = null) {
             orders = _orders.value,
             users = _users.value,
             hiddenCosts = _hiddenCosts.value,
+            customPromos = _customPromos.value,
             currentCustomerPhone = _currentCustomerPhone.value,
             currentActiveOrderId = _currentActiveOrderId.value,
             adminPin = _adminPin.value
@@ -130,6 +136,7 @@ class MeatballRepository(context: Context? = null) {
             _orders.value = state.orders
             _users.value = state.users
             _hiddenCosts.value = state.hiddenCosts
+            _customPromos.value = state.customPromos
             persistState()
         } finally {
             isApplyingRemote = false
@@ -143,6 +150,7 @@ class MeatballRepository(context: Context? = null) {
         val orders: List<Order> = emptyList(),
         val users: Map<String, MemberUser> = emptyMap(),
         val hiddenCosts: List<HiddenCostLog> = emptyList(),
+        val customPromos: List<CustomPromo> = emptyList(),
         val currentCustomerPhone: String = "",
         val currentActiveOrderId: String? = null,
         val adminPin: String = DEFAULT_ADMIN_PIN
@@ -377,6 +385,23 @@ fun addOrUpdateMenuItem(item: MenuItem) {
         if (id == "all") return
         if ((_menuItems.value).any { it.categoryId == id }) return
         _categories.value = _categories.value.filterNot { it.id == id }
+        persistState()
+    }
+
+    fun addCustomPromo(promo: CustomPromo) {
+        _customPromos.value = _customPromos.value + promo
+        persistState()
+    }
+
+    fun toggleCustomPromo(id: String, enabled: Boolean) {
+        _customPromos.value = _customPromos.value.map { p ->
+            if (p.id == id) p.copy(enabled = enabled) else p
+        }
+        persistState()
+    }
+
+    fun deleteCustomPromo(id: String) {
+        _customPromos.value = _customPromos.value.filterNot { it.id == id }
         persistState()
     }
 

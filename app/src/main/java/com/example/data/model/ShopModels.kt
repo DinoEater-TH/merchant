@@ -186,3 +186,17 @@ data class CustomerConsumptionSummary(
     val totalSavings: Double = 0.0
 )
 
+data class CustomPromo(
+    val id: String = "",
+    val name: String = "",
+    val type: String = "percentOff", // buyXgetY | percentOff | fixedOff
+    val enabled: Boolean = true,
+    val buyItemId: String = "",
+    val buyQty: Int = 3,
+    val getItemId: String = "",
+    val getQty: Int = 1,
+    val minQty: Int = 1,
+    val discountPercent: Double = 10.0,
+    val discountAmount: Double = 10.0
+)
+
