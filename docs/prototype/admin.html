@@ -1215,6 +1215,29 @@
     }
 
     // ---------- Inventory ----------
+    function moveMenuItem(id, dir) {
+      const items = state.menuItems || [];
+      const idx = items.findIndex(x => x.id === id);
+      if (idx < 0) return;
+      const item = items[idx];
+      const sameCat = items.map((it, i) => ({ it, i })).filter(x => x.it.categoryId === item.categoryId);
+      const posInCat = sameCat.findIndex(x => x.it.id === id);
+      if (posInCat < 0) return;
+      const targetPos = posInCat + dir;
+      if (targetPos < 0 || targetPos >= sameCat.length) return;
+      const targetItem = sameCat[targetPos].it;
+      const so1 = item.sortOrder || 0;
+      const so2 = targetItem.sortOrder || 0;
+      item.sortOrder = so2 || (posInCat + dir + 1);
+      targetItem.sortOrder = so1 || (posInCat + 1);
+      const i1 = items.findIndex(x => x.id === item.id);
+      const i2 = items.findIndex(x => x.id === targetItem.id);
+      const tmp = items[i1];
+      items[i1] = items[i2];
+      items[i2] = tmp;
+      renderInventory();
+      schedulePush();
+    }
     function deleteMenuItem(id) {
       const item = (state.menuItems || []).find(x => x.id === id);
       if (!item) return;
@@ -1250,6 +1273,8 @@
             <button onclick="setItemStatus('${item.id}','OUT_OF_STOCK')" class="px-2 py-1 rounded text-xs ${item.status==='OUT_OF_STOCK'?'bg-yellow-100 text-yellow-700 font-bold':'bg-gray-100'}">🟡 สินค้าหมด</button>
             <button onclick="setItemStatus('${item.id}','HIDDEN')" class="px-2 py-1 rounded text-xs ${item.status==='HIDDEN'?'bg-red-100 text-red-700 font-bold':'bg-gray-100'}">🔴 ซ่อน</button>
             <button onclick="toggleUnlimitedStock('${item.id}')" class="px-2 py-1 rounded text-xs font-bold ${unlimited ? 'bg-green-100 text-green-700' : 'bg-gray-100'}">${unlimited ? '∞ ไม่จำกัด' : 'จำกัดสต็อก'}</button>
+            <button onclick="moveMenuItem('${item.id}', -1)" class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 font-bold" title="เลื่อนขึ้น">⬆️</button>
+            <button onclick="moveMenuItem('${item.id}', 1)" class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 font-bold" title="เลื่อนลง">⬇️</button>
             <button onclick="openEditMenu('${item.id}')" class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700 font-bold">✏️ แก้ไข</button>
             <button onclick="deleteMenuItem('${item.id}')" class="px-2 py-1 rounded text-xs bg-red-100 text-red-700 font-bold">🗑️ ลบ</button>
           </div>
@@ -1264,7 +1289,9 @@
       const groups = [];
       const used = new Set();
       cats.forEach(c => {
-        const list = items.filter(i => i.categoryId === c.id);
+        const list = items.filter(i => i.categoryId === c.id)
+          .slice()
+          .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
         used.add(c.id);
         if (list.length > 0) groups.push({ category: c, items: list });
       });
