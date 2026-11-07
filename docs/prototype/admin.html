@@ -20,6 +20,15 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen">
+
+  <!-- Toast notification -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] hidden transition-opacity duration-300">
+    <div class="bg-gray-900 text-white text-sm px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+      <span id="toastIcon">✅</span>
+      <span id="toastMsg">บันทึกแล้ว</span>
+    </div>
+  </div>
+
   <!-- PIN overlay -->
   <div id="pinOverlay" class="fixed inset-0 bg-gray-900/90 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center space-y-4 shadow-2xl">
@@ -690,6 +699,22 @@
       clearTimeout(pushTimer);
       pushTimer = setTimeout(pushState, 400);
     }
+    let toastTimer = null;
+    function showToast(msg, icon) {
+      const toast = document.getElementById('toast');
+      const msgEl = document.getElementById('toastMsg');
+      const iconEl = document.getElementById('toastIcon');
+      if (!toast || !msgEl) return;
+      msgEl.textContent = msg || 'บันทึกแล้ว';
+      if (iconEl) iconEl.textContent = icon || '✅';
+      toast.classList.remove('hidden');
+      toast.style.opacity = '1';
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.classList.add('hidden'), 300);
+      }, 1800);
+    }
 
     function pushState() {
       if (applyingRemote) return;
@@ -1280,6 +1305,7 @@
       delete posCart[id];
       renderInventory(); renderPos(); renderOrders(); renderSales();
       schedulePush();
+      showToast('ลบเมนู "' + item.name + '" แล้ว', '🗑️');
     }
 
     function inventoryItemCard(item) {
@@ -1496,6 +1522,7 @@
       if (!confirm('ลบโปรโมชั่นนี้?')) return;
       state.customPromos = getPromos().filter(x => x.id !== id);
       renderPromoModalList(); renderCustomPromoList(); schedulePush();
+      showToast('ลบโปรโมชั่นแล้ว', '🗑️');
     }
     function renderPromoFields() {
       const type = document.getElementById('promoType').value;
@@ -1542,7 +1569,7 @@
       getPromos().push(promo);
       document.getElementById('promoName').value = '';
       renderPromoModalList(); renderCustomPromoList(); schedulePush();
-      alert('เพิ่มโปรโมชั่นแล้ว');
+      showToast('เพิ่มโปรโมชั่นแล้ว', '✅');
     }
     // re-render promo fields when type changes
     setTimeout(() => {
@@ -1574,10 +1601,11 @@
       document.getElementById('newCatEmoji').value = '🍽️';
       renderCategoryList();
       schedulePush();
+      showToast('เพิ่มหมวดหมู่ "' + name + '" แล้ว', '✅');
     }
     function renameCategory(id, newName) {
       const c = (state.categories || []).find(x => x.id === id);
-      if (c && newName.trim()) { c.name = newName.trim(); schedulePush(); }
+      if (c && newName.trim()) { c.name = newName.trim(); schedulePush(); showToast('แก้ไขหมวดหมู่แล้ว', '✅'); }
     }
     function deleteCategory(id) {
       const count = (state.menuItems || []).filter(m => m.categoryId === id).length;
@@ -1586,6 +1614,7 @@
       state.categories = (state.categories || []).filter(c => c.id !== id);
       renderCategoryList();
       schedulePush();
+      showToast('ลบหมวดหมู่แล้ว', '🗑️');
     }
     function copyLink(id) {
       const el = document.getElementById(id);
@@ -1624,6 +1653,7 @@
           if (!state.categories) state.categories = [];
           state.categories.push({ id: category, name: newCategoryName, sort: state.categories.length + 1, iconEmoji: '🍽️' });
         }
+        const wasEdit = !!editingMenuId;
         if (editingMenuId) {
           const existing = (state.menuItems || []).find(x => x.id === editingMenuId);
           if (existing) {
@@ -1639,6 +1669,7 @@
         }
         renderInventory();
         schedulePush();
+        showToast(wasEdit ? 'แก้ไขเมนูแล้ว' : 'เพิ่มเมนูแล้ว', '✅');
         closeAddMenuModal();
       };
 
