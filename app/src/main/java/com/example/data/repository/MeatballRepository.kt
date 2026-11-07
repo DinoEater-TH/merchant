@@ -357,6 +357,29 @@ fun addOrUpdateMenuItem(item: MenuItem) {
         persistState()
     }
 
+    fun addCategory(name: String, emoji: String) {
+        if (name.isBlank()) return
+        if ((_categories.value).any { it.name.trim() == name.trim() }) return
+        val newCat = Category(id = "cat_" + System.currentTimeMillis(), name = name.trim(), sort = (_categories.value.size), iconEmoji = emoji.ifBlank { "🍽️" })
+        _categories.value = _categories.value + newCat
+        persistState()
+    }
+
+    fun renameCategory(id: String, name: String) {
+        if (name.isBlank()) return
+        _categories.value = _categories.value.map { c ->
+            if (c.id == id) c.copy(name = name.trim()) else c
+        }
+        persistState()
+    }
+
+    fun deleteCategory(id: String) {
+        if (id == "all") return
+        if ((_menuItems.value).any { it.categoryId == id }) return
+        _categories.value = _categories.value.filterNot { it.id == id }
+        persistState()
+    }
+
     fun setItemUnlimitedStock(itemId: String, unlimited: Boolean) {
         _menuItems.value = _menuItems.value.map { item ->
             if (item.id == itemId) {

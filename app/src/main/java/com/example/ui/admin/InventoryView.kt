@@ -71,8 +71,11 @@ fun InventoryView(viewModel: MainViewModel) {
     val categories by viewModel.categories.collectAsState()
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
     var editingItem by remember { mutableStateOf<MenuItem?>(null) }
     var deletingItem by remember { mutableStateOf<MenuItem?>(null) }
+    var newCategoryName by remember { mutableStateOf("") }
+    var newCategoryEmoji by remember { mutableStateOf("🍽️") }
 
     // Group exactly like the customer page: shop categories in configured order,
     // only categories that actually contain menu items.
@@ -124,6 +127,14 @@ fun InventoryView(viewModel: MainViewModel) {
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { showCategoryDialog = true },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "หมวดหมู่", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                     OutlinedButton(
                         onClick = { showAddDialog = true },
                         shape = RoundedCornerShape(12.dp)
@@ -218,7 +229,71 @@ fun InventoryView(viewModel: MainViewModel) {
                 }
             )
         }
+
+        if (showCategoryDialog) {
+            CategoryManagerDialog(
+                categories = categories,
+                menuItems = menuItems,
+                onAdd = { name, emoji -> viewModel.addCategory(name, emoji) },
+                onRename = { id, name -> viewModel.renameCategory(id, name) },
+                onDelete = { id -> viewModel.deleteCategory(id) },
+                onDismiss = { showCategoryDialog = false }
+            )
+        }
     }
+}
+
+@Composable
+fun CategoryManagerDialog(
+    categories: List<Category>,
+    menuItems: List<MenuItem>,
+    onAdd: (String, String) -> Unit,
+    onRename: (String, String) -> Unit,
+    onDelete: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var newName by remember { mutableStateOf("") }
+    var newEmoji by remember { mutableStateOf("🍽️") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("จัดการหมวดหมู่", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                categories.filter { it.id != "all" }.forEach { c ->
+                    val count = menuItems.count { it.categoryId == c.id }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${c.iconEmoji} ${c.name}", modifier = Modifier.weight(1f))
+                        Text("$count เมนู", fontSize = 10.sp, color = Color.Gray)
+                        if (count == 0) {
+                            TextButton(onClick = { onDelete(c.id) }) { Text("🗑️", color = ChiliRed) }
+                        }
+                    }
+                }
+                HorizontalDivider()
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = newEmoji, onValueChange = { newEmoji = it }, modifier = Modifier.width(60.dp), singleLine = true)
+                    OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("ชื่อหมวดหมู่ใหม่") }, modifier = Modifier.weight(1f), singleLine = true)
+                }
+                Button(
+                    onClick = {
+                        if (newName.isNotBlank()) {
+                            onAdd(newName.trim(), newEmoji.trim().ifBlank { "🍽️" })
+                            newName = ""
+                            newEmoji = "🍽️"
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("เพิ่มหมวดหมู่") }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("เสร็จสิ้น") }
+        }
+    )
 }
 
 @Composable

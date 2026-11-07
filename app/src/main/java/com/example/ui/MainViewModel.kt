@@ -567,6 +567,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.moveMenuItem(itemId, direction)
     }
 
+    fun addCategory(name: String, emoji: String) {
+        repository.addCategory(name, emoji)
+    }
+
+    fun renameCategory(id: String, name: String) {
+        repository.renameCategory(id, name)
+    }
+
+    fun deleteCategory(id: String) {
+        repository.deleteCategory(id)
+    }
+
     fun oneClickStockReset() {
         repository.oneClickStockReset()
         SoundHelper.playStampSuccessSound(getApplication())
