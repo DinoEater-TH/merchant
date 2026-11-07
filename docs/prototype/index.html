@@ -19,6 +19,15 @@
 </head>
 <body class="bg-amber-50 text-gray-800 min-h-screen pb-28">
 
+  <!-- Splash Screen (Logo + Greeting) -->
+  <div id="splashScreen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-amber-50 transition-opacity duration-500">
+    <div class="text-center space-y-4 animate-pulse">
+      <div id="splashLogo" class="text-7xl">🍢</div>
+      <h1 id="splashTitle" class="text-2xl font-bold text-orange-600">DinoEater ลูกชิ้นทอด</h1>
+      <p class="text-sm text-gray-500">ยินดีต้อนรับ! กำลังโหลดเมนู...</p>
+    </div>
+  </div>
+
   <!-- Header -->
   <header class="bg-white shadow-sm sticky top-0 z-30 px-3 sm:px-4 py-2 sm:py-3">
     <div class="flex flex-col items-center text-center sm:flex-row sm:justify-between sm:text-left gap-1">
@@ -1148,6 +1157,14 @@
             if (si.logoUri) logoEl.innerHTML = `<img src="${si.logoUri}" class="w-10 h-10 sm:w-8 sm:h-8 rounded-full object-cover">`;
             else logoEl.textContent = si.logoEmoji || '🍢';
           }
+          // Update splash screen logo/title from shop info
+          const splashLogo = document.getElementById('splashLogo');
+          const splashTitle = document.getElementById('splashTitle');
+          if (splashLogo) {
+            if (si.logoUri) splashLogo.innerHTML = `<img src="${si.logoUri}" class="w-24 h-24 rounded-full object-cover mx-auto">`;
+            else splashLogo.textContent = si.logoEmoji || '🍢';
+          }
+          if (splashTitle) splashTitle.textContent = si.name || 'DinoEater ลูกชิ้นทอด';
           const addrEl = document.getElementById('shopAddress');
           if (addrEl) addrEl.textContent = si.address || addrEl.textContent;
           const statusEl = document.getElementById('shopStatus');
@@ -1209,6 +1226,20 @@
     renderMenu();
     renderMemberVisibility();
     renderPromoBanner();
+
+    // Splash screen: auto-hide after 5 seconds (or on click)
+    (function() {
+      const splash = document.getElementById('splashScreen');
+      const hideSplash = () => {
+        if (!splash) return;
+        splash.style.opacity = '0';
+        setTimeout(() => { splash.style.display = 'none'; }, 500);
+      };
+      if (splash) {
+        splash.addEventListener('click', hideSplash);
+        setTimeout(hideSplash, 5000);
+      }
+    })();
   </script>
 </body>
 </html>
