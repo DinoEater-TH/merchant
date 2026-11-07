@@ -46,28 +46,10 @@
     { "id": "cat_3", "name": "ชุดสุดคุ้ม Combo", "sort": 3, "iconEmoji": "⭐" },
     { "id": "cat_4", "name": "เครื่องดื่ม & เคียง", "sort": 4, "iconEmoji": "🥤" }
   ],
-  "menuItems": [
-    { "id": "item_01", "name": "ลูกชิ้นเอ็นเนื้อ", "categoryId": "cat_1", "price": 10.0, "directCost": 5.5, "status": "ACTIVE", "stockQty": 50, "isUnlimitedStock": true, "defaultResetQty": 50, "isBestseller": true, "saleUnit": "ไม้", "emoji": "🍢", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
-    { "id": "item_02", "name": "ลูกชิ้นปลา", "categoryId": "cat_1", "price": 8.0, "directCost": 4.0, "status": "ACTIVE", "stockQty": 60, "isUnlimitedStock": true, "defaultResetQty": 60, "isBestseller": true, "saleUnit": "ไม้", "emoji": "🍢", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
-    { "id": "item_03", "name": "ลูกชิ้นหมู", "categoryId": "cat_1", "price": 8.0, "directCost": 4.5, "status": "ACTIVE", "stockQty": 40, "isUnlimitedStock": true, "defaultResetQty": 40, "isBestseller": false, "saleUnit": "ไม้", "emoji": "🍢", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
-    { "id": "item_04", "name": "น้ำコーラ", "categoryId": "cat_4", "price": 15.0, "directCost": 8.0, "status": "ACTIVE", "stockQty": 30, "isUnlimitedStock": true, "defaultResetQty": 30, "isBestseller": false, "saleUnit": "ขวด", "emoji": "🥤", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
-    { "id": "item_05", "name": "น้ำเปล่า", "categoryId": "cat_4", "price": 10.0, "directCost": 5.0, "status": "ACTIVE", "stockQty": 50, "isUnlimitedStock": true, "defaultResetQty": 50, "isBestseller": false, "saleUnit": "ขวด", "emoji": "💧", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 },
-    { "id": "item_06", "name": "ไส้กรอกทอด", "categoryId": "cat_3", "price": 15.0, "directCost": 9.0, "status": "ACTIVE", "stockQty": 25, "isUnlimitedStock": true, "defaultResetQty": 25, "isBestseller": false, "saleUnit": "ไม้", "emoji": "🌭", "description": "", "imageUrl": null, "sortOrder": 0, "packagePrice": 0.0, "piecesPerPackage": 0 }
-  ],
+  "menuItems": [],
   "orders": [],
-  "users": {
-    "0812345678": {
-      "phoneNumber": "0812345678",
-      "name": "",
-      "stamps": 7,
-      "totalOrders": 7,
-      "lastOrder": null
-    }
-  },
-  "hiddenCosts": [
-    { "id": "hc_1", "date": "2026-11-06", "category": "utilities", "itemName": "เติมแก๊สหุงต้ม 15 กก.", "amount": 390.0, "notes": "" },
-    { "id": "hc_2", "date": "2026-11-06", "category": "supplies", "itemName": "ถุงพลาสติก 100 ใบ", "amount": 50.0, "notes": "" }
-  ],
+  "users": {},
+  "hiddenCosts": [],
   "currentCustomerPhone": "",
   "currentActiveOrderId": null,
   "adminPin": "09286840"
