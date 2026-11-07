@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Refresh
@@ -1137,7 +1138,7 @@ fun CustomerPhoneDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = { onConfirm("") }) {
+                    TextButton(onClick = { onConfirm("", "") }) {
                         Text("สั่งแบบทั่วไป (ไม่ใส่เบอร์)", color = Color.Gray)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
