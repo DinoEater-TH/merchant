@@ -143,7 +143,7 @@ fun CustomerScreen(viewModel: MainViewModel) {
                         ShopLogoView(
                             shopInfo = shopInfo,
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(48.dp)
                                 .testTag("top_app_bar_logo")
                         )
                         Spacer(modifier = Modifier.width(10.dp))
