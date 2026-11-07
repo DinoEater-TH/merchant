@@ -296,6 +296,25 @@
           <input type="file" id="s_qr" accept="image/*" class="w-full text-sm">
           <div id="qrPreview" class="mt-2"></div>
         </div>
+        <div class="border-t pt-3 space-y-2">
+          <label class="text-xs font-bold text-gray-700">🔗 ลิงก์สำหรับลูกค้า (คัดลอกส่งให้ลูกค้า)</label>
+          <div class="bg-gray-50 rounded-lg p-2.5 space-y-2">
+            <div>
+              <div class="text-[11px] text-gray-500 mb-1">🌐 สั่งอาหารผ่านเว็บ (ไม่ต้องติดตั้งแอป)</div>
+              <div class="flex gap-2">
+                <input id="customerWebLink" readonly value="https://dinoeater-merchant.web.app/" class="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-white">
+                <button onclick="copyLink('customerWebLink')" class="bg-orange-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold">คัดลอก</button>
+              </div>
+            </div>
+            <div>
+              <div class="text-[11px] text-gray-500 mb-1">📱 ดาวน์โหลดแอป Android</div>
+              <div class="flex gap-2">
+                <input id="customerApkLink" readonly value="https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk" class="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-white">
+                <button onclick="copyLink('customerApkLink')" class="bg-orange-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold">คัดลอก</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <button onclick="saveSettings()" class="bg-orange-600 text-white w-full py-2 rounded-xl text-sm font-bold">บันทึกการตั้งค่า</button>
       </div>
     </section>
@@ -1414,6 +1433,13 @@
       state.categories = (state.categories || []).filter(c => c.id !== id);
       renderCategoryList();
       schedulePush();
+    }
+    function copyLink(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.select();
+      try { navigator.clipboard.writeText(el.value); } catch (e) {}
+      alert('คัดลอกลิงก์แล้ว: ' + el.value);
     }
     function closeAddMenuModal() { document.getElementById('addMenuModal').classList.add('hidden'); }
     function saveMenuItem() {
