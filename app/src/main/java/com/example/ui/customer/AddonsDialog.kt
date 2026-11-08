@@ -373,21 +373,24 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
-                SkewerOption.values().forEach { option ->
+                val skewerItems = remember(shopInfo.skewerOptions) {
+                    parseSkewerItems(shopInfo.skewerOptions)
+                }
+                skewerItems.filter { it.enabled }.forEach { option ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { tempAddons = tempAddons.copy(skewer = option) }
+                            .clickable { tempAddons = tempAddons.copy(skewerLabel = option.label) }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = tempAddons.skewer == option,
-                            onClick = { tempAddons = tempAddons.copy(skewer = option) },
+                            selected = tempAddons.skewerLabel.ifBlank { "เสียบไม้" } == option.label,
+                            onClick = { tempAddons = tempAddons.copy(skewerLabel = option.label) },
                             colors = RadioButtonDefaults.colors(selectedColor = OrangePrimary)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "${option.icon} ${option.displayName}", fontSize = 14.sp)
+                        Text(text = "${option.icon} ${option.label}", fontSize = 14.sp)
                     }
                 }
 
@@ -515,10 +518,14 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 val freeDeliveryReached = cartSummary.subtotal >= shopInfo.minOrderForFreeDelivery
                 val quotedDistance = distanceKm
                 val perKmEnabled = shopInfo.promoDeliveryPerKmEnabled
-                val previewDeliveryFee = if (isDelivery && !freeDeliveryReached && quotedDistance != null) {
-                    if (perKmEnabled && shopInfo.deliveryFeePerKm > 0.0) ceil(quotedDistance * shopInfo.deliveryFeePerKm) else shopInfo.deliveryFee
+                val previewDeliveryFee = if (isDelivery && !freeDeliveryReached) {
+                    if (!shopInfo.deliveryGpsEnabled) {
+                        if (shopInfo.promoDeliveryFeeEnabled) shopInfo.deliveryFee else 0.0
+                    } else if (quotedDistance != null) {
+                        if (perKmEnabled && shopInfo.deliveryFeePerKm > 0.0) ceil(quotedDistance * shopInfo.deliveryFeePerKm) else shopInfo.deliveryFee
+                    } else 0.0
                 } else 0.0
-                val deliveryBlocked = isDelivery && (
+                val deliveryBlocked = isDelivery && shopInfo.deliveryGpsEnabled && (
                     quotedDistance == null ||
                         quotedDistance > shopInfo.maxDeliveryDistanceKm ||
                         distanceLoading
@@ -564,6 +571,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
                             )
                             when {
                                 freeDeliveryReached -> Text("ฟรี (ซื้อครบ ${String.format(Locale.US, "%.0f", shopInfo.minOrderForFreeDelivery)}.-) 🎉", fontSize = 13.sp, color = CucumberGreen, fontWeight = FontWeight.Bold)
+                                !shopInfo.deliveryGpsEnabled -> Text("฿${String.format(Locale.US, "%.0f", previewDeliveryFee)}", fontSize = 13.sp)
                                 distanceLoading -> Text("กำลังคำนวณ...", fontSize = 13.sp, color = Color.Gray)
                                 quotedDistance == null -> Text("รอพิกัด GPS", fontSize = 13.sp, color = Color(0xFFC62828))
                                 else -> Text("฿${String.format(Locale.US, "%.0f", previewDeliveryFee)}", fontSize = 13.sp)
@@ -608,7 +616,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 // Cash payment
                 Button(
                     onClick = {
-                        val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList())
+                        val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList(), skewerLabel = tempAddons.skewerLabel.ifBlank { "เสียบไม้" })
                         viewModel.setAddonOptions(finalOptions)
                         viewModel.setFulfillment(tempFulfillment)
                         if (tempFulfillment == FulfillmentType.DELIVERY) {
@@ -635,7 +643,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
 // Action buttons
                 Button(
                     onClick = {
-                        val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList())
+                        val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList(), skewerLabel = tempAddons.skewerLabel.ifBlank { "เสียบไม้" })
                         viewModel.setAddonOptions(finalOptions)
                         viewModel.setFulfillment(tempFulfillment)
                         if (tempFulfillment == FulfillmentType.DELIVERY) {
@@ -662,6 +670,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
     }
 }
 data class AddonItem(val id: String, val name: String, val enabled: Boolean = true)
+data class SkewerItem(val id: String, val label: String, val icon: String = "🍢", val enabled: Boolean = true)
 
 fun parseAddonItems(config: String): List<AddonItem> {
     if (config.isBlank()) return listOf(
@@ -679,5 +688,24 @@ fun parseAddonItems(config: String): List<AddonItem> {
         if (list.isEmpty()) listOf(AddonItem("chili", "???????", true), AddonItem("cucumber", "??????", true), AddonItem("sauceCup", "???????????", true)) else list
     } catch (e: Exception) {
         listOf(AddonItem("chili", "???????", true), AddonItem("cucumber", "??????", true), AddonItem("sauceCup", "???????????", true))
+    }
+}
+
+fun parseSkewerItems(config: String): List<SkewerItem> {
+    if (config.isBlank()) return listOf(
+        SkewerItem("skewered", "เสียบไม้", "🍢", true),
+        SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "🛍️", true),
+        SkewerItem("separate", "รับไม้เสียบแยก", "🥢", true)
+    )
+    return try {
+        val arr = org.json.JSONArray(config)
+        val list = mutableListOf<SkewerItem>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            list.add(SkewerItem(o.optString("id", "skewer_$i"), o.optString("label", o.optString("name", "ตัวเลือก")), o.optString("icon", "🍢"), o.optBoolean("enabled", true)))
+        }
+        if (list.isEmpty()) listOf(SkewerItem("skewered", "เสียบไม้", "🍢", true), SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "🛍️", true), SkewerItem("separate", "รับไม้เสียบแยก", "🥢", true)) else list
+    } catch (e: Exception) {
+        listOf(SkewerItem("skewered", "เสียบไม้", "🍢", true), SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "🛍️", true), SkewerItem("separate", "รับไม้เสียบแยก", "🥢", true))
     }
 }

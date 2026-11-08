@@ -468,7 +468,7 @@ fun OrderHistoryCard(
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        text = "🍢 ${order.options.skewer.displayName} • ${order.options.sauceChoice.displayName}",
+                        text = "🍢 ${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }} • ${order.options.sauceChoice.displayName}",
                         fontSize = 11.sp,
                         color = Color.DarkGray
                     )

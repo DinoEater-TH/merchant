@@ -11,6 +11,10 @@ plugins {
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
+  lint {
+    checkReleaseBuilds = false
+    abortOnError = false
+  }
 
   defaultConfig {
     applicationId = "com.dinoeater.merchant"

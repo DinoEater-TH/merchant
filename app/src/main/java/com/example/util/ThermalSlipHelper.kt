@@ -37,7 +37,7 @@ object ThermalSlipHelper {
 
         sb.appendLine(line)
         sb.appendLine("ตัวเลือกเสริม:")
-        sb.appendLine("- ไม้เสียบ : ${order.options.skewer.displayName}")
+        sb.appendLine("- ไม้เสียบ : ${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }}")
         val condiments = mutableListOf<String>()
         if (order.options.friedChili) condiments.add("พริกทอด")
         if (order.options.cucumber) condiments.add("แตงกวา")

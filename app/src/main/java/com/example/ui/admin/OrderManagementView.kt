@@ -283,7 +283,7 @@ fun AdminOrderCard(
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        text = "🍡 เสียบไม้: ${order.options.skewer.displayName} | น้ำจิ้ม: ${order.options.sauceChoice.displayName}",
+                        text = "🍡 เสียบไม้: ${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }} | น้ำจิ้ม: ${order.options.sauceChoice.displayName}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )

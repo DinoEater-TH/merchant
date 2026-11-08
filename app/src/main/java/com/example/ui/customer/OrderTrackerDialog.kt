@@ -261,7 +261,7 @@ fun OrderTrackerDialog(viewModel: MainViewModel) {
                 ) {
                     Column(modifier = Modifier.padding(10.dp)) {
                         Text(text = "📌 ตัวเลือกที่เลือก:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = OrangePrimary)
-                        Text(text = "- รูปแบบ: ${order.options.skewer.displayName}", fontSize = 12.sp)
+                        Text(text = "- รูปแบบ: ${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }}", fontSize = 12.sp)
                         val extras = mutableListOf<String>()
                         if (order.options.friedChili) extras.add("พริกทอด")
                         if (order.options.cucumber) extras.add("แตงกวา")

@@ -268,17 +268,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Delivery fee is calculated from the real driving distance at the admin's per-km rate.
         val freeDelivery = shop.promoFreeDeliveryEnabled && subtotal >= shop.minOrderForFreeDelivery
         val deliveryFee = if (fulfillment == FulfillmentType.DELIVERY) {
-            when {
-                freeDelivery -> 0.0
-                distanceKm == null -> 0.0
-                shop.promoDeliveryPerKmEnabled && shop.deliveryFeePerKm > 0.0 -> ceil(distanceKm * shop.deliveryFeePerKm)
-                !shop.promoDeliveryFeeEnabled -> 0.0
-                else -> shop.deliveryFee
+            if (!shop.deliveryGpsEnabled) {
+                when {
+                    freeDelivery -> 0.0
+                    !shop.promoDeliveryFeeEnabled -> 0.0
+                    else -> shop.deliveryFee
+                }
+            } else {
+                when {
+                    freeDelivery -> 0.0
+                    distanceKm == null -> 0.0
+                    shop.promoDeliveryPerKmEnabled && shop.deliveryFeePerKm > 0.0 -> ceil(distanceKm * shop.deliveryFeePerKm)
+                    !shop.promoDeliveryFeeEnabled -> 0.0
+                    else -> shop.deliveryFee
+                }
             }
         } else 0.0
 
-        val isDeliveryBlocked = fulfillment == FulfillmentType.DELIVERY &&
-            (distanceKm == null || distanceKm > shop.maxDeliveryDistanceKm)
+        val isDeliveryBlocked = if (!shop.deliveryGpsEnabled) {
+            false
+        } else {
+            fulfillment == FulfillmentType.DELIVERY &&
+                (distanceKm == null || distanceKm > shop.maxDeliveryDistanceKm)
+        }
 
         val total = (subtotal - discount + deliveryFee).coerceAtLeast(0.0)
 
@@ -354,6 +366,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun refreshDeliveryQuote() {
         val shop = shopInfo.value
+        // GPS disabled by admin: no quote is needed, the flat fee is used.
+        if (!shop.deliveryGpsEnabled) {
+            _deliveryDistanceKm.value = null
+            _deliveryDistanceLoading.value = false
+            _deliveryDistanceError.value = null
+            return
+        }
         val destination = DeliveryRouteHelper.parseCoordinate(_gpsCoordinates.value)
         val shopCoordinate = if (shop.shopLat != null && shop.shopLng != null) {
             DeliveryRouteHelper.Coordinate(shop.shopLat, shop.shopLng)

@@ -146,7 +146,7 @@ fun PromotionView(viewModel: MainViewModel) {
                 OutlinedTextField(value = minDiscount, onValueChange = { minDiscount = it }, label = { Text("ซื้อครบ (บาท) จึงลด") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = discountAmount, onValueChange = { discountAmount = it }, label = { Text("ส่วนลด (บาท)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = freeDelivery, onValueChange = { freeDelivery = it }, label = { Text("ส่งฟรีเมื่อครบ (บาท)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = stamps, onValueChange = { stamps = it }, label = { Text("แต้มแลกรางวัล") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = stamps, onValueChange = { stamps = it }, label = { Text("สะสม stamp ครบ (ดวง) เพื่อแลกเมนูรางวัล") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = spendPerStamp, onValueChange = { spendPerStamp = it }, label = { Text("ซื้อเท่าไหร่ (บาท) ได้ 1 แต้ม") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = rewardDesc, onValueChange = { rewardDesc = it }, label = { Text("คำอธิบายรางวัล") }, modifier = Modifier.fillMaxWidth())
 

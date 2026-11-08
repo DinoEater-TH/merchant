@@ -121,6 +121,7 @@ fun SettingsView(viewModel: MainViewModel) {
     var shopLatText by remember(syncedShopInfo.shopLat) { mutableStateOf(syncedShopInfo.shopLat?.toString() ?: "") }
     var shopLngText by remember(syncedShopInfo.shopLng) { mutableStateOf(syncedShopInfo.shopLng?.toString() ?: "") }
     var showShopLocation by remember(syncedShopInfo.showShopLocation) { mutableStateOf(syncedShopInfo.showShopLocation) }
+    var deliveryGpsEnabled by remember(syncedShopInfo.deliveryGpsEnabled) { mutableStateOf(syncedShopInfo.deliveryGpsEnabled) }
     var isLocatingShop by remember { mutableStateOf(false) }
     // Start empty: never pre-fill the field with the current secret PIN
     var pinText by remember { mutableStateOf("") }
@@ -140,6 +141,7 @@ fun SettingsView(viewModel: MainViewModel) {
         shopLat = shopLatText.toDoubleOrNull(),
         shopLng = shopLngText.toDoubleOrNull(),
         showShopLocation = showShopLocation,
+        deliveryGpsEnabled = deliveryGpsEnabled,
         logoType = logoType,
         logoPresetId = logoPresetId,
         logoUri = logoUri.ifBlank { null },
@@ -958,6 +960,16 @@ fun SettingsView(viewModel: MainViewModel) {
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = deliveryGpsEnabled, onCheckedChange = { deliveryGpsEnabled = it })
+                        Text("ให้ลูกค้าแนบพิกัด GPS (ปิด = ใช้ค่าส่งคงที่)", fontSize = 13.sp)
+                    }
+                    Text(
+                        "ปิดไว้ = ปุ่ม GPS/แผนที่/ระยะทางจะถูกซ่อน และปุ่มชำระเงินทำงานได้เลยเมื่อเลือกจัดส่ง",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -976,6 +988,7 @@ fun SettingsView(viewModel: MainViewModel) {
                                 shopLat = shopLatText.toDoubleOrNull(),
                                 shopLng = shopLngText.toDoubleOrNull(),
                                 showShopLocation = showShopLocation,
+        deliveryGpsEnabled = deliveryGpsEnabled,
                                 logoType = logoType,
                                 logoPresetId = logoPresetId,
                                 logoUri = logoUri.ifBlank { null },

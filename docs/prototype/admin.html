@@ -215,6 +215,15 @@
           <button onclick="addAddonOption()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
         </div>
       </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">รูปแบบการใส่ไม้ (ที่ลูกค้าเลือก)</h3>
+        <div id="skewerAdminList" class="space-y-1"></div>
+        <div class="flex gap-2 mt-2">
+          <input id="newSkewerName" placeholder="เพิ่มตัวเลือกใหม่" class="flex-1 border rounded-lg px-3 py-2 text-sm">
+          <button onclick="addSkewerOption()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
+        </div>
+      </div>
     </section>
 
     <!-- Analytics -->
@@ -289,6 +298,8 @@
           </div>
           <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_showShopLocation" checked> แสดงพิกัดและปุ่มนำทางไปร้านให้ลูกค้าเห็น</label>
           <p class="text-[11px] text-gray-400">ปิดไว้ = ลูกค้าจะไม่เห็นปุ่มนำทาง แต่ระบบยังใช้พิกัดคำนวณค่าส่งได้</p>
+           <label class="flex items-center gap-2 text-sm mt-2"><input type="checkbox" id="s_deliveryGps"> ให้ลูกค้าแนบพิกัด GPS (ปิด = ใช้ค่าส่งคงที่ ไม่ต้องส่งพิกัด)</label>
+           <p class="text-[11px] text-gray-400">ปิดไว้ = ปุ่ม GPS/แผนที่/ระยะทางจะถูกซ่อน และปุ่มชำระเงินทำงานได้เลยเมื่อเลือกจัดส่ง</p>
         </div>
         <div class="border-t pt-3">
           <label class="text-xs font-bold text-gray-700">🔔 แจ้งเตือนออเดอร์ใหม่</label>
@@ -360,11 +371,16 @@
         <input id="s_freeDelivery" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <div>
-        <label class="text-xs text-gray-500">แต้มแลกรางวัล (แต้มที่ต้องใช้)</label>
+        <label class="text-xs text-gray-500">สะสม stamp ครบ (ดวง) เพื่อแลกเมนูรางวัล</label>
         <input id="s_stamps" type="number" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <div>
-        <label class="text-xs text-gray-500">ซื้อเท่าไหร่ (บาท) ได้ 1 แต้ม</label>
+        <label class="text-xs text-gray-500">Stamp Icon (อัปโหลดรูป — ระบบย่อให้เล็กอัตโนมัติ)</label>
+         <input type="file" id="s_stampIcon" accept="image/*" class="w-full text-sm">
+         <div id="stampIconPreview" class="mt-2"></div>
+       </div>
+       <div>
+         <label class="text-xs text-gray-500">ซื้อเท่าไหร่ (บาท) ได้ 1 แต้ม</label>
         <input id="s_spendPerStamp" type="number" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="เช่น 50">
       </div>
       <div>
@@ -2018,11 +2034,17 @@
         if (s.logoUri) logoPreview.innerHTML = `<img src="${s.logoUri}" class="w-16 h-16 rounded-lg object-cover">`;
         else logoPreview.innerHTML = `<span class="text-3xl">${s.logoEmoji || '🍢'}</span>`;
       }
+      const stampIconPreview = document.getElementById('stampIconPreview');
+      if (stampIconPreview) {
+        if (s.stampIconUri) stampIconPreview.innerHTML = `<img src="${s.stampIconUri}" class="w-12 h-12 rounded-lg object-cover">`;
+        else stampIconPreview.innerHTML = '<p class="text-xs text-gray-400">ยังไม่มีรูป Stamp</p>';
+      }
       document.getElementById('s_promptPay').value = s.promptPayNumber || '';
       document.getElementById('s_address').value = s.address || '';
       document.getElementById('s_shopLat').value = s.shopLat ?? '';
       document.getElementById('s_shopLng').value = s.shopLng ?? '';
       document.getElementById('s_showShopLocation').checked = (s.showShopLocation !== false);
+       document.getElementById('s_deliveryGps').checked = (s.deliveryGpsEnabled === true);
       document.getElementById('s_deliveryFee').value = s.deliveryFee ?? 15;
       document.getElementById('s_deliveryFeePerKm').value = (s.deliveryFeePerKm != null && s.deliveryFeePerKm !== 0) ? s.deliveryFeePerKm : '';
       document.getElementById('s_maxDeliveryKm').value = s.maxDeliveryDistanceKm ?? 20;
@@ -2064,6 +2086,19 @@
       }
       window.addonAdminItems = items;
       renderAddonAdminList();
+
+      // Skewer options
+      let skewerItems = [];
+      try { skewerItems = JSON.parse(s.skewerOptions || '[]'); } catch (e) { skewerItems = []; }
+      if (!Array.isArray(skewerItems) || skewerItems.length === 0) {
+        skewerItems = [
+          { id: 'skewered', label: 'เสียบไม้', icon: '🍢', enabled: true },
+          { id: 'in_bag', label: 'ใส่ถุง (ไม่เสียบไม้)', icon: '🛍️', enabled: true },
+          { id: 'separate', label: 'รับไม้เสียบแยก', icon: '🥢', enabled: true }
+        ];
+      }
+      window.skewerAdminItems = skewerItems;
+      renderSkewerAdminList();
     }
     function renderAddonAdminList() {
       const container = document.getElementById('addonAdminList');
@@ -2105,6 +2140,47 @@
       input.value = '';
       renderAddonAdminList();
     }
+
+     function renderSkewerAdminList() {
+       const container = document.getElementById('skewerAdminList');
+       if (!container || !window.skewerAdminItems) return;
+       container.innerHTML = window.skewerAdminItems.map((it, idx) => `
+         <div class="flex items-center gap-2 text-sm">
+           <input type="checkbox" ${it.enabled ? 'checked' : ''} onchange="toggleSkewer(${idx}, this.checked)">
+           <span class="flex-1">${it.icon || ''} ${it.label}</span>
+           <button onclick="editSkewer(${idx})" class="text-blue-500 text-xs">แก้ไข</button>
+           <button onclick="removeSkewer(${idx})" class="text-red-500 text-xs">ลบ</button>
+         </div>
+       `).join('');
+     }
+     function toggleSkewer(idx, checked) {
+       if (window.skewerAdminItems && window.skewerAdminItems[idx]) {
+         window.skewerAdminItems[idx].enabled = checked;
+       }
+     }
+     function editSkewer(idx) {
+       if (!window.skewerAdminItems || !window.skewerAdminItems[idx]) return;
+       const newName = prompt('แก้ไขชื่อตัวเลือก:', window.skewerAdminItems[idx].label);
+       if (newName && newName.trim()) {
+         window.skewerAdminItems[idx].label = newName.trim();
+         renderSkewerAdminList();
+       }
+     }
+     function removeSkewer(idx) {
+       if (window.skewerAdminItems) {
+         window.skewerAdminItems.splice(idx, 1);
+         renderSkewerAdminList();
+       }
+     }
+     function addSkewerOption() {
+       const input = document.getElementById('newSkewerName');
+       const name = input.value.trim();
+       if (!name) return;
+       if (!window.skewerAdminItems) window.skewerAdminItems = [];
+       window.skewerAdminItems.push({ id: 'skewer_' + Date.now(), label: name, icon: '🍢', enabled: true });
+       input.value = '';
+       renderSkewerAdminList();
+     }
 
 // Downscale an image file so the Firebase state blob stays small.
     // Photos become JPEG; PNGs (logo/QR with transparency) stay PNG.
@@ -2150,14 +2226,28 @@
     function saveSettings() {
       const logoFile = document.getElementById('s_logo').files[0];
       const qrFile = document.getElementById('s_qr').files[0];
-      const afterLogo = () => {
-        if (qrFile) {
-          downscaleImageFile(qrFile, 600, 0.85).then(dataUrl => {
-            if (dataUrl) state.shopInfo.promptPayQrUri = dataUrl;
+      const stampIconFile = document.getElementById('s_stampIcon').files[0];
+      const afterStampIcon = () => {
+        if (stampIconFile) {
+          downscaleImageFile(stampIconFile, 200, 0.85).then(dataUrl => {
+            if (dataUrl) {
+              state.shopInfo.stampType = 'CUSTOM_IMAGE';
+              state.shopInfo.stampIconUri = dataUrl;
+            }
             finishSaveSettings();
           });
         } else {
           finishSaveSettings();
+        }
+      };
+      const afterLogo = () => {
+        if (qrFile) {
+          downscaleImageFile(qrFile, 600, 0.85).then(dataUrl => {
+            if (dataUrl) state.shopInfo.promptPayQrUri = dataUrl;
+            afterStampIcon();
+          });
+        } else {
+          afterStampIcon();
         }
       };
       if (logoFile) {
@@ -2185,6 +2275,7 @@ function finishSaveSettings() {
       state.shopInfo.shopLat = parseFloat(document.getElementById('s_shopLat').value) || null;
       state.shopInfo.shopLng = parseFloat(document.getElementById('s_shopLng').value) || null;
       state.shopInfo.showShopLocation = document.getElementById('s_showShopLocation').checked;
+       state.shopInfo.deliveryGpsEnabled = document.getElementById('s_deliveryGps').checked;
       state.shopInfo.minOrderForDiscount = parseFloat(document.getElementById('s_minDiscount').value) || state.shopInfo.minOrderForDiscount;
       state.shopInfo.discountAmount = parseFloat(document.getElementById('s_discountAmount').value) || state.shopInfo.discountAmount;
       state.shopInfo.minOrderForFreeDelivery = parseFloat(document.getElementById('s_freeDelivery').value) || state.shopInfo.minOrderForFreeDelivery;
@@ -2212,6 +2303,7 @@ function finishSaveSettings() {
       }
       state.shopInfo.showScanPayment = document.getElementById('s_showScan').checked;
       state.shopInfo.addonConfig = JSON.stringify(window.addonAdminItems || []);
+       state.shopInfo.skewerOptions = JSON.stringify(window.skewerAdminItems || []);
       document.getElementById('shopNameHeader').textContent = state.shopInfo.name;
       schedulePush();
       alert('บันทึกการตั้งค่าแล้ว');
@@ -2226,6 +2318,7 @@ function finishSaveSettings() {
       renderAnalytics();
       renderSettings();
       renderAddonAdminList();
+      renderSkewerAdminList();
       // Re-render custom promos so promos added/changed on the Android admin app appear here too.
       if (typeof renderCustomPromoList === 'function') renderCustomPromoList();
       if (typeof renderPromoModalList === 'function' && !document.getElementById('promoModal').classList.contains('hidden')) renderPromoModalList();

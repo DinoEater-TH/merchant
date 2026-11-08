@@ -28,6 +28,7 @@ data class ShopInfo(
     val shopLat: Double? = null,
     val shopLng: Double? = null,
     val showShopLocation: Boolean = true,
+    val deliveryGpsEnabled: Boolean = false,
     val minOrderForDiscount: Double = 50.0,
     val discountAmount: Double = 5.0,
     val minOrderForFreeDelivery: Double = 120.0,
@@ -43,6 +44,7 @@ data class ShopInfo(
     val aiApiKey: String = "",
     val aiModel: String = "gemini-2.5-flash-lite",
 val addonConfig: String = "", // JSON: {"friedChili":true,"cucumber":true,"sauceCup":true}
+val skewerOptions: String = "", // JSON array: [{"id":..,"label":..,"icon":..,"enabled":..}]
 val showScanPayment: Boolean = true,
 val promptPayQrUri: String? = null,
     // Shop Logo Customization
@@ -111,6 +113,7 @@ enum class SauceChoice(val displayName: String) {
 
 data class AddonOptions(
     val skewer: SkewerOption = SkewerOption.SKEWERED,
+    val skewerLabel: String = "",
     val friedChili: Boolean = true,
     val cucumber: Boolean = true,
     val sauceCup: Boolean = true,

@@ -210,10 +210,8 @@
       <!-- Skewer Preference -->
       <div>
         <label class="block text-xs font-bold text-gray-700 mb-1.5">2. รูปแบบการใส่ไม้</label>
-        <div class="space-y-1.5 text-xs">
-          <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="skewerOpt" value="skewered" checked class="accent-orange-600"> <span>🍢 เสียบไม้</span></label>
-          <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="skewerOpt" value="in_bag" class="accent-orange-600"> <span>🛍️ ใส่ถุง (ไม่เสียบไม้)</span></label>
-          <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="skewerOpt" value="separate" class="accent-orange-600"> <span>🥢 รับไม้เสียบแยก</span></label>
+        <div id="skewerOptionsContainer" class="space-y-1.5 text-xs">
+          <!-- rendered dynamically from admin config -->
         </div>
       </div>
 
@@ -397,7 +395,16 @@
 
     let menu = [];
 
-    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, deliveryFeePerKm: 0, maxDeliveryDistanceKm: 20, promoDeliveryFeeEnabled: true, promoDeliveryPerKmEnabled: true, shopLat: null, shopLng: null, showShopLocation: true, shopAddress: '', promoBanner: true, stampsRequired: 10, spendPerStamp: 50, promoDiscountEnabled: true, promoFreeDeliveryEnabled: true, promoRewardEnabled: true };
+    let shopCfg = { minOrderForDiscount: 50, discountAmount: 5, minOrderForFreeDelivery: 120, deliveryFee: 15, deliveryFeePerKm: 0, maxDeliveryDistanceKm: 20, promoDeliveryFeeEnabled: true, promoDeliveryPerKmEnabled: true, shopLat: null, shopLng: null, showShopLocation: true, deliveryGpsEnabled: false, shopAddress: '', promoBanner: true, stampsRequired: 10, spendPerStamp: 50, promoDiscountEnabled: true, promoFreeDeliveryEnabled: true, promoRewardEnabled: true, stampIconUri: null, stampType: 'PRESET', stampEmoji: '🍢' };
+
+    // Admin-managed skewer options ("รูปแบบการใส่ไม้"). Falls back to the classic 3.
+    const DEFAULT_SKEWER_OPTIONS = [
+      { id: 'skewered', label: 'เสียบไม้', icon: '🍢' },
+      { id: 'in_bag', label: 'ใส่ถุ่่ง (ไม่เสียบไม้)', icon: '🛍️' },
+      { id: 'separate', label: 'รับไม้เสียบแยก', icon: '🥢' }
+    ];
+    window.skewerConfig = [];
+    let selectedSkewer = null;
 
     // Delivery distance state (driving distance from shop to customer GPS point)
     let deliveryDistanceKm = null;
@@ -430,6 +437,8 @@
       deliveryDistanceKm = null;
       deliveryDistanceError = null;
       if (fulfillment !== 'delivery') { updateCartSummary(); renderDeliveryInfo(); return; }
+      // GPS is disabled by the admin: no distance is needed, the flat fee is used.
+      if (!shopCfg.deliveryGpsEnabled) { updateCartSummary(); renderDeliveryInfo(); return; }
       const dest = (selectedLat != null && selectedLng != null) ? { lat: selectedLat, lng: selectedLng } : null;
       const shop = (shopCfg.shopLat != null && shopCfg.shopLng != null) ? { lat: Number(shopCfg.shopLat), lng: Number(shopCfg.shopLng) } : null;
       if (!dest) {
@@ -466,6 +475,11 @@
     function calcDeliveryFee(subtotal) {
       if (fulfillment !== 'delivery') return 0;
       if (shopCfg.promoFreeDeliveryEnabled && subtotal >= shopCfg.minOrderForFreeDelivery) return 0;
+      // GPS off: no distance is available, so we always charge the flat fee.
+      if (!shopCfg.deliveryGpsEnabled) {
+        if (shopCfg.promoDeliveryFeeEnabled === false) return 0;
+        return shopCfg.deliveryFee;
+      }
       if (deliveryDistanceKm == null) return null;
       if (shopCfg.promoDeliveryPerKmEnabled && (shopCfg.deliveryFeePerKm || 0) > 0) {
         return Math.ceil(deliveryDistanceKm * shopCfg.deliveryFeePerKm);
@@ -476,6 +490,8 @@
 
     function isDeliveryBlocked() {
       if (fulfillment !== 'delivery') return false;
+      // GPS off: delivery is never blocked, payment buttons stay enabled.
+      if (!shopCfg.deliveryGpsEnabled) return false;
       if (selectedLat == null || selectedLng == null) return true;
       if (deliveryDistanceLoading) return true;
       if (deliveryDistanceKm == null) return true;
@@ -485,7 +501,9 @@
     function renderDeliveryInfo() {
       const box = document.getElementById('deliveryInfoBox');
       if (!box) return;
-      if (fulfillment !== 'delivery') { box.innerHTML = ''; return; }
+      if (fulfillment !== 'delivery') { box.innerHTML = ''; applyGpsVisibility(); return; }
+      // GPS off: no distance info is shown and the order is never blocked.
+      if (!shopCfg.deliveryGpsEnabled) { box.innerHTML = ''; applyGpsVisibility(); return; }
       const maxKm = shopCfg.maxDeliveryDistanceKm || 20;
       if (deliveryDistanceLoading) {
         box.innerHTML = '<div class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-2.5">กำลังคำนวณระยะทางตามเส้นทาง...</div>';
@@ -519,16 +537,57 @@
       const lat = shopCfg.shopLat, lng = shopCfg.shopLng;
       window.open(`https://www.openstreetmap.org/directions?from=&to=${lat},${lng}`, '_blank');
     }
+
+    // Show/hide the GPS button, the distance box and the shop-navigation button
+    // based on the admin "deliveryGpsEnabled" setting. When GPS is off the
+    // customer simply pays a flat delivery fee.
+    function applyGpsVisibility() {
+      const gpsOn = shopCfg.deliveryGpsEnabled === true;
+      const gpsBtn = document.getElementById('gpsBtn');
+      const infoBox = document.getElementById('deliveryInfoBox');
+      const navWrap = document.getElementById('shopNavWrap');
+      if (gpsBtn) gpsBtn.style.display = gpsOn ? '' : 'none';
+      if (infoBox) infoBox.style.display = gpsOn ? '' : 'none';
+      if (navWrap) navWrap.style.display = gpsOn ? '' : 'none';
+    }
+
+    // Render the admin-managed "รูปแบบการใส่ไม้" radio list.
+    function renderSkewerOptions() {
+      const container = document.getElementById('skewerOptionsContainer');
+      if (!container) return;
+      let items = window.skewerConfig;
+      if (typeof items === 'string') { try { items = JSON.parse(items || '[]'); } catch (e) { items = []; } }
+      if (!Array.isArray(items) || items.length === 0) items = DEFAULT_SKEWER_OPTIONS;
+      window.skewerConfig = items;
+      const enabled = items.filter(i => i.enabled !== false);
+      if (!enabled.some(i => i.id === selectedSkewer)) selectedSkewer = enabled[0] ? enabled[0].id : null;
+      container.innerHTML = enabled.map(i => `
+        <label class="flex items-center space-x-2 cursor-pointer">
+          <input type="radio" name="skewerOpt" value="${i.id}" ${selectedSkewer === i.id ? 'checked' : ''} class="accent-orange-600">
+          <span>${i.icon || ''} ${i.label}</span>
+        </label>
+      `).join('') || '<p class="text-xs text-gray-400">ไม่มีตัวเลือกไม้</p>';
+    }
+
     function renderStamps() {
       if (!isMember) return;
       const need = shopCfg.stampsRequired || 10;
       const container = document.getElementById('stampsContainer');
       container.innerHTML = '';
+      const useIcon = shopCfg.stampType === 'CUSTOM_IMAGE' && shopCfg.stampIconUri;
       for (let i = 1; i <= need; i++) {
         const isStamped = i <= stamps;
         const div = document.createElement('div');
-        div.className = `w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isStamped ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-400 border border-gray-200'}`;
-        div.textContent = isStamped ? '🍢' : i;
+        div.className = `w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden ${isStamped ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-400 border border-gray-200'}`;
+        if (isStamped) {
+          if (useIcon) {
+            div.innerHTML = `<img src="${shopCfg.stampIconUri}" class="w-5 h-5 object-contain" alt="">`;
+          } else {
+            div.textContent = shopCfg.stampEmoji || '🍢';
+          }
+        } else {
+          div.textContent = i;
+        }
         container.appendChild(div);
       }
       document.getElementById('stampsCountText').textContent = `สะสมแล้ว ${stamps}/${need} แต้ม`;
@@ -668,6 +727,11 @@
         : free ? `ฟรี (ซื้อครบ ${shopCfg.minOrderForFreeDelivery}.-)` : `฿${deliveryFee}`;
       document.getElementById('modalNetTotal').textContent = `฿${net}`;
       renderDeliveryInfo();
+
+      // Track selected skewer from the radio buttons
+      const checkedSkewer = document.querySelector('input[name="skewerOpt"]:checked');
+      if (checkedSkewer) selectedSkewer = checkedSkewer.value;
+      renderSkewerOptions();
 
       // Render addon options from manager config
       const container = document.getElementById('addonOptionsContainer');
@@ -819,6 +883,18 @@
       const addrEl = document.getElementById('deliveryAddressInput');
       const now = new Date();
       const pad = n => String(n).padStart(2, '0');
+      const skewerRadio = document.querySelector('input[name="skewerOpt"]:checked');
+      const skewerId = skewerRadio ? skewerRadio.value : selectedSkewer;
+      const skewerItem = (Array.isArray(window.skewerConfig) ? window.skewerConfig : []).find(i => i.id === skewerId);
+      const skewerLabel = skewerItem ? skewerItem.label : (skewerId || '');
+      const addonNames = Array.from(document.querySelectorAll('#addonOptionsContainer input[type="checkbox"]:checked'))
+        .map(c => (c.closest('label') ? c.closest('label').textContent.trim() : c.getAttribute('data-addon')))
+        .filter(Boolean);
+      const userComment = (commentEl && commentEl.value) || '';
+      const commentParts = [];
+      if (skewerLabel) commentParts.push(`[ไม้: ${skewerLabel}]`);
+      if (addonNames.length) commentParts.push(`[เครื่องเคียง: ${addonNames.join(', ')}]`);
+      if (userComment) commentParts.push(userComment);
       return {
         order: {
           id: 'ORD-' + (100 + Math.floor(Math.random() * 900)),
@@ -828,8 +904,8 @@
           deliveryAddress: fulfillment === 'delivery' ? ((addrEl && addrEl.value) || '') : '',
           gpsCoordinates: (selectedLat != null && selectedLng != null) ? `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}` : '',
           items,
-          options: {},
-          comment: (commentEl && commentEl.value) || '',
+          options: { skewer: skewerLabel, skewerId: skewerId || '', addons: addonNames },
+          comment: commentParts.join(' '),
           subtotal, discount, deliveryFee, totalAmount,
           status: 'PENDING',
           timestamp: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
@@ -1182,6 +1258,9 @@
           let cfg = parsed.shopInfo && parsed.shopInfo.addonConfig;
           if (typeof cfg === 'string') { try { cfg = JSON.parse(cfg); } catch(e){ cfg = {}; } }
           window.addonConfig = cfg || {};
+          let skewCfg = parsed.shopInfo && parsed.shopInfo.skewerOptions;
+          if (typeof skewCfg === 'string') { try { skewCfg = JSON.parse(skewCfg); } catch(e){ skewCfg = []; } }
+          window.skewerConfig = Array.isArray(skewCfg) && skewCfg.length ? skewCfg : DEFAULT_SKEWER_OPTIONS;
           // Shop config for promos
           shopCfg.minOrderForDiscount = si.minOrderForDiscount ?? 50;
           shopCfg.discountAmount = si.discountAmount ?? 5;
@@ -1194,6 +1273,7 @@
           shopCfg.shopLat = si.shopLat ?? null;
           shopCfg.shopLng = si.shopLng ?? null;
           shopCfg.showShopLocation = si.showShopLocation !== false;
+          shopCfg.deliveryGpsEnabled = si.deliveryGpsEnabled === true;
           shopCfg.shopAddress = si.address || '';
           shopCfg.stampsRequired = si.stampsRequiredForReward ?? 10;
           shopCfg.spendPerStamp = si.spendPerStamp ?? 50;
@@ -1201,8 +1281,13 @@
           shopCfg.promoDiscountEnabled = si.promoDiscountEnabled !== false;
           shopCfg.promoFreeDeliveryEnabled = si.promoFreeDeliveryEnabled !== false;
           shopCfg.promoRewardEnabled = si.promoRewardEnabled !== false;
+          shopCfg.stampType = si.stampType || 'PRESET';
+          shopCfg.stampIconUri = si.stampIconUri || null;
+          shopCfg.stampEmoji = si.stampEmoji || '🍢';
           renderPromoBanner();
           renderShopNavButton();
+          renderSkewerOptions();
+          applyGpsVisibility();
           // Menu from Firebase (real data)
           if (Array.isArray(parsed.menuItems) && parsed.menuItems.length > 0) {
             menu = parsed.menuItems
@@ -1233,6 +1318,8 @@
     renderMenu();
     renderMemberVisibility();
     renderPromoBanner();
+    renderSkewerOptions();
+    applyGpsVisibility();
 
     // Splash screen: auto-hide after 5 seconds (or on click)
     (function() {
