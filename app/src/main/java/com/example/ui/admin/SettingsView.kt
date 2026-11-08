@@ -85,6 +85,7 @@ import com.example.ui.MainViewModel
 import com.example.ui.components.ShopBrandPresets
 import com.example.ui.components.ShopLogoView
 import com.example.ui.components.StampIconView
+import com.example.ui.components.LongdoMapPickerDialog
 import com.example.ui.theme.GoldenCrisp
 import com.example.ui.theme.OrangePrimary
 import com.example.util.LocationHelper
@@ -123,6 +124,20 @@ fun SettingsView(viewModel: MainViewModel) {
     var showShopLocation by remember(syncedShopInfo.showShopLocation) { mutableStateOf(syncedShopInfo.showShopLocation) }
     var deliveryGpsEnabled by remember(syncedShopInfo.deliveryGpsEnabled) { mutableStateOf(syncedShopInfo.deliveryGpsEnabled) }
     var isLocatingShop by remember { mutableStateOf(false) }
+    var showLongdoMapPicker by remember { mutableStateOf(false) }
+
+    if (showLongdoMapPicker) {
+        LongdoMapPickerDialog(
+            initialLat = shopLatText.toDoubleOrNull(),
+            initialLng = shopLngText.toDoubleOrNull(),
+            onLocationSelected = { lat, lng ->
+                shopLatText = lat.toString()
+                shopLngText = lng.toString()
+                showLongdoMapPicker = false
+            },
+            onDismiss = { showLongdoMapPicker = false }
+        )
+    }
     // Start empty: never pre-fill the field with the current secret PIN
     var pinText by remember { mutableStateOf("") }
 
@@ -957,6 +972,12 @@ fun SettingsView(viewModel: MainViewModel) {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("🗺️ เปิดใน Longdo Map (เว็บ)")
+                        }
+                        OutlinedButton(
+                            onClick = { showLongdoMapPicker = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("📌 ปักหมุดตำแหน่งร้านบนแผนที่ (Longdo Map)")
                         }
                     }
 
