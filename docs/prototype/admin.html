@@ -151,15 +151,15 @@
       </div>
 
       <div class="space-y-2">
-        <h3 class="font-bold text-sm px-1">รายการเมนูทั้งหมด (POS)</h3>
-        <div id="posMenuList" class="space-y-2 max-h-72 overflow-y-auto no-scrollbar"></div>
+        <h3 class="font-bold text-base px-1">รายการเมนูทั้งหมด (POS)</h3>
+        <div id="posMenuList" class="space-y-3 max-h-[65vh] overflow-y-auto no-scrollbar pr-0.5"></div>
       </div>
 
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
-        <h3 class="font-bold text-sm">สรุปออเดอร์หน้าร้าน</h3>
-        <div id="posCart" class="text-sm space-y-1"></div>
-        <div class="flex justify-between text-xs text-gray-500"><span>ส่วนลด</span><span id="posDiscount">฿0</span></div>
-        <div class="flex justify-between font-bold"><span>ยอดรวม</span><span id="posTotal">฿0</span></div>
+        <h3 class="font-bold text-base">สรุปออเดอร์หน้าร้าน</h3>
+        <div id="posCart" class="text-base space-y-1.5"></div>
+        <div class="flex justify-between text-sm text-gray-500"><span>ส่วนลด</span><span id="posDiscount">฿0</span></div>
+        <div class="flex justify-between font-bold text-lg"><span>ยอดรวม</span><span id="posTotal">฿0</span></div>
         <div class="flex gap-2">
           <button onclick="posConfirmOrder('cash')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm">💵 เงินสด</button>
           <button onclick="posConfirmOrder('scan')" class="hidden">📱 สแกน</button>
@@ -1164,18 +1164,21 @@
       if (menuEl) {
         const items = (state.menuItems || []).filter(m => m.status !== 'HIDDEN');
         menuEl.innerHTML = items.map(m => `
-          <div class="flex justify-between items-center border rounded-lg p-2">
-            <div class="flex items-center gap-2">
-              ${m.imageUrl ? `<img src="${m.imageUrl}" class="w-10 h-10 rounded object-cover">` : `<span class="text-xl">${m.emoji || '🍢'}</span>`}
-              <div><div class="text-sm font-bold">${m.name}</div><div class="text-xs text-gray-500">฿${m.price} / ${m.saleUnit || 'ไม้'} • ${stockText(m)}</div></div>
-            </div>
-            <div class="flex items-center gap-1">
-              <button onclick="posChangeQty('${m.id}', -1)" class="w-10 h-10 bg-gray-100 rounded-full text-lg font-bold">-</button>
-              <span class="px-2 font-bold text-base">${posCart[m.id] || 0}</span>
-              <button onclick="posChangeQty('${m.id}', 1)" class="w-10 h-10 bg-green-100 text-green-700 rounded-full text-lg font-bold">+</button>
+          <div class="border rounded-2xl p-3 bg-white flex gap-3">
+            ${m.imageUrl
+              ? `<img src="${m.imageUrl}" class="w-20 h-20 rounded-xl object-cover flex-shrink-0">`
+              : `<div class="w-20 h-20 rounded-xl bg-amber-50 flex items-center justify-center text-4xl flex-shrink-0">${m.emoji || '🍢'}</div>`}
+            <div class="flex-1 min-w-0">
+              <div class="text-lg font-bold leading-snug">${m.name}</div>
+              <div class="text-base text-gray-600 mt-0.5">฿${m.price} / ${m.saleUnit || 'ไม้'} • <span class="text-gray-500">${stockText(m)}</span></div>
+              <div class="mt-2 flex items-center gap-3">
+                <button onclick="posChangeQty('${m.id}', -1)" ${posCart[m.id] ? '' : 'disabled'} class="w-14 h-14 rounded-full bg-gray-100 text-gray-700 text-2xl font-bold flex items-center justify-center active:scale-95 transition disabled:opacity-40 disabled:active:scale-100">−</button>
+                <span class="min-w-[2.5rem] text-center text-2xl font-bold tabular-nums">${posCart[m.id] || 0}</span>
+                <button onclick="posChangeQty('${m.id}', 1)" class="w-14 h-14 rounded-full bg-green-600 text-white text-2xl font-bold shadow-sm flex items-center justify-center active:scale-95 transition">+</button>
+              </div>
             </div>
           </div>
-        `).join('') || '<p class="text-xs text-gray-400">ยังไม่มีเมนู</p>';
+        `).join('') || '<p class="text-base text-gray-400 text-center py-6">ยังไม่มีเมนู</p>';
       }
       renderPosCart();
     }
