@@ -722,9 +722,14 @@
       }, 1800);
     }
 
-    function pushState() {
-      if (applyingRemote) return;
-      const toPush = {
+    // Firebase Realtime Database rejects any single string larger than 10 MB.
+    // The whole shop state (including menu photos as data URLs) is stored as one
+    // string, so images must be kept small and checked before every save.
+    const MAX_STATE_CHARS = 9000000;
+    let compactingImages = false;
+
+    function pushPayload() {
+      return {
         shopInfo: state.shopInfo,
         categories: state.categories,
         menuItems: state.menuItems,
@@ -736,10 +741,83 @@
         currentActiveOrderId: null,
         adminPin: ''
       };
-      const json = JSON.stringify(toPush);
+    }
+
+    function pushState() {
+      if (applyingRemote || compactingImages) return;
+      const json = JSON.stringify(pushPayload());
       if (json === lastPushed || json === lastApplied) return;
+      if (json.length > MAX_STATE_CHARS) {
+        setStatus('รูปภาพใหญ่เกินไป กำลังย่อรูป...');
+        compactStateImages().then(() => { if (!applyingRemote) pushState(); });
+        return;
+      }
       lastPushed = json;
-      STATE_REF.set(json).catch(e => { console.error(e); setStatus('Push error: ' + e.message); });
+      STATE_REF.set(json).then(() => {
+        setStatus('ซิงก์ข้อมูลล่าสุดแล้ว');
+      }).catch(e => {
+        console.error(e);
+        lastPushed = null;
+        setStatus('บันทึกไม่สำเร็จ');
+        const msg = String(e && e.message || '');
+        showToast(msg.includes('10485760') ? 'บันทึกไม่สำเร็จ: รูปภาพรวมใหญ่เกิน 10MB' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง', '⚠️');
+      });
+    }
+
+    // Re-encode oversized images to compact JPEG so the shared state always fits
+    // under Firebase's 10 MB string limit. Only images above the threshold are
+    // touched, so repeated saves are stable.
+    function compressDataUrl(dataUrl, maxDim, quality) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onerror = () => resolve(null);
+        img.onload = () => {
+          try {
+            const w = img.naturalWidth || img.width;
+            const h = img.naturalHeight || img.height;
+            if (!w || !h) return resolve(null);
+            const scale = Math.min(1, maxDim / Math.max(w, h));
+            const nw = Math.max(1, Math.round(w * scale));
+            const nh = Math.max(1, Math.round(h * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = nw; canvas.height = nh;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, nw, nh);
+            ctx.drawImage(img, 0, 0, nw, nh);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          } catch (_) { resolve(null); }
+        };
+        img.src = dataUrl;
+      });
+    }
+
+    async function compactStateImages() {
+      if (compactingImages) return;
+      compactingImages = true;
+      try {
+        const jobs = [];
+        (state.menuItems || []).forEach(m => {
+          if (typeof m.imageUrl === 'string' && m.imageUrl.startsWith('data:image') && m.imageUrl.length > 120000)
+            jobs.push([m, 'imageUrl', 480, 0.7]);
+        });
+        const si = state.shopInfo || {};
+        if (typeof si.logoUri === 'string' && si.logoUri.startsWith('data:image') && si.logoUri.length > 120000)
+          jobs.push([si, 'logoUri', 256, 0.85]);
+        if (typeof si.stampIconUri === 'string' && si.stampIconUri.startsWith('data:image') && si.stampIconUri.length > 120000)
+          jobs.push([si, 'stampIconUri', 200, 0.85]);
+        if (typeof si.promptPayQrUri === 'string' && si.promptPayQrUri.startsWith('data:image') && si.promptPayQrUri.length > 150000)
+          jobs.push([si, 'promptPayQrUri', 600, 0.9]);
+        if (!jobs.length) return;
+        await Promise.all(jobs.map(async ([obj, key, dim, q]) => {
+          const out = await compressDataUrl(obj[key], dim, q);
+          if (out && out.length < obj[key].length) obj[key] = out;
+        }));
+        renderAll();
+        showToast('ย่อรูปภาพให้พอดีระบบแล้ว', '🖼️');
+      } finally {
+        compactingImages = false;
+      }
     }
 
     function applyRemote(parsed) {
@@ -1689,7 +1767,7 @@
       };
 
       if (file) {
-        downscaleImageFile(file, 600, 0.75).then(doSave);
+        downscaleImageFile(file, 480, 0.72, 'image/jpeg').then(doSave);
       } else {
         doSave(null);
       }
@@ -2021,7 +2099,7 @@
 
 // Downscale an image file so the Firebase state blob stays small.
     // Photos become JPEG; PNGs (logo/QR with transparency) stay PNG.
-    function downscaleImageFile(file, maxDim, quality) {
+    function downscaleImageFile(file, maxDim, quality, forceMime) {
       return new Promise((resolve) => {
         if (!file) return resolve(null);
         const reader = new FileReader();
@@ -2036,14 +2114,19 @@
               const h = img.naturalHeight || img.height;
               if (!w || !h) return resolve(original);
               const scale = Math.min(1, maxDim / Math.max(w, h));
-              if (scale >= 1) return resolve(original); // already small enough
+              const mime = forceMime || ((file.type === 'image/png') ? 'image/png' : 'image/jpeg');
+              const needsResize = scale < 1;
+              const needsConvert = mime !== file.type;
+              // Already small and already in the right format: keep the original.
+              if (!needsResize && !needsConvert && original.length <= 180000) return resolve(original);
               const nw = Math.max(1, Math.round(w * scale));
               const nh = Math.max(1, Math.round(h * scale));
               const canvas = document.createElement('canvas');
               canvas.width = nw; canvas.height = nh;
               const ctx = canvas.getContext('2d');
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, nw, nh);
               ctx.drawImage(img, 0, 0, nw, nh);
-              const mime = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
               let out;
               try { out = canvas.toDataURL(mime, quality); } catch (_) { out = original; }
               resolve(out.length < original.length ? out : original);
@@ -2069,7 +2152,7 @@
         }
       };
       if (logoFile) {
-        downscaleImageFile(logoFile, 300, 0.85).then(dataUrl => {
+        downscaleImageFile(logoFile, 256, 0.85).then(dataUrl => {
           if (dataUrl) {
             state.shopInfo.logoType = 'CUSTOM_IMAGE';
             state.shopInfo.logoUri = dataUrl;
