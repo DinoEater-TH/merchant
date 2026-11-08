@@ -727,6 +727,7 @@
     // string, so images must be kept small and checked before every save.
     const MAX_STATE_CHARS = 9000000;
     let compactingImages = false;
+    let sizeRetry = 0;
 
     function pushPayload() {
       return {
@@ -748,12 +749,20 @@
       const json = JSON.stringify(pushPayload());
       if (json === lastPushed || json === lastApplied) return;
       if (json.length > MAX_STATE_CHARS) {
+        if (sizeRetry >= 2) {
+          sizeRetry = 0;
+          setStatus('บันทึกไม่สำเร็จ: ข้อมูลเกินขีดจำกัด');
+          showToast('บันทึกไม่สำเร็จ: รูปภาพรวมใหญ่เกินไป', '⚠️');
+          return;
+        }
+        sizeRetry++;
         setStatus('รูปภาพใหญ่เกินไป กำลังย่อรูป...');
         compactStateImages().then(() => { if (!applyingRemote) pushState(); });
         return;
       }
       lastPushed = json;
       STATE_REF.set(json).then(() => {
+        sizeRetry = 0;
         setStatus('ซิงก์ข้อมูลล่าสุดแล้ว');
       }).catch(e => {
         console.error(e);
