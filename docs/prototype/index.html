@@ -8,8 +8,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://api.longdo.com/map3/?key=45f4bedb69da4ebbcdacd2ac7c4ac724"></script>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Prompt', sans-serif; }
@@ -423,14 +422,21 @@
     }
 
     async function fetchDrivingDistanceKm(from, to) {
-      const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`;
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (!data.routes || !data.routes.length) return null;
-      const meters = data.routes[0].distance;
-      if (meters == null || meters <= 0) return null;
-      return meters / 1000;
+      const url = `https://api.longdo.com/RouteService/json/route/guide?flon=${from.lng}&flat=${from.lat}&tlon=${to.lng}&tlat=${to.lat}&mode=t&key=45f4bedb69da4ebbcdacd2ac7c4ac724`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const data = await res.json();
+        // Longdo returns distance in meters (summary.distance or top-level distance)
+        let meters = null;
+        if (data && typeof data.distance === 'number') meters = data.distance;
+        else if (data && data.summary && typeof data.summary.distance === 'number') meters = data.summary.distance;
+        else if (data && data.result && typeof data.result.distance === 'number') meters = data.result.distance;
+        if (meters == null || meters <= 0) return null;
+        return meters / 1000;
+      } catch (e) {
+        return null;
+      }
     }
 
     async function refreshDeliveryDistance() {
@@ -797,21 +803,31 @@
       setTimeout(() => {
         const startView = (lat, lng) => {
           if (!mapInstance) {
-            mapInstance = L.map('map').setView([lat, lng], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapInstance);
-            mapInstance.on('click', e => {
-              selectedLat = e.latlng.lat;
-              selectedLng = e.latlng.lng;
-              if (selectedMarker) mapInstance.removeLayer(selectedMarker);
-              selectedMarker = L.marker([selectedLat, selectedLng]).addTo(mapInstance);
-              document.getElementById('selectedCoords').textContent = `เลือกแล้ว: ${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
+            mapInstance = new longdo.Map({
+              placeholder: document.getElementById('map'),
+              layer: [longdo.Layers.LIGHT],
+              ui: longdo.UiComponent.Mobile,
+              lastView: false
+            });
+            mapInstance.Event.bind('ready', () => {
+              try { mapInstance.zoom(15); mapInstance.location({ lon: lng, lat: lat }, true); } catch (_) {}
+            });
+            mapInstance.Event.bind('click', e => {
+              if (e && e.lon != null && e.lat != null) {
+                selectedLat = e.lat;
+                selectedLng = e.lon;
+                if (selectedMarker) { try { mapInstance.Overlays.remove(selectedMarker); } catch (_) {} }
+                selectedMarker = new longdo.Marker({ lat: selectedLat, lon: selectedLng }, { title: 'จุดส่ง' });
+                mapInstance.Overlays.add(selectedMarker);
+                document.getElementById('selectedCoords').textContent = `เลือกแล้ว: ${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
+              }
             });
           } else {
-            mapInstance.setView([lat, lng], 15);
-            mapInstance.invalidateSize();
+            try { mapInstance.location({ lon: lng, lat: lat }, true); } catch (_) {}
           }
-          if (selectedMarker) mapInstance.removeLayer(selectedMarker);
-          selectedMarker = L.marker([lat, lng]).addTo(mapInstance);
+          if (selectedMarker) { try { mapInstance.Overlays.remove(selectedMarker); } catch (_) {} }
+          selectedMarker = new longdo.Marker({ lat: lat, lon: lng }, { title: 'จุดส่ง' });
+          mapInstance.Overlays.add(selectedMarker);
           selectedLat = lat; selectedLng = lng;
           document.getElementById('selectedCoords').textContent = `ตำแหน่งปัจจุบัน: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         };
@@ -820,9 +836,9 @@
         } else {
           startView(16.4421, 102.8358);
         }
-      }, 200);
+      }, 400);
     }
-    function closeGpsMap() { document.getElementById('gpsMapModal').classList.add('hidden'); }
+    function closeGpsMap( { document.getElementById('gpsMapModal').classList.add('hidden'); }
     function useSelectedCoords() {
       if (selectedLat == null) { alert('กรุณาคลิกบนแผนที่เพื่อเลือกพิกัด'); return; }
       const coords = `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
