@@ -838,7 +838,7 @@
         }
       }, 400);
     }
-    function closeGpsMap( { document.getElementById('gpsMapModal').classList.add('hidden'); }
+    function closeGpsMap() { document.getElementById('gpsMapModal').classList.add('hidden'); }
     function useSelectedCoords() {
       if (selectedLat == null) { alert('กรุณาคลิกบนแผนที่เพื่อเลือกพิกัด'); return; }
       const coords = `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
