@@ -8,8 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://api.longdo.com/map3/?key=45f4bedb69da4ebbcdacd2ac7c4ac724"></script>
   <style>
     body { font-family: 'Prompt', 'Sarabun', 'Tahoma', sans-serif; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -1972,33 +1971,45 @@
     }
 
     // ---------- Settings ----------
-    // ---------- Shop location map (Leaflet) ----------
+    // ---------- Shop location map (Longdo) ----------
     let shopMap = null;
     let shopMarker = null;
 
     function initShopMap() {
       const el = document.getElementById('shopMap');
-      if (!el || typeof L === 'undefined') return;
+      if (!el || typeof longdo === 'undefined') return;
       const lat = parseFloat(document.getElementById('s_shopLat').value);
       const lng = parseFloat(document.getElementById('s_shopLng').value);
       const startLat = isNaN(lat) ? 16.4421 : lat;
       const startLng = isNaN(lng) ? 102.8358 : lng;
       if (!shopMap) {
-        shopMap = L.map('shopMap').setView([startLat, startLng], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(shopMap);
-        shopMap.on('click', e => {
-          setShopCoords(e.latlng.lat, e.latlng.lng);
+        shopMap = new longdo.Map({
+          placeholder: el,
+          layer: [longdo.Layers.LIGHT],
+          ui: longdo.UiComponent.Mobile,
+          lastView: false
         });
+        shopMap.Event.bind('ready', () => {
+          try { shopMap.zoom(15); shopMap.location({ lon: startLng, lat: startLat }, true); } catch (_) {}
+        });
+        shopMap.Event.bind('click', e => {
+          if (e && e.lon != null && e.lat != null) {
+            setShopCoords(e.lat, e.lon);
+          }
+        });
+      } else {
+        try { shopMap.location({ lon: startLng, lat: startLat }, true); } catch (_) {}
       }
       setShopCoords(startLat, startLng, false);
-      setTimeout(() => shopMap.invalidateSize(), 300);
+      setTimeout(() => { try { shopMap.location({ lon: startLng, lat: startLat }, true); } catch (_) {} }, 300);
     }
 
     function setShopCoords(lat, lng, updateInputs = true) {
       if (!shopMap) return;
-      if (shopMarker) shopMap.removeLayer(shopMarker);
-      shopMarker = L.marker([lat, lng]).addTo(shopMap);
-      shopMap.setView([lat, lng], 15);
+      if (shopMarker) { try { shopMap.Overlays.remove(shopMarker); } catch (_) {} }
+      shopMarker = new longdo.Marker({ lat: lat, lon: lng }, { title: 'ร้าน' });
+      shopMap.Overlays.add(shopMarker);
+      try { shopMap.location({ lon: lng, lat: lat }, true); } catch (_) {}
       if (updateInputs) {
         document.getElementById('s_shopLat').value = lat.toFixed(6);
         document.getElementById('s_shopLng').value = lng.toFixed(6);
@@ -2006,15 +2017,6 @@
       const hint = document.getElementById('shopMapHint');
       if (hint) hint.textContent = `📌 พิกัดร้าน: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
-
-    function locateShopFromDevice() {
-      if (!navigator.geolocation) { alert('เบราว์เซอร์ไม่รองรับ GPS'); return; }
-      navigator.geolocation.getCurrentPosition(
-        pos => setShopCoords(pos.coords.latitude, pos.coords.longitude),
-        () => alert('อ่านพิกัด GPS ไม่ได้ กรุณาเปิด GPS แล้วลองอีกครั้ง')
-      );
-    }
-
     function openShopOnOsm() {
       const lat = parseFloat(document.getElementById('s_shopLat').value);
       const lng = parseFloat(document.getElementById('s_shopLng').value);
