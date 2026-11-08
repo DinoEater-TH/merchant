@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,26 +48,29 @@ fun PromotionView(viewModel: MainViewModel) {
     val shopInfo by viewModel.shopInfo.collectAsState()
     val menuItems by viewModel.menuItems.collectAsState()
     val customPromos by viewModel.customPromos.collectAsState()
-    var deliveryFee by remember(shopInfo.deliveryFee) { mutableStateOf(shopInfo.deliveryFee.toInt().toString()) }
-    var promoDeliveryFee by remember(shopInfo.promoDeliveryFeeEnabled) { mutableStateOf(shopInfo.promoDeliveryFeeEnabled) }
-    var deliveryFeePerKm by remember(shopInfo.deliveryFeePerKm) {
-        mutableStateOf(if (shopInfo.deliveryFeePerKm == 0.0) "" else shopInfo.deliveryFeePerKm.toString())
+    // Keep the form stable while the admin is typing. Remote values (e.g. from the web
+    // admin) are adopted only when the form has no unsaved edits.
+    var syncedShopInfo by remember { mutableStateOf(shopInfo) }
+    var deliveryFee by remember(syncedShopInfo.deliveryFee) { mutableStateOf(formatSettingNumber(syncedShopInfo.deliveryFee)) }
+    var promoDeliveryFee by remember(syncedShopInfo.promoDeliveryFeeEnabled) { mutableStateOf(syncedShopInfo.promoDeliveryFeeEnabled) }
+    var deliveryFeePerKm by remember(syncedShopInfo.deliveryFeePerKm) {
+        mutableStateOf(if (syncedShopInfo.deliveryFeePerKm == 0.0) "" else formatSettingNumber(syncedShopInfo.deliveryFeePerKm))
     }
-    var maxDeliveryDistanceKm by remember(shopInfo.maxDeliveryDistanceKm) {
-        mutableStateOf(shopInfo.maxDeliveryDistanceKm.toString())
+    var maxDeliveryDistanceKm by remember(syncedShopInfo.maxDeliveryDistanceKm) {
+        mutableStateOf(formatSettingNumber(syncedShopInfo.maxDeliveryDistanceKm))
     }
-    var minDiscount by remember(shopInfo.minOrderForDiscount) { mutableStateOf(shopInfo.minOrderForDiscount.toInt().toString()) }
-    var discountAmount by remember(shopInfo.discountAmount) { mutableStateOf(shopInfo.discountAmount.toInt().toString()) }
-    var freeDelivery by remember(shopInfo.minOrderForFreeDelivery) { mutableStateOf(shopInfo.minOrderForFreeDelivery.toInt().toString()) }
-    var stamps by remember(shopInfo.stampsRequiredForReward) { mutableStateOf(shopInfo.stampsRequiredForReward.toString()) }
-    var spendPerStamp by remember(shopInfo.spendPerStamp) { mutableStateOf(shopInfo.spendPerStamp.toInt().toString()) }
-    var rewardDesc by remember(shopInfo.rewardDescription) { mutableStateOf(shopInfo.rewardDescription) }
-    var rewardItemId by remember(shopInfo.rewardItemId) { mutableStateOf(shopInfo.rewardItemId) }
-    var showPromo by remember(shopInfo.showPromoBanner) { mutableStateOf(shopInfo.showPromoBanner) }
-    var promoDiscount by remember(shopInfo.promoDiscountEnabled) { mutableStateOf(shopInfo.promoDiscountEnabled) }
-    var promoDeliveryPerKm by remember(shopInfo.promoDeliveryPerKmEnabled) { mutableStateOf(shopInfo.promoDeliveryPerKmEnabled) }
-    var promoFreeDelivery by remember(shopInfo.promoFreeDeliveryEnabled) { mutableStateOf(shopInfo.promoFreeDeliveryEnabled) }
-    var promoReward by remember(shopInfo.promoRewardEnabled) { mutableStateOf(shopInfo.promoRewardEnabled) }
+    var minDiscount by remember(syncedShopInfo.minOrderForDiscount) { mutableStateOf(formatSettingNumber(syncedShopInfo.minOrderForDiscount)) }
+    var discountAmount by remember(syncedShopInfo.discountAmount) { mutableStateOf(formatSettingNumber(syncedShopInfo.discountAmount)) }
+    var freeDelivery by remember(syncedShopInfo.minOrderForFreeDelivery) { mutableStateOf(formatSettingNumber(syncedShopInfo.minOrderForFreeDelivery)) }
+    var stamps by remember(syncedShopInfo.stampsRequiredForReward) { mutableStateOf(syncedShopInfo.stampsRequiredForReward.toString()) }
+    var spendPerStamp by remember(syncedShopInfo.spendPerStamp) { mutableStateOf(formatSettingNumber(syncedShopInfo.spendPerStamp)) }
+    var rewardDesc by remember(syncedShopInfo.rewardDescription) { mutableStateOf(syncedShopInfo.rewardDescription) }
+    var rewardItemId by remember(syncedShopInfo.rewardItemId) { mutableStateOf(syncedShopInfo.rewardItemId) }
+    var showPromo by remember(syncedShopInfo.showPromoBanner) { mutableStateOf(syncedShopInfo.showPromoBanner) }
+    var promoDiscount by remember(syncedShopInfo.promoDiscountEnabled) { mutableStateOf(syncedShopInfo.promoDiscountEnabled) }
+    var promoDeliveryPerKm by remember(syncedShopInfo.promoDeliveryPerKmEnabled) { mutableStateOf(syncedShopInfo.promoDeliveryPerKmEnabled) }
+    var promoFreeDelivery by remember(syncedShopInfo.promoFreeDeliveryEnabled) { mutableStateOf(syncedShopInfo.promoFreeDeliveryEnabled) }
+    var promoReward by remember(syncedShopInfo.promoRewardEnabled) { mutableStateOf(syncedShopInfo.promoRewardEnabled) }
     var rewardExpanded by remember { mutableStateOf(false) }
     var newPromoName by remember { mutableStateOf("") }
     var newPromoType by remember { mutableStateOf("percentOff") }
@@ -77,6 +81,33 @@ fun PromotionView(viewModel: MainViewModel) {
     var newPromoBuyItem by remember { mutableStateOf("") }
     var newPromoGetItem by remember { mutableStateOf("") }
     val rewardItem = menuItems.find { it.id == rewardItemId }
+
+    // Current values of the edit form, used to detect unsaved edits.
+    val localShopInfo = shopInfo.copy(
+        deliveryFee = deliveryFee.toDoubleOrNull() ?: shopInfo.deliveryFee,
+        deliveryFeePerKm = deliveryFeePerKm.toDoubleOrNull() ?: 0.0,
+        maxDeliveryDistanceKm = maxDeliveryDistanceKm.toDoubleOrNull() ?: 20.0,
+        minOrderForDiscount = minDiscount.toDoubleOrNull() ?: shopInfo.minOrderForDiscount,
+        discountAmount = discountAmount.toDoubleOrNull() ?: shopInfo.discountAmount,
+        minOrderForFreeDelivery = freeDelivery.toDoubleOrNull() ?: shopInfo.minOrderForFreeDelivery,
+        stampsRequiredForReward = stamps.toIntOrNull() ?: shopInfo.stampsRequiredForReward,
+        rewardDescription = rewardDesc,
+        rewardItemId = rewardItemId,
+        showPromoBanner = showPromo,
+        promoDeliveryFeeEnabled = promoDeliveryFee,
+        promoDiscountEnabled = promoDiscount,
+        promoDeliveryPerKmEnabled = promoDeliveryPerKm,
+        promoFreeDeliveryEnabled = promoFreeDelivery,
+        promoRewardEnabled = promoReward,
+        spendPerStamp = spendPerStamp.toDoubleOrNull() ?: shopInfo.spendPerStamp
+    )
+    // Adopt changes coming from the other device (web) only when this form has no
+    // unsaved edits, so typing is never overwritten mid-edit.
+    LaunchedEffect(shopInfo) {
+        if (localShopInfo == shopInfo || localShopInfo == syncedShopInfo) {
+            syncedShopInfo = shopInfo
+        }
+    }
 
     Column(
         modifier = Modifier

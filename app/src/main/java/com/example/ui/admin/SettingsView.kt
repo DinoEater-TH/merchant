@@ -59,6 +59,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,34 +94,68 @@ fun SettingsView(viewModel: MainViewModel) {
     val shopInfo by viewModel.shopInfo.collectAsState()
     val context = LocalContext.current
 
-    // Brand Logo & Stamp States
-    var logoType by remember(shopInfo.logoType) { mutableStateOf(shopInfo.logoType) }
-    var logoPresetId by remember(shopInfo.logoPresetId) { mutableStateOf(shopInfo.logoPresetId) }
-    var logoUri by remember(shopInfo.logoUri) { mutableStateOf(shopInfo.logoUri ?: "") }
-    var logoEmoji by remember(shopInfo.logoEmoji) { mutableStateOf(shopInfo.logoEmoji) }
+    // Keep the form stable while the admin is typing. Remote values (e.g. from the web
+    // admin) are adopted only when the form has no unsaved edits.
+    var syncedShopInfo by remember { mutableStateOf(shopInfo) }
 
-    var stampType by remember(shopInfo.stampType) { mutableStateOf(shopInfo.stampType) }
-    var stampPresetId by remember(shopInfo.stampPresetId) { mutableStateOf(shopInfo.stampPresetId) }
-    var stampIconUri by remember(shopInfo.stampIconUri) { mutableStateOf(shopInfo.stampIconUri ?: "") }
-    var stampEmoji by remember(shopInfo.stampEmoji) { mutableStateOf(shopInfo.stampEmoji) }
+    // Brand Logo & Stamp States
+    var logoType by remember(syncedShopInfo.logoType) { mutableStateOf(syncedShopInfo.logoType) }
+    var logoPresetId by remember(syncedShopInfo.logoPresetId) { mutableStateOf(syncedShopInfo.logoPresetId) }
+    var logoUri by remember(syncedShopInfo.logoUri) { mutableStateOf(syncedShopInfo.logoUri ?: "") }
+    var logoEmoji by remember(syncedShopInfo.logoEmoji) { mutableStateOf(syncedShopInfo.logoEmoji) }
+
+    var stampType by remember(syncedShopInfo.stampType) { mutableStateOf(syncedShopInfo.stampType) }
+    var stampPresetId by remember(syncedShopInfo.stampPresetId) { mutableStateOf(syncedShopInfo.stampPresetId) }
+    var stampIconUri by remember(syncedShopInfo.stampIconUri) { mutableStateOf(syncedShopInfo.stampIconUri ?: "") }
+    var stampEmoji by remember(syncedShopInfo.stampEmoji) { mutableStateOf(syncedShopInfo.stampEmoji) }
 
     // General Shop info States
-    var name by remember(shopInfo.name) { mutableStateOf(shopInfo.name) }
-    var slogan by remember(shopInfo.slogan) { mutableStateOf(shopInfo.slogan) }
-    var address by remember(shopInfo.address) { mutableStateOf(shopInfo.address) }
-    var promptPayNum by remember(shopInfo.promptPayNumber) { mutableStateOf(shopInfo.promptPayNumber) }
-    var promptPayName by remember(shopInfo.promptPayName) { mutableStateOf(shopInfo.promptPayName) }
-    var promptPayQrUri by remember(shopInfo.promptPayQrUri) { mutableStateOf(shopInfo.promptPayQrUri ?: "") }
-    var showScanPayment by remember(shopInfo.showScanPayment) { mutableStateOf(shopInfo.showScanPayment) }
-    var deliveryFeeText by remember(shopInfo.deliveryFee) { mutableStateOf(shopInfo.deliveryFee.toInt().toString()) }
-    var shopLatText by remember(shopInfo.shopLat) { mutableStateOf(shopInfo.shopLat?.toString() ?: "") }
-    var shopLngText by remember(shopInfo.shopLng) { mutableStateOf(shopInfo.shopLng?.toString() ?: "") }
-    var showShopLocation by remember(shopInfo.showShopLocation) { mutableStateOf(shopInfo.showShopLocation) }
+    var name by remember(syncedShopInfo.name) { mutableStateOf(syncedShopInfo.name) }
+    var slogan by remember(syncedShopInfo.slogan) { mutableStateOf(syncedShopInfo.slogan) }
+    var address by remember(syncedShopInfo.address) { mutableStateOf(syncedShopInfo.address) }
+    var promptPayNum by remember(syncedShopInfo.promptPayNumber) { mutableStateOf(syncedShopInfo.promptPayNumber) }
+    var promptPayName by remember(syncedShopInfo.promptPayName) { mutableStateOf(syncedShopInfo.promptPayName) }
+    var promptPayQrUri by remember(syncedShopInfo.promptPayQrUri) { mutableStateOf(syncedShopInfo.promptPayQrUri ?: "") }
+    var showScanPayment by remember(syncedShopInfo.showScanPayment) { mutableStateOf(syncedShopInfo.showScanPayment) }
+    var deliveryFeeText by remember(syncedShopInfo.deliveryFee) { mutableStateOf(formatSettingNumber(syncedShopInfo.deliveryFee)) }
+    var shopLatText by remember(syncedShopInfo.shopLat) { mutableStateOf(syncedShopInfo.shopLat?.toString() ?: "") }
+    var shopLngText by remember(syncedShopInfo.shopLng) { mutableStateOf(syncedShopInfo.shopLng?.toString() ?: "") }
+    var showShopLocation by remember(syncedShopInfo.showShopLocation) { mutableStateOf(syncedShopInfo.showShopLocation) }
     var isLocatingShop by remember { mutableStateOf(false) }
     // Start empty: never pre-fill the field with the current secret PIN
     var pinText by remember { mutableStateOf("") }
 
     var isWebExportDialogOpen by remember { mutableStateOf(false) }
+
+    // Current values of the edit form, used to detect unsaved edits.
+    val localShopInfo = shopInfo.copy(
+        name = name,
+        slogan = slogan,
+        address = address,
+        promptPayNumber = promptPayNum,
+        promptPayName = promptPayName,
+        promptPayQrUri = promptPayQrUri.ifBlank { null },
+        showScanPayment = showScanPayment,
+        deliveryFee = deliveryFeeText.toDoubleOrNull() ?: shopInfo.deliveryFee,
+        shopLat = shopLatText.toDoubleOrNull(),
+        shopLng = shopLngText.toDoubleOrNull(),
+        showShopLocation = showShopLocation,
+        logoType = logoType,
+        logoPresetId = logoPresetId,
+        logoUri = logoUri.ifBlank { null },
+        logoEmoji = logoEmoji,
+        stampType = stampType,
+        stampPresetId = stampPresetId,
+        stampIconUri = stampIconUri.ifBlank { null },
+        stampEmoji = stampEmoji
+    )
+    // Adopt changes coming from the other device (web) only when this form has no
+    // unsaved edits, so typing is never overwritten mid-edit.
+    LaunchedEffect(shopInfo) {
+        if (localShopInfo == shopInfo || localShopInfo == syncedShopInfo) {
+            syncedShopInfo = shopInfo
+        }
+    }
 
     fun captureShopLocation() {
         isLocatingShop = true
