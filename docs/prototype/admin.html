@@ -827,7 +827,12 @@
       document.getElementById(`tab_${tab}`).classList.remove('hidden');
       document.getElementById(`tabBtn_${tab}`).className = 'tab-btn py-3 border-b-2 border-orange-600 text-orange-600 font-bold';
       renderAll();
-      if (tab === 'settings') initShopMap();
+      if (tab === 'settings') {
+        // Never leave a typed PIN sitting in the field
+        const pinEl = document.getElementById('s_pin');
+        if (pinEl) pinEl.value = '';
+        initShopMap();
+      }
     }
 
     // ---------- Orders ----------
