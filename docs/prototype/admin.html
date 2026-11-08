@@ -295,7 +295,7 @@
           <p id="shopMapHint" class="text-[11px] text-gray-500">คลิกบนแผนที่เพื่อปักหมุดตำแหน่งร้าน หรือกรอกละติจูด/ลองติจูดด้านบน</p>
           <div class="flex gap-2">
             <button type="button" onclick="locateShopFromDevice()" class="flex-1 border border-orange-300 text-orange-600 text-xs py-2 rounded-lg font-bold">📍 ใช้ตำแหน่งปัจจุบันของเครื่องนี้</button>
-            <button type="button" onclick="openShopOnOsm()" class="flex-1 border border-gray-300 text-gray-600 text-xs py-2 rounded-lg font-bold">🗺️ เปิดใน OpenStreetMap</button>
+            <button type="button" onclick="openShopOnLongdo()" class="flex-1 border border-gray-300 text-gray-600 text-xs py-2 rounded-lg font-bold">🗺️ เปิดใน Longdo Map</button>
           </div>
           <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s_showShopLocation" checked> แสดงพิกัดและปุ่มนำทางไปร้านให้ลูกค้าเห็น</label>
           <p class="text-[11px] text-gray-400">ปิดไว้ = ลูกค้าจะไม่เห็นปุ่มนำทาง แต่ระบบยังใช้พิกัดคำนวณค่าส่งได้</p>
@@ -2017,11 +2017,11 @@
       const hint = document.getElementById('shopMapHint');
       if (hint) hint.textContent = `📌 พิกัดร้าน: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
-    function openShopOnOsm() {
+    function openShopOnLongdo() {
       const lat = parseFloat(document.getElementById('s_shopLat').value);
       const lng = parseFloat(document.getElementById('s_shopLng').value);
       if (isNaN(lat) || isNaN(lng)) { alert('กรุณาตั้งพิกัดร้านก่อน'); return; }
-      window.open(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`, '_blank');
+      window.open(`https://map.longdo.com/?lon=${lng}&lat=${lat}&zoom=16`, '_blank');
     }
 
     function renderSettings() {

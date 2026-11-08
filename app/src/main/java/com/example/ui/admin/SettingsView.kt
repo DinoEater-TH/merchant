@@ -941,12 +941,22 @@ fun SettingsView(viewModel: MainViewModel) {
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
                             onClick = {
-                                val uri = Uri.parse("https://www.openstreetmap.org/?mlat=$shopLatValue&mlon=$shopLngValue#map=16/$shopLatValue/$shopLngValue")
+                                // เปิดในแอปแผนที่ที่ติดตั้งบนเครื่อง (Google Maps ถ้ามี) เพื่อดูพิกัดร้าน
+                                val uri = Uri.parse("geo:$shopLatValue,$shopLngValue?q=$shopLatValue,$shopLngValue(ร้าน)")
                                 context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("🗺️ เปิดแผนที่ตรวจพิกัดร้าน (OpenStreetMap)")
+                            Text("🗺️ เปิดในแอปแผนที่บนเครื่อง (Google Maps)")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val uri = Uri.parse("https://map.longdo.com/?lon=$shopLngValue&lat=$shopLatValue&zoom=16")
+                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("🗺️ เปิดใน Longdo Map (เว็บ)")
                         }
                     }
 
