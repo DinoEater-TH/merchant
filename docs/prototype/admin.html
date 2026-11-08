@@ -559,6 +559,11 @@
     };
 
     let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    // PIN ของเครื่องนี้เก็บไว้ในเบราว์เซอร์เท่านั้น ไม่ซิงก์ขึ้น Firebase (เหมือนฝั่งแอป Android)
+    try {
+      const savedPin = localStorage.getItem('admin_pin');
+      if (savedPin && /^\d{4,8}$/.test(savedPin)) state.adminPin = savedPin;
+    } catch (e) {}
     let currentPin = '';
     let lastPushed = null;
     let lastApplied = null;
@@ -2095,8 +2100,16 @@ function finishSaveSettings() {
       state.shopInfo.promoFreeDeliveryEnabled = document.getElementById('s_promoFreeDelivery').checked;
       state.shopInfo.promoRewardEnabled = document.getElementById('s_promoReward').checked;
       const pin = document.getElementById('s_pin').value.trim();
-      if (pin.length === 8 && /^\d{8}$/.test(pin)) state.adminPin = pin;
-      if (pin.length === 4 && /^\d{4}$/.test(pin)) state.adminPin = pin;
+      if (pin) {
+        if (/^\d{4,8}$/.test(pin)) {
+          state.adminPin = pin;
+          try { localStorage.setItem('admin_pin', pin); } catch (e) {}
+          document.getElementById('s_pin').value = '';
+        } else {
+          alert('PIN ต้องเป็นตัวเลข 4-8 หลัก');
+          return;
+        }
+      }
       state.shopInfo.showScanPayment = document.getElementById('s_showScan').checked;
       state.shopInfo.addonConfig = JSON.stringify(window.addonAdminItems || []);
       document.getElementById('shopNameHeader').textContent = state.shopInfo.name;
