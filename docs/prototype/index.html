@@ -12,6 +12,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ea580c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
     body { font-family: 'Prompt', 'Sarabun', 'Tahoma', sans-serif; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -413,6 +417,21 @@
     let deliveryDistanceError = null;
 
     const STATE_PATH = 'shops/dinoeater-merchant/state';
+    const ANALYTICS_PATH = 'shops/dinoeater-merchant/analytics';
+
+    // Lightweight analytics: increment counters in Firebase RTDB (no external SDK).
+    function trackEvent(name, payload) {
+      try {
+        const db = firebase.database();
+        const today = new Date().toISOString().slice(0, 10);
+        const ref = db.ref(ANALYTICS_PATH);
+        ref.child('totals/' + name).transaction(v => (v || 0) + 1);
+        ref.child('daily/' + today + '/' + name).transaction(v => (v || 0) + 1);
+        if (payload && payload.itemId) {
+          ref.child('items/' + payload.itemId + '/' + name).transaction(v => (v || 0) + (payload.qty || 1));
+        }
+      } catch (e) { /* analytics must never break the app */ }
+    }
 
     function parseCoordPair(raw) {
       if (!raw) return null;
@@ -966,6 +985,9 @@
           return typeof current === 'string' ? JSON.stringify(parsed) : parsed;
         });
         if (isMember && window.remoteState) hydrateMemberData(window.remoteState);
+        // Analytics: log order + items
+        trackEvent('orders');
+        (order.items || []).forEach(it => trackEvent('itemOrders', { itemId: it.itemId, qty: it.quantity }));
       } catch (e) {
         console.error('submit order failed', e);
         alert('ส่งออเดอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
@@ -1328,6 +1350,7 @@
           }
           // If already logged in, refresh this member's stamps/history from the shop data
           hydrateMemberData(parsed);
+          if (!window._pvLogged) { window._pvLogged = true; trackEvent('pageViews'); }
         }, () => {});
       }).catch(()=>{});
     } catch (e) { console.error(e); }
@@ -1352,6 +1375,13 @@
         setTimeout(hideSplash, 5000);
       }
     })();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>

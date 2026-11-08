@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ea580c">
   <script src="https://api.longdo.com/map3/?key=45f4bedb69da4ebbcdacd2ac7c4ac724"></script>
   <style>
     body { font-family: 'Prompt', 'Sarabun', 'Tahoma', sans-serif; }
@@ -230,6 +232,11 @@
     <!-- Analytics -->
     <section id="tab_analytics" class="p-4 space-y-4 hidden">
       <div id="analyticsSummary" class="grid grid-cols-2 gap-3"></div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-sm">📊 สถิติการเข้าชมและเมนูขายดี</h3>
+        <div id="webAnalyticsBox" class="text-xs text-gray-600 space-y-1">กำลังโหลด...</div>
+      </div>
 
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
         <h3 class="font-bold text-sm">ต้นทุนหลัก (แยกตามรายการ)</h3>
@@ -874,6 +881,11 @@
         setStatus('เชื่อมต่อ Firebase แล้ว');
       }, err => {
         setStatus('Firebase error: ' + err.message);
+      });
+      // Listen to analytics counters (separate node)
+      db.ref('shops/dinoeater-merchant/analytics').on('value', snap => {
+        window.analyticsData = snap.val() || {};
+        renderWebAnalytics();
       });
     }
 
@@ -1866,6 +1878,41 @@
       }
     }
 
+    function renderWebAnalytics() {
+      const box = document.getElementById('webAnalyticsBox');
+      if (!box) return;
+      const a = window.analyticsData || {};
+      const totals = a.totals || {};
+      const daily = a.daily || {};
+      const items = a.items || {};
+      const today = new Date().toISOString().slice(0, 10);
+      const todayStats = daily[today] || {};
+      let html = '';
+      html += `<div>👁️ ยอดเข้าชมทั้งหมด: <b>${totals.pageViews || 0}</b> (วันนี้ ${todayStats.pageViews || 0})</div>`;
+      html += `<div>🛒 จำนวนออเดอร์ (web): <b>${totals.orders || 0}</b> (วันนี้ ${todayStats.orders || 0})</div>`;
+      // top items
+      const itemStats = Object.keys(items).map(id => {
+        const m = (state.menuItems || []).find(x => x.id === id);
+        return { id, name: m ? m.name : id, count: items[id].itemOrders || 0 };
+      }).filter(x => x.count > 0).sort((a, b) => b.count - a.count).slice(0, 5);
+      if (itemStats.length) {
+        html += `<div class="mt-2 font-bold">เมนูขายดี (web):</div>`;
+        html += itemStats.map((x, i) => `<div>${i + 1}. ${x.name} — ${x.count} ไม้</div>`).join('');
+      } else {
+        html += `<div class="mt-2 text-gray-400">ยังไม่มีข้อมูลเมนูขายดี</div>`;
+      }
+      // last 7 days
+      const days = Object.keys(daily).sort().slice(-7);
+      if (days.length) {
+        html += `<div class="mt-2 font-bold">7 วันล่าสุด:</div>`;
+        html += days.map(d => {
+          const st = daily[d] || {};
+          return `<div class="flex justify-between"><span>${d}</span><span>เข้าชม ${st.pageViews || 0} • ออเดอร์ ${st.orders || 0}</span></div>`;
+        }).join('');
+      }
+      box.innerHTML = html;
+    }
+
     function updateCost(id) {
       const m = (state.menuItems || []).find(x => x.id === id);
       if (!m) return;
@@ -1873,7 +1920,7 @@
       const pieces = parseInt(document.getElementById('pieces_' + id).value) || 0;
       m.packagePrice = pkg; m.piecesPerPackage = pieces;
       if (pkg > 0 && pieces > 0) m.directCost = pkg / pieces;
-      renderAnalytics(); renderInventory(); schedulePush();
+      renderAnalytics(); renderWebAnalytics(); renderInventory(); schedulePush();
     }
     let editingHcId = null;
     const HC_PRESETS = ['น้ำตาลทราย','น้ำตาลปี๊บ','ไม้เสียบ','ถุงพลาสติก 6*14','ถุงพลาสติก 9*18','ถุงพลาสติก 10*12','ถุงใส่น้ำจิ้มเบอร์ 3','ถุงใส่น้ำจิ้มเบอร์ 4','ถุงใส่น้ำจิ้มเบอร์ 5','ถุงใส่น้ำจิ้มเบอร์ 6','ถุงกระดาษ 4*8','ถุงกระดาษ 5*7','ถุงกระดาษ 5*9','แตงกวา','พริก','แป้งมัน','แป้งข้าวเจ้า'];
@@ -2323,9 +2370,17 @@ function finishSaveSettings() {
       renderSettings();
       renderAddonAdminList();
       renderSkewerAdminList();
+      renderWebAnalytics();
       // Re-render custom promos so promos added/changed on the Android admin app appear here too.
       if (typeof renderCustomPromoList === 'function') renderCustomPromoList();
       if (typeof renderPromoModalList === 'function' && !document.getElementById('promoModal').classList.contains('hidden')) renderPromoModalList();
+    }
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
     }
   </script>
 </body>
