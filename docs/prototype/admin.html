@@ -2107,6 +2107,9 @@ function finishSaveSettings() {
       renderAnalytics();
       renderSettings();
       renderAddonAdminList();
+      // Re-render custom promos so promos added/changed on the Android admin app appear here too.
+      if (typeof renderCustomPromoList === 'function') renderCustomPromoList();
+      if (typeof renderPromoModalList === 'function' && !document.getElementById('promoModal').classList.contains('hidden')) renderPromoModalList();
     }
   </script>
 </body>
