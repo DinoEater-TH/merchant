@@ -1906,6 +1906,12 @@
 
     function renderSettings() {
       const s = state.shopInfo || {};
+      // อย่าทับค่าที่กำลังพิมพ์อยู่ ถ้ามีอัปเดตมาจากอีกเครื่อง (Android) ระหว่างแก้ฟอร์ม
+      if (lastApplied) {
+        const active = document.activeElement;
+        const settingsTab = document.getElementById('tab_settings');
+        if (active && settingsTab && settingsTab.contains(active) && active.matches('input,select,textarea')) return;
+      }
       document.getElementById('s_name').value = s.name || '';
       const logoPreview = document.getElementById('logoPreview');
       if (logoPreview) {
