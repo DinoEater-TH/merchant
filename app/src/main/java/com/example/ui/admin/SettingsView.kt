@@ -100,12 +100,12 @@ fun SettingsView(viewModel: MainViewModel) {
     var syncedShopInfo by remember { mutableStateOf(shopInfo) }
 
     // Brand Logo & Stamp States
-    var logoType by remember(syncedShopInfo.logoType) { mutableStateOf(syncedShopInfo.logoType) }
+    var logoType by remember(syncedShopInfo.logoType) { mutableStateOf(if (syncedShopInfo.logoType == LogoType.PRESET || syncedShopInfo.logoType == LogoType.EMOJI) LogoType.CUSTOM_IMAGE else syncedShopInfo.logoType) }
     var logoPresetId by remember(syncedShopInfo.logoPresetId) { mutableStateOf(syncedShopInfo.logoPresetId) }
     var logoUri by remember(syncedShopInfo.logoUri) { mutableStateOf(syncedShopInfo.logoUri ?: "") }
     var logoEmoji by remember(syncedShopInfo.logoEmoji) { mutableStateOf(syncedShopInfo.logoEmoji) }
 
-    var stampType by remember(syncedShopInfo.stampType) { mutableStateOf(syncedShopInfo.stampType) }
+    var stampType by remember(syncedShopInfo.stampType) { mutableStateOf(if (syncedShopInfo.stampType == StampIconType.PRESET || syncedShopInfo.stampType == StampIconType.EMOJI) StampIconType.CUSTOM_IMAGE else syncedShopInfo.stampType) }
     var stampPresetId by remember(syncedShopInfo.stampPresetId) { mutableStateOf(syncedShopInfo.stampPresetId) }
     var stampIconUri by remember(syncedShopInfo.stampIconUri) { mutableStateOf(syncedShopInfo.stampIconUri ?: "") }
     var stampEmoji by remember(syncedShopInfo.stampEmoji) { mutableStateOf(syncedShopInfo.stampEmoji) }
@@ -386,16 +386,6 @@ fun SettingsView(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
-                            selected = logoType == LogoType.PRESET,
-                            onClick = { logoType = LogoType.PRESET },
-                            label = { Text("🎨 รูปสำเร็จรูป", fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = OrangePrimary,
-                                selectedLabelColor = Color.White
-                            ),
-                            modifier = Modifier.testTag("logo_preset_chip")
-                        )
-                        FilterChip(
                             selected = logoType == LogoType.CUSTOM_IMAGE,
                             onClick = { logoType = LogoType.CUSTOM_IMAGE },
                             label = { Text("🖼️ อัปโหลดรูปภาพ", fontSize = 12.sp) },
@@ -404,16 +394,6 @@ fun SettingsView(viewModel: MainViewModel) {
                                 selectedLabelColor = Color.White
                             ),
                             modifier = Modifier.testTag("logo_custom_chip")
-                        )
-                        FilterChip(
-                            selected = logoType == LogoType.EMOJI,
-                            onClick = { logoType = LogoType.EMOJI },
-                            label = { Text("😀 อิโมจิ", fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = OrangePrimary,
-                                selectedLabelColor = Color.White
-                            ),
-                            modifier = Modifier.testTag("logo_emoji_chip")
                         )
                     }
 
@@ -587,16 +567,6 @@ fun SettingsView(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
-                            selected = stampType == StampIconType.PRESET,
-                            onClick = { stampType = StampIconType.PRESET },
-                            label = { Text("🎨 ตราประทับสำเร็จรูป", fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = OrangePrimary,
-                                selectedLabelColor = Color.White
-                            ),
-                            modifier = Modifier.testTag("stamp_preset_chip")
-                        )
-                        FilterChip(
                             selected = stampType == StampIconType.CUSTOM_IMAGE,
                             onClick = { stampType = StampIconType.CUSTOM_IMAGE },
                             label = { Text("🖼️ อัปโหลดรูปแสตมป์", fontSize = 12.sp) },
@@ -605,16 +575,6 @@ fun SettingsView(viewModel: MainViewModel) {
                                 selectedLabelColor = Color.White
                             ),
                             modifier = Modifier.testTag("stamp_custom_chip")
-                        )
-                        FilterChip(
-                            selected = stampType == StampIconType.EMOJI,
-                            onClick = { stampType = StampIconType.EMOJI },
-                            label = { Text("ไอคอน (ไม่ใช้)", fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = OrangePrimary,
-                                selectedLabelColor = Color.White
-                            ),
-                            modifier = Modifier.testTag("stamp_emoji_chip")
                         )
                     }
 

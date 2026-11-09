@@ -48,12 +48,12 @@ val skewerOptions: String = "", // JSON array: [{"id":..,"label":..,"icon":..,"e
 val showScanPayment: Boolean = true,
 val promptPayQrUri: String? = null,
     // Shop Logo Customization
-    val logoType: LogoType = LogoType.PRESET,
+    val logoType: LogoType = LogoType.CUSTOM_IMAGE,
     val logoUri: String? = null,
     val logoPresetId: String = "preset_logo_retro",
     val logoEmoji: String = "",
     // Stamp Icon Customization
-    val stampType: StampIconType = StampIconType.PRESET,
+    val stampType: StampIconType = StampIconType.CUSTOM_IMAGE,
     val stampIconUri: String? = null,
     val stampPresetId: String = "preset_stamp_badge",
     val stampEmoji: String = ""
