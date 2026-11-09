@@ -1325,7 +1325,7 @@
         else {
           menuEl.innerHTML = groups.map(g => `
             <div class="space-y-2">
-              <div class="text-sm font-bold text-gray-700 px-1 pt-2">${g.cat.name || g.cat.id}</div>
+              <button type="button" class="w-full text-left text-base font-bold text-white bg-orange-600 rounded-xl px-4 py-2.5 shadow-sm">${g.cat.name || g.cat.id}</button>
               ${g.items.map(m => `
                 <div class="border rounded-2xl p-3 bg-white flex gap-3">
                   ${m.imageUrl
