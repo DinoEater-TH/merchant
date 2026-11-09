@@ -324,7 +324,7 @@
         <div class="text-red-500 font-bold hidden" id="trackerCommentText"></div>
       </div>
 
-      <button onclick="closeTrackerModal()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs">
+      <button onclick="closeTrackerModalWithPrompt()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs">
         ปิดหน้าต่าง
       </button>
     </div>
@@ -1088,6 +1088,62 @@
 
     function closeTrackerModal() {
       document.getElementById('trackerModal').classList.add('hidden');
+    }
+    async function closeTrackerModalWithPrompt() {
+      if (isMember) { closeTrackerModal(); return; }
+      // Guest: offer to register / enter phone to earn stamps from this purchase
+      const want = confirm('ต้องการใส่เบอร์โทร/ลงทะเบียนสมาชิก เพื่อรับสะสม stamp จากรายการนี้หรือไม่?');
+      if (!want) { closeTrackerModal(); return; }
+      const phone = prompt('กรุณาใส่เบอร์โทร 10 หลัก:');
+      if (!phone || !/^\d{10}$/.test(phone.trim())) { alert('เบอร์โทรไม่ถูกต้อง'); closeTrackerModal(); return; }
+      const p = phone.trim();
+      const si = (window.remoteState && window.remoteState.shopInfo) ? window.remoteState.shopInfo : {};
+      const users = (window.remoteState && window.remoteState.users) ? window.remoteState.users : {};
+      if (users[p]) {
+        // existing member: claim stamps retroactively for this order
+        customerPhone = p;
+        isMember = true;
+        stamps = users[p].stamps || 0;
+        // +1 stamp for this purchase if not already counted (guest order had no stamp)
+        try {
+          const ref = firebase.database().ref(STATE_PATH);
+          await ref.transaction(cur => {
+            if (cur == null) return cur;
+            const parsed = typeof cur === 'string' ? JSON.parse(cur) : cur;
+            if (parsed.users && parsed.users[p]) {
+              parsed.users[p].stamps = (parsed.users[p].stamps || 0) + 1;
+              parsed.users[p].totalOrders = (parsed.users[p].totalOrders || 0) + 1;
+            }
+            window.remoteState = parsed;
+            return typeof cur === 'string' ? JSON.stringify(parsed) : parsed;
+          });
+        } catch (e) { console.error(e); }
+        if (window.remoteState) hydrateMemberData(window.remoteState);
+        alert('บันทึกแล้ว — คุณได้รับ +1 stamp จากรายการนี้');
+      } else {
+        // not found: ask to register
+        const reg = confirm('ไม่พบสมาชิกเบอร์นี้ ต้องการลงทะเบียนสมาชิกใหม่หรือไม่?');
+        if (reg) {
+          const name = prompt('กรุณาใส่ชื่อ (หรือเว้นว่าง):') || '';
+          customerPhone = p;
+          isMember = true;
+          stamps = 1; // +1 for this purchase
+          try {
+            const ref = firebase.database().ref(STATE_PATH);
+            await ref.transaction(cur => {
+              if (cur == null) return cur;
+              const parsed = typeof cur === 'string' ? JSON.parse(cur) : cur;
+              if (!parsed.users) parsed.users = {};
+              parsed.users[p] = { phoneNumber: p, name: name.trim(), stamps: 1, totalOrders: 1 };
+              window.remoteState = parsed;
+              return typeof cur === 'string' ? JSON.stringify(parsed) : parsed;
+            });
+          } catch (e) { console.error(e); }
+          if (window.remoteState) hydrateMemberData(window.remoteState);
+          alert('ลงทะเบียนสำเร็จ — คุณได้รับ +1 stamp จากรายการนี้');
+        }
+      }
+      closeTrackerModal();
     }
 
     function reorderPrevious() {

@@ -79,15 +79,15 @@
       <button onclick="exitAdmin()" class="text-xs bg-gray-100 px-3 py-1.5 rounded-lg">กลับหน้าร้าน</button>
     </header>
 
-    <nav class="bg-white border-b flex overflow-x-auto no-scrollbar text-xs font-bold text-gray-600">
-      <button onclick="switchTab('orders')" id="tabBtn_orders" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-orange-600 text-orange-600">ออเดอร์</button>
-      <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">POS</button>
-      <button onclick="switchTab('members')" id="tabBtn_members" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">สมาชิก</button>
-      <button onclick="switchTab('sales')" id="tabBtn_sales" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">ประวัติการขาย</button>
-      <button onclick="switchTab('inventory')" id="tabBtn_inventory" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">สต็อก</button>
-      <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">จุดคุ้มทุน</button>
-      <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">ตั้งค่า</button>
-      <button onclick="switchTab('promotions')" id="tabBtn_promotions" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">โปรโมชั่น</button>
+    <nav class="bg-white border-b flex overflow-x-auto no-scrollbar text-xs font-bold text-gray-600 gap-1 px-2 py-1.5">
+      <button onclick="switchTab('orders')" id="tabBtn_orders" class="tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-orange-600 text-orange-600 bg-orange-50">ออเดอร์</button>
+      <button onclick="switchTab('pos')" id="tabBtn_pos" class="tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">POS</button>
+      <button onclick="switchTab('members')" id="tabBtn_members" class="tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">สมาชิก</button>
+      <button onclick="switchTab('sales')" id="tabBtn_sales" class="tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">ประวัติการขาย</button>
+      <button onclick="switchTab('inventory')" id="tabBtn_inventory" class="tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">สต็อก</button>
+      <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">จุดคุ้มทุน</button>
+      <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">ตั้งค่า</button>
+      <button onclick="switchTab('promotions')" id="tabBtn_promotions" class="tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">โปรโมชั่น</button>
     </nav>
 
     <!-- Orders -->
@@ -950,10 +950,10 @@
     function switchTab(tab) {
       ['orders', 'pos', 'sales', 'inventory', 'analytics', 'settings', 'promotions', 'members'].forEach(t => {
         document.getElementById(`tab_${t}`).classList.add('hidden');
-        document.getElementById(`tabBtn_${t}`).className = 'tab-btn py-3 border-b-2 border-transparent text-gray-600';
+        document.getElementById(`tabBtn_${t}`).className = 'tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50';
       });
       document.getElementById(`tab_${tab}`).classList.remove('hidden');
-      document.getElementById(`tabBtn_${tab}`).className = 'tab-btn py-3 border-b-2 border-orange-600 text-orange-600 font-bold';
+      document.getElementById(`tabBtn_${tab}`).className = 'tab-btn flex-shrink-0 px-4 py-2.5 mx-0.5 rounded-lg border border-orange-600 text-orange-600 bg-orange-50 font-bold';
       renderAll();
       if (tab === 'settings') {
         // Never leave a typed PIN sitting in the field
