@@ -87,6 +87,7 @@
       <button onclick="switchTab('analytics')" id="tabBtn_analytics" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">📊 จุดคุ้มทุน</button>
       <button onclick="switchTab('settings')" id="tabBtn_settings" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">⚙️ ตั้งค่า</button>
       <button onclick="switchTab('promotions')" id="tabBtn_promotions" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">🎁 โปรโมชั่น</button>
+      <button onclick="switchTab('members')" id="tabBtn_members" class="tab-btn flex-shrink-0 px-4 py-3 border-b-2 border-transparent">👥 สมาชิก</button>
     </nav>
 
     <!-- Orders -->
@@ -169,10 +170,6 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl p-4 shadow-sm">
-        <h3 class="font-bold text-sm mb-2">สมาชิกทั้งหมด</h3>
-        <div id="usersList" class="space-y-2 text-sm"></div>
-      </div>
     </section>
 
     <!-- Member History Modal -->
@@ -226,6 +223,25 @@
           <input id="newSkewerName" placeholder="เพิ่มตัวเลือกใหม่" class="flex-1 border rounded-lg px-3 py-2 text-sm">
           <button onclick="addSkewerOption()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
         </div>
+      </div>
+    </section>
+
+    <!-- Members -->
+    <section id="tab_members" class="p-4 space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+        <h3 class="font-bold text-base">สมัคร/เพิ่มบัญชีลูกค้า</h3>
+        <input id="posPhoneInput2" type="text" placeholder="เบอร์โทร (จำเป็น)" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <input id="posNameInput2" type="text" placeholder="ชื่อ (ไม่จำเป็น)" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <div class="flex gap-2">
+          <button onclick="addMemberFromTab()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm">เพิ่มสมาชิก</button>
+          <button onclick="redeemPosReward()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm">แลกรางวัล</button>
+        </div>
+        <div id="posResult2" class="text-sm text-gray-600"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm">
+        <h3 class="font-bold text-sm mb-2">สมาชิกทั้งหมด</h3>
+        <div id="usersList" class="space-y-2 text-sm"></div>
       </div>
     </section>
 
@@ -944,7 +960,7 @@
 
     // ---------- Tabs ----------
     function switchTab(tab) {
-      ['orders', 'pos', 'sales', 'inventory', 'analytics', 'settings', 'promotions'].forEach(t => {
+      ['orders', 'pos', 'sales', 'inventory', 'analytics', 'settings', 'promotions', 'members'].forEach(t => {
         document.getElementById(`tab_${t}`).classList.add('hidden');
         document.getElementById(`tabBtn_${t}`).className = 'tab-btn py-3 border-b-2 border-transparent text-gray-600';
       });
@@ -1224,6 +1240,15 @@
     // ---------- POS ----------
     let posCart = {};
     let editingMemberPhone = null;
+    function addMemberFromTab() {
+      const p = document.getElementById('posPhoneInput2').value.trim();
+      const n = document.getElementById('posNameInput2').value.trim();
+      document.getElementById('posPhoneInput').value = p;
+      document.getElementById('posNameInput').value = n;
+      addMember();
+      document.getElementById('posPhoneInput2').value = '';
+      document.getElementById('posNameInput2').value = '';
+    }
     function addMember() {
       const phone = document.getElementById('posPhoneInput').value.trim();
       const name = document.getElementById('posNameInput').value.trim();
@@ -1256,10 +1281,19 @@
       editingMemberPhone = phone;
       const u = (state.users || {})[phone] || {};
       const orders = (state.orders || []).filter(o => o.customerPhone === phone);
-      document.getElementById('memberModalTitle').textContent = `สมาชิก ${phone} ${u.name ? '(' + u.name + ')' : ''}`;
-      document.getElementById('memberModalBody').innerHTML = orders.length
-        ? orders.map(o => `<div class="border-b py-1">${o.id} • ${o.timestamp}<br>${(o.items||[]).map(i => `${i.name} x${i.quantity}`).join(', ')} • ฿${o.totalAmount}</div>`).join('')
-        : '<p class="text-xs text-gray-400">ยังไม่มีประวัติสั่งซื้อ</p>';
+       document.getElementById('memberModalTitle').textContent = `สมาชิก ${phone}`;
+       let body = '';
+       body += `<div class="bg-gray-50 rounded-lg p-2 space-y-1">
+         <div><b>ชื่อ:</b> ${u.name || '-'}</div>
+         <div><b>เบอร์โทร:</b> ${phone}</div>
+         <div><b>Stamp สะสม:</b> <span class="text-orange-600 font-bold">${u.stamps || 0} ดวง</span></div>
+         <div><b>จำนวนออเดอร์:</b> ${u.totalOrders || orders.length}</div>
+       </div>`;
+       body += `<div class="font-bold text-sm mt-2">ประวัติการสั่งซื้อ (${orders.length})</div>`;
+       body += orders.length
+         ? orders.map(o => `<div class="border-b py-1 text-xs">${o.id} • ${o.timestamp}<br>${(o.items||[]).map(i => `${i.name} x${i.quantity}`).join(', ')} • ฿${o.totalAmount}</div>`).join('')
+         : '<p class="text-xs text-gray-400">ยังไม่มีประวัติสั่งซื้อ</p>';
+       document.getElementById('memberModalBody').innerHTML = body;
       document.getElementById('editMemberName').value = u.name || '';
       document.getElementById('editMemberStamps').value = u.stamps ?? 0;
       document.getElementById('memberModal').classList.remove('hidden');
