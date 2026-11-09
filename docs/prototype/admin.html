@@ -533,8 +533,7 @@
         <input id="m_price" type="number" placeholder="ราคาขาย (บาท)" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <div class="flex gap-2">
-        <input id="m_stock" type="number" placeholder="สต็อกเริ่มต้น (เฉพาะแบบจำกัด)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
-        <input id="m_emoji" placeholder="อีโมจิ (เช่น 🍢)" class="w-1/2 border rounded-lg px-3 py-2 text-sm">
+        <input id="m_stock" type="number" placeholder="สต็อกเริ่มต้น (เฉพาะแบบจำกัด)" class="w-full border rounded-lg px-3 py-2 text-sm">
       </div>
       <div>
         <label class="block text-[11px] text-gray-500">ขายเป็น (แสดงให้ลูกค้า เช่น ฿10 / ไม้)</label>
@@ -1614,7 +1613,6 @@
       document.getElementById('m_stock').value = m.stockQty ?? '';
       document.getElementById('m_unlimited').checked = isUnlimitedStock(m);
       toggleStockInputs();
-      document.getElementById('m_emoji').value = m.emoji || '🍢';
       document.getElementById('m_saleUnit').value = m.saleUnit || 'ไม้';
       document.getElementById('m_desc').value = m.description || '';
       let si = [];
@@ -1637,7 +1635,6 @@
       document.getElementById('m_stock').value = '30';
       document.getElementById('m_unlimited').checked = true;
       toggleStockInputs();
-      document.getElementById('m_emoji').value = '🍢';
       document.getElementById('m_saleUnit').value = 'ไม้';
       document.getElementById('m_desc').value = '';
       window.subItemAdminItems = [];
@@ -1772,7 +1769,7 @@
     }
     function addCategory() {
       const name = document.getElementById('newCatName').value.trim();
-      const emoji = document.getElementById('newCatEmoji').value.trim() || '🍽️';
+      const emoji = '';
       if (!name) { alert('กรุณาใส่ชื่อหมวดหมู่'); return; }
       if ((state.categories || []).some(c => (c.name||'').trim() === name)) { alert('หมวดหมู่นี้มีอยู่แล้ว'); return; }
       if (!state.categories) state.categories = [];
@@ -1823,7 +1820,6 @@
       const cost = (packagePrice > 0 && pieces > 0) ? (packagePrice / pieces) : 0;
       const stock = parseInt(document.getElementById('m_stock').value) || 0;
       const unlimited = document.getElementById('m_unlimited').checked;
-      const emoji = document.getElementById('m_emoji').value.trim() || '🍢';
       const saleUnit = document.getElementById('m_saleUnit').value || 'ไม้';
       const desc = document.getElementById('m_desc').value.trim();
       const file = document.getElementById('m_image').files[0];
