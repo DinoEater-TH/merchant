@@ -112,18 +112,30 @@ fun AdminScreen(viewModel: MainViewModel) {
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { viewModel.setAdminTab(1) },
-                    icon = { Icon(Icons.Default.PointOfSale, contentDescription = "POS แต้ม") },
-                    label = { Text("POS แต้ม", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Default.PointOfSale, contentDescription = "POS เมนู") },
+                    label = { Text("POS", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = OrangePrimary,
                         selectedTextColor = OrangePrimary,
                         indicatorColor = Color(0xFFFFF3E0)
                     ),
-                    modifier = Modifier.testTag("nav_admin_pos")
+                    modifier = Modifier.testTag("nav_admin_posmenu")
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { viewModel.setAdminTab(2) },
+                    icon = { Icon(Icons.Default.Person, contentDescription = "สมาชิก") },
+                    label = { Text("สมาชิก", fontSize = 10.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = OrangePrimary,
+                        selectedTextColor = OrangePrimary,
+                        indicatorColor = Color(0xFFFFF3E0)
+                    ),
+                    modifier = Modifier.testTag("nav_admin_members")
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { viewModel.setAdminTab(3) },
                     icon = { Icon(Icons.Default.BarChart, contentDescription = "ประวัติการขาย") },
                     label = { Text("ยอดขาย", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
@@ -134,8 +146,8 @@ fun AdminScreen(viewModel: MainViewModel) {
                     modifier = Modifier.testTag("nav_admin_sales")
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { viewModel.setAdminTab(3) },
+                    selected = selectedTab == 4,
+                    onClick = { viewModel.setAdminTab(4) },
                     icon = { Icon(Icons.Default.Inventory2, contentDescription = "สต็อก") },
                     label = { Text("สต็อก", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
@@ -146,8 +158,8 @@ fun AdminScreen(viewModel: MainViewModel) {
                     modifier = Modifier.testTag("nav_admin_inventory")
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 4,
-                    onClick = { viewModel.setAdminTab(4) },
+                    selected = selectedTab == 5,
+                    onClick = { viewModel.setAdminTab(5) },
                     icon = { Icon(Icons.Default.Analytics, contentDescription = "ต้นทุน/กำไร") },
                     label = { Text("ต้นทุน", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
@@ -158,8 +170,8 @@ fun AdminScreen(viewModel: MainViewModel) {
                     modifier = Modifier.testTag("nav_admin_analytics")
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 5,
-                    onClick = { viewModel.setAdminTab(5) },
+                    selected = selectedTab == 6,
+                    onClick = { viewModel.setAdminTab(6) },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "ตั้งค่า") },
                     label = { Text("ตั้งค่า", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
@@ -170,8 +182,8 @@ fun AdminScreen(viewModel: MainViewModel) {
                     modifier = Modifier.testTag("nav_admin_settings")
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 6,
-                    onClick = { viewModel.setAdminTab(6) },
+                    selected = selectedTab == 7,
+                    onClick = { viewModel.setAdminTab(7) },
                     icon = { Icon(Icons.Default.LocalOffer, contentDescription = "โปรโมชั่น") },
                     label = { Text("โปรฯ", fontSize = 9.sp) },
                     colors = NavigationBarItemDefaults.colors(
@@ -180,30 +192,6 @@ fun AdminScreen(viewModel: MainViewModel) {
                         indicatorColor = Color(0xFFFFF3E0)
                     ),
                     modifier = Modifier.testTag("nav_admin_promotions")
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 7,
-                    onClick = { viewModel.setAdminTab(7) },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "สมาชิก") },
-                    label = { Text("สมาชิก", fontSize = 9.sp) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = OrangePrimary,
-                        selectedTextColor = OrangePrimary,
-                        indicatorColor = Color(0xFFFFF3E0)
-                    ),
-                    modifier = Modifier.testTag("nav_admin_members")
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 8,
-                    onClick = { viewModel.setAdminTab(8) },
-                    icon = { Icon(Icons.Default.PointOfSale, contentDescription = "POS เมนู") },
-                    label = { Text("POS", fontSize = 9.sp) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = OrangePrimary,
-                        selectedTextColor = OrangePrimary,
-                        indicatorColor = Color(0xFFFFF3E0)
-                    ),
-                    modifier = Modifier.testTag("nav_admin_posmenu")
                 )
             }
         }
@@ -215,14 +203,13 @@ fun AdminScreen(viewModel: MainViewModel) {
         ) {
             when (selectedTab) {
                 0 -> OrderManagementView(viewModel = viewModel)
-                1 -> PosStampView(viewModel = viewModel)
-                2 -> SalesHistoryView(viewModel = viewModel)
-                3 -> InventoryView(viewModel = viewModel)
-                4 -> AnalyticsView(viewModel = viewModel)
-                5 -> SettingsView(viewModel = viewModel)
-                6 -> PromotionView(viewModel = viewModel)
-                7 -> MembersView(viewModel = viewModel)
-                8 -> PosMenuView(viewModel = viewModel)
+                1 -> PosMenuView(viewModel = viewModel)
+                2 -> MembersView(viewModel = viewModel)
+                3 -> SalesHistoryView(viewModel = viewModel)
+                4 -> InventoryView(viewModel = viewModel)
+                5 -> AnalyticsView(viewModel = viewModel)
+                6 -> SettingsView(viewModel = viewModel)
+                7 -> PromotionView(viewModel = viewModel)
             }
         }
     }
