@@ -87,6 +87,7 @@ data class MenuItem(
     val emoji: String = "🍢",
     val description: String = "",
 val imageUrl: String? = null,
+val subItems: String = "", // JSON array: [{"id":..,"name":..,"enabled":..}]
 val sortOrder: Int = 0,
     val packagePrice: Double = 0.0,
     val piecesPerPackage: Int = 0
@@ -140,7 +141,8 @@ data class OrderItem(
     val name: String,
     val price: Double,
     val directCost: Double,
-    val quantity: Int
+    val quantity: Int,
+    val selectedSubItems: String = ""
 )
 
 data class Order(

@@ -220,9 +220,17 @@
         </div>
       </div>
 
+      <!-- Sub-items (admin-managed, e.g. เกี๊ยวห่อลูกชิ้น) -->
+      <div id="subItemsSection">
+        <label class="block text-xs font-bold text-gray-700 mb-1.5">4. เลือกเมนูรอง (สำหรับรายการที่กำหนด)</label>
+        <div id="subItemsContainer" class="space-y-2 text-xs">
+          <!-- rendered dynamically from item.subItems -->
+        </div>
+      </div>
+
       <!-- Condiments Checkboxes -->
       <div>
-        <label class="block text-xs font-bold text-gray-700 mb-1.5">3. เครื่องเคียงและถ้วยน้ำจิ้ม (ฟรี)</label>
+        <label class="block text-xs font-bold text-gray-700 mb-1.5">5. เครื่องเคียงและถ้วยน้ำจิ้ม (ฟรี)</label>
         <div id="addonOptionsContainer" class="space-y-1.5 text-xs">
           <!-- rendered dynamically from addonConfig -->
         </div>
@@ -596,6 +604,49 @@
       `).join('') || '<p class="text-xs text-gray-400">ไม่มีตัวเลือกไม้</p>';
     }
 
+    // Render admin-managed sub-item selectors (e.g. เกี๊ยวห่อลูกชิ้น: หมู/ไก่/เนื้อ)
+    window.selectedSubItems = window.selectedSubItems || {};
+    function renderSubItems() {
+      const container = document.getElementById('subItemsContainer');
+      const section = document.getElementById('subItemsSection');
+      if (!container) return;
+      let html = '';
+      let hasAny = false;
+      for (const [id, qty] of Object.entries(cart)) {
+        const m = menu.find(x => x.id === id);
+        if (!m) continue;
+        let subs = [];
+        try { subs = JSON.parse(m.subItems || '[]'); } catch (e) { subs = []; }
+        subs = (subs || []).filter(s => s.enabled !== false);
+        if (!subs.length) continue;
+        hasAny = true;
+        const current = window.selectedSubItems[id] || [];
+        html += `<div class="bg-gray-50 rounded-lg p-2">
+          <div class="font-bold text-xs mb-1">${m.name} (x${qty}) — เลือก ${qty} รายการ</div>
+          <div class="space-y-1">`;
+        subs.forEach(s => {
+          const checked = current.includes(s.name) ? 'checked' : '';
+          html += `<label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" data-subitem="${id}" data-name="${s.name}" ${checked} class="accent-orange-600 subItemCb">
+            <span>${s.name}</span>
+          </label>`;
+        });
+        html += `</div></div>`;
+      }
+      container.innerHTML = html || '<p class="text-xs text-gray-400">ไม่มีเมนูรองสำหรับรายการในตะกร้า</p>';
+      if (section) section.style.display = hasAny ? '' : 'none';
+      // bind change handlers to keep selectedSubItems in sync
+      document.querySelectorAll('.subItemCb').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const itemId = cb.getAttribute('data-subitem');
+          const name = cb.getAttribute('data-name');
+          if (!window.selectedSubItems[itemId]) window.selectedSubItems[itemId] = [];
+          if (cb.checked) window.selectedSubItems[itemId].push(name);
+          else window.selectedSubItems[itemId] = window.selectedSubItems[itemId].filter(n => n !== name);
+        });
+      });
+    }
+
     function renderStamps() {
       if (!isMember) return;
       const need = shopCfg.stampsRequired || 10;
@@ -760,6 +811,9 @@
       if (checkedSkewer) selectedSkewer = checkedSkewer.value;
       renderSkewerOptions();
 
+      // Render sub-item selectors for cart items that have admin-managed sub-items
+      renderSubItems();
+
       // Render addon options from manager config
       const container = document.getElementById('addonOptionsContainer');
       if (container) {
@@ -901,7 +955,8 @@
         const m = menu.find(x => x.id === id);
         if (m) {
           subtotal += m.price * qty;
-          items.push({ itemId: m.id, name: m.name, price: m.price, directCost: m.directCost || 0, quantity: qty });
+          const subs = (window.selectedSubItems && window.selectedSubItems[m.id]) ? window.selectedSubItems[m.id] : [];
+          items.push({ itemId: m.id, name: m.name, price: m.price, directCost: m.directCost || 0, quantity: qty, selectedSubItems: subs });
         }
       }
       let discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
@@ -931,6 +986,12 @@
       const commentParts = [];
       if (skewerLabel) commentParts.push(`[ไม้: ${skewerLabel}]`);
       if (addonNames.length) commentParts.push(`[เครื่องเคียง: ${addonNames.join(', ')}]`);
+      for (const [id, subs] of Object.entries(window.selectedSubItems || {})) {
+        if (subs && subs.length) {
+          const m = menu.find(x => x.id === id);
+          commentParts.push(`[${m ? m.name : id}: ${subs.join(', ')}]`);
+        }
+      }
       if (userComment) commentParts.push(userComment);
       return {
         order: {
@@ -941,7 +1002,7 @@
           deliveryAddress: fulfillment === 'delivery' ? ((addrEl && addrEl.value) || '') : '',
           gpsCoordinates: (selectedLat != null && selectedLng != null) ? `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}` : '',
           items,
-          options: { skewer: skewerLabel, skewerId: skewerId || '', addons: addonNames },
+          options: { skewer: skewerLabel, skewerId: skewerId || '', addons: addonNames, subItems: window.selectedSubItems || {} },
           comment: commentParts.join(' '),
           subtotal, discount, deliveryFee, totalAmount,
           status: 'PENDING',

@@ -534,6 +534,14 @@
       </div>
       <p class="text-xs text-gray-500">ต้นทุนต่อหน่วย = ราคาถุง ÷ จำนวนต่อถุง (ถ้าใส่)</p>
       <input id="m_desc" placeholder="คำอธิบาย" class="w-full border rounded-lg px-3 py-2 text-sm">
+      <div class="border-t pt-2">
+        <label class="block text-[11px] text-gray-500 mb-1">เมนูรอง (ให้ลูกค้าเลือก) — เช่น เกี๊ยวห่อลูกชิ้น: หมู/ไก่/เนื้อ</label>
+        <div id="subItemAdminList" class="space-y-1 text-xs"></div>
+        <div class="flex gap-2 mt-1">
+          <input id="newSubItemName" placeholder="เพิ่มเมนูรอง" class="flex-1 border rounded-lg px-3 py-2 text-sm">
+          <button onclick="addSubItemOption()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+</button>
+        </div>
+      </div>
       <div class="flex gap-2 pt-1">
         <button onclick="saveMenuItem()" class="bg-orange-600 text-white flex-1 py-2 rounded-lg text-sm font-bold">บันทึก</button>
         <button onclick="closeAddMenuModal()" class="bg-gray-200 text-gray-700 flex-1 py-2 rounded-lg text-sm font-bold">ยกเลิก</button>
@@ -1575,6 +1583,11 @@
       document.getElementById('m_emoji').value = m.emoji || '🍢';
       document.getElementById('m_saleUnit').value = m.saleUnit || 'ไม้';
       document.getElementById('m_desc').value = m.description || '';
+      let si = [];
+      try { si = JSON.parse(m.subItems || '[]'); } catch (e) { si = []; }
+      if (!Array.isArray(si)) si = [];
+      window.subItemAdminItems = si;
+      renderSubItemAdminList();
     }
     function toggleStockInputs() {
       const unlimited = document.getElementById('m_unlimited').checked;
@@ -1593,6 +1606,8 @@
       document.getElementById('m_emoji').value = '🍢';
       document.getElementById('m_saleUnit').value = 'ไม้';
       document.getElementById('m_desc').value = '';
+      window.subItemAdminItems = [];
+      renderSubItemAdminList();
       document.getElementById('m_image').value = '';
       const categorySelect = document.getElementById('m_category');
       const cats = (state.categories || []).filter(c => c.id !== 'all');
@@ -1788,13 +1803,13 @@
         if (editingMenuId) {
           const existing = (state.menuItems || []).find(x => x.id === editingMenuId);
           if (existing) {
-            existing.name = name; existing.categoryId = category; existing.price = price; existing.directCost = cost; existing.stockQty = stock; existing.isUnlimitedStock = unlimited; existing.saleUnit = saleUnit; existing.emoji = emoji; existing.description = desc; existing.packagePrice = packagePrice; existing.piecesPerPackage = pieces;
+            existing.name = name; existing.categoryId = category; existing.price = price; existing.directCost = cost; existing.stockQty = stock; existing.isUnlimitedStock = unlimited; existing.saleUnit = saleUnit; existing.emoji = emoji; existing.description = desc; existing.packagePrice = packagePrice; existing.piecesPerPackage = pieces; existing.subItems = JSON.stringify(window.subItemAdminItems || []);
             if (unlimited && existing.status === 'OUT_OF_STOCK') existing.status = 'ACTIVE';
             if (imageUrl) existing.imageUrl = imageUrl;
           }
           editingMenuId = null;
         } else {
-          const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, isUnlimitedStock: unlimited, saleUnit, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, sortOrder: (state.menuItems || []).length };
+          const item = { id: 'item_' + Date.now(), name, categoryId: category, price, directCost: cost, status: 'ACTIVE', stockQty: stock, isUnlimitedStock: unlimited, saleUnit, defaultResetQty: stock, isBestseller: false, emoji, description: desc, imageUrl: imageUrl || null, packagePrice, piecesPerPackage: pieces, subItems: JSON.stringify(window.subItemAdminItems || []), sortOrder: (state.menuItems || []).length };
           if (!state.menuItems) state.menuItems = [];
           state.menuItems.push(item);
         }
@@ -2191,6 +2206,46 @@
       input.value = '';
       renderAddonAdminList();
     }
+
+     function renderSubItemAdminList() {
+       const container = document.getElementById('subItemAdminList');
+       if (!container) return;
+       const items = window.subItemAdminItems || [];
+       container.innerHTML = items.map((it, idx) => `
+         <div class="flex items-center gap-2 text-sm">
+           <input type="checkbox" ${it.enabled ? 'checked' : ''} onchange="toggleSubItem(${idx}, this.checked)">
+           <span class="flex-1">${it.name}</span>
+           <button onclick="editSubItem(${idx})" class="text-blue-500 text-xs">แก้ไข</button>
+           <button onclick="removeSubItem(${idx})" class="text-red-500 text-xs">ลบ</button>
+         </div>
+       `).join('') || '<p class="text-xs text-gray-400">ยังไม่มีเมนูรอง</p>';
+     }
+     function toggleSubItem(idx, checked) {
+       if (window.subItemAdminItems && window.subItemAdminItems[idx]) window.subItemAdminItems[idx].enabled = checked;
+     }
+     function editSubItem(idx) {
+       if (!window.subItemAdminItems || !window.subItemAdminItems[idx]) return;
+       const newName = prompt('แก้ไขชื่อเมนูรอง:', window.subItemAdminItems[idx].name);
+       if (newName && newName.trim()) {
+         window.subItemAdminItems[idx].name = newName.trim();
+         renderSubItemAdminList();
+       }
+     }
+     function removeSubItem(idx) {
+       if (window.subItemAdminItems) {
+         window.subItemAdminItems.splice(idx, 1);
+         renderSubItemAdminList();
+       }
+     }
+     function addSubItemOption() {
+       const input = document.getElementById('newSubItemName');
+       const name = input.value.trim();
+       if (!name) return;
+       if (!window.subItemAdminItems) window.subItemAdminItems = [];
+       window.subItemAdminItems.push({ id: 'sub_' + Date.now(), name, enabled: true });
+       input.value = '';
+       renderSubItemAdminList();
+     }
 
      function renderSkewerAdminList() {
        const container = document.getElementById('skewerAdminList');
