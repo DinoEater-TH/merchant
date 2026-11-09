@@ -1095,45 +1095,8 @@ fun SettingsView(viewModel: MainViewModel) {
             }
         }
 
-        // 6. Web PWA Export card
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Code, contentDescription = null, tint = OrangePrimary)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "5. ส่งออกเว็บ Web PWA (GitHub Pages)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "ระบบได้สร้างไฟล์ index.html และ admin.html พร้อมใช้งานฟรี 100% บน GitHub Pages ตามสเปคงบ 0 บาท",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedButton(
-                        onClick = { isWebExportDialogOpen = true },
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("เปิดดูโค้ด index.html & admin.html")
-                    }
-                }
-            }
-        }
     }
 
-    if (isWebExportDialogOpen) {
-        WebPwaExportDialog(onDismiss = { isWebExportDialogOpen = false })
-    }
 }
 
 @Composable
