@@ -145,6 +145,7 @@
       <div id="posPromoBanner" class="bg-orange-100 text-orange-800 rounded-xl px-3 py-2 text-xs font-medium"></div>
       <div class="space-y-2">
         <h3 class="font-bold text-base px-1">รายการเมนูทั้งหมด (POS)</h3>
+        <div id="posCategoryTabs" class="flex space-x-2 overflow-x-auto no-scrollbar py-1"></div>
         <div id="posMenuList" class="space-y-3 max-h-[65vh] overflow-y-auto no-scrollbar pr-0.5"></div>
       </div>
 
@@ -1227,6 +1228,7 @@
 
     // ---------- POS ----------
     let posCart = {};
+    let posCatFilter = 'all';
     let editingMemberPhone = null;
     function addMemberFromTab() {
       const p = document.getElementById('posPhoneInput2').value.trim();
@@ -1308,20 +1310,30 @@
         else { banner.style.display = ''; banner.textContent = `🎁 โปรสุดคุ้ม: ซื้อครบ ${si.minOrderForDiscount ?? 50}.- ลด ${si.discountAmount ?? 5}.- | ซื้อครบ ${si.minOrderForFreeDelivery ?? 120}.- ส่งฟรี | สะสมครบ ${si.stampsRequiredForReward ?? 10} แต้ม รับ ${rewardItemName()} ฟรี`; }
       }
       const menuEl = document.getElementById('posMenuList');
+      const tabsEl = document.getElementById('posCategoryTabs');
+      if (tabsEl) {
+        const cats = (state.categories || []).filter(c => c.id !== 'all').sort((a,b) => (a.sort||0)-(b.sort||0));
+        const allBtn = `<button onclick="filterPosCategory('all')" class="cat-btn ${posCatFilter==='all'?'bg-orange-600 text-white shadow-sm':'bg-white text-gray-700 border border-gray-200'} text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">ทั้งหมด</button>`;
+        const catBtns = cats.map(c => `<button onclick="filterPosCategory('${c.id}')" class="cat-btn ${posCatFilter===c.id?'bg-orange-600 text-white shadow-sm':'bg-white text-gray-700 border border-gray-200'} text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">${c.name}</button>`).join('');
+        tabsEl.innerHTML = allBtn + catBtns;
+        tabsEl.className = 'flex space-x-2 overflow-x-auto no-scrollbar py-1';
+      }
       if (menuEl) {
         const items = (state.menuItems || []).filter(m => m.status !== 'HIDDEN');
         const cats = (state.categories || []).filter(c => c.id !== 'all').sort((a,b) => (a.sort||0)-(b.sort||0));
+        // filter by selected category
+        const filtered = posCatFilter === 'all' ? items : items.filter(m => m.categoryId === posCatFilter);
         // group items by category, sorted by category sort then item sortOrder
         const groups = [];
         const used = new Set();
         cats.forEach(c => {
-          const ci = items.filter(m => m.categoryId === c.id).sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0));
+          const ci = filtered.filter(m => m.categoryId === c.id).sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0));
           if (ci.length) { groups.push({ cat: c, items: ci }); ci.forEach(m => used.add(m.id)); }
         });
         // items without a known category go to "อื่นๆ"
-        const rest = items.filter(m => !used.has(m.id));
+        const rest = filtered.filter(m => !used.has(m.id));
         if (rest.length) groups.push({ cat: { id: '__other', name: 'อื่นๆ', iconEmoji: '' }, items: rest });
-        if (items.length === 0) { menuEl.innerHTML = '<p class="text-base text-gray-400 text-center py-6">ยังไม่มีเมนู</p>'; }
+        if (filtered.length === 0) { menuEl.innerHTML = '<p class="text-base text-gray-400 text-center py-6">ยังไม่มีเมนู</p>'; }
         else {
           menuEl.innerHTML = groups.map(g => `
             <div class="space-y-2">
@@ -1356,6 +1368,10 @@
     function posChangeQty(id, delta) {
       posCart[id] = Math.max(0, (posCart[id] || 0) + delta);
       if (posCart[id] === 0) delete posCart[id];
+      renderPos();
+    }
+    function filterPosCategory(catId) {
+      posCatFilter = catId || 'all';
       renderPos();
     }
     function posTotals() {
