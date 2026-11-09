@@ -13,10 +13,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,51 +43,129 @@ fun MembersView(viewModel: MainViewModel) {
     val users by viewModel.users.collectAsState()
     val orders by viewModel.orders.collectAsState()
     var selectedPhone by remember { mutableStateOf<String?>(null) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var editPhone by remember { mutableStateOf<String?>(null) }
 
-    if (users.isEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Add member button
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            horizontalArrangement = Arrangement.End
         ) {
-            Text("ยังไม่มีสมาชิก", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = { showAddDialog = true }) {
+                androidx.compose.material3.Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                Text("เพิ่มสมาชิก", fontSize = 12.sp)
+            }
         }
-        return
-    }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(users.entries.toList(), key = { it.key }) { (phone, u) ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        if (users.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = OrangePrimary,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = phone, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text(text = if (u.name.isBlank()) "-" else u.name, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = "Stamp: ${u.stamps} ดวง • ออเดอร์: ${u.totalOrders}", fontSize = 12.sp, color = OrangePrimary)
-                    }
-                    TextButton(onClick = { selectedPhone = phone }) {
-                        Text("ดูรายละเอียด", fontSize = 11.sp, color = OrangePrimary)
+                Text("ยังไม่มีสมาชิก", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(users.entries.toList(), key = { it.key }) { (phone, u) ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = OrangePrimary,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = phone, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(text = if (u.name.isBlank()) "-" else u.name, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = "Stamp: ${u.stamps} ดวง • ออเดอร์: ${u.totalOrders}", fontSize = 12.sp, color = OrangePrimary)
+                            }
+                            TextButton(onClick = { selectedPhone = phone }) {
+                                Text("ดู", fontSize = 11.sp, color = OrangePrimary)
+                            }
+                            TextButton(onClick = { editPhone = phone }) {
+                                Text("แก้ไข", fontSize = 11.sp)
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
+    // Add member dialog
+    if (showAddDialog) {
+        var newPhone by remember { mutableStateOf("") }
+        var newName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            title = { Text("เพิ่มสมาชิกใหม่", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    OutlinedTextField(value = newPhone, onValueChange = { newPhone = it }, label = { Text("เบอร์โทร (10 หลัก)") }, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("ชื่อ") }, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (newPhone.trim().length == 10) {
+                        viewModel.addOrUpdateMember(newPhone.trim(), newName.trim())
+                        showAddDialog = false
+                    }
+                }) { Text("บันทึก") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddDialog = false }) { Text("ยกเลิก") }
+            }
+        )
+    }
+
+    // Edit member dialog
+    editPhone?.let { phone ->
+        val u = users[phone] ?: MemberUser(phoneNumber = phone)
+        var editName by remember { mutableStateOf(u.name) }
+        var editPhoneVal by remember { mutableStateOf(phone) }
+        AlertDialog(
+            onDismissRequest = { editPhone = null },
+            title = { Text("แก้ไขสมาชิก", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    OutlinedTextField(value = editPhoneVal, onValueChange = { editPhoneVal = it }, label = { Text("เบอร์โทร (10 หลัก)") }, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = editName, onValueChange = { editName = it }, label = { Text("ชื่อ") }, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (editPhoneVal.trim().length == 10) {
+                        if (editPhoneVal.trim() != phone) {
+                            viewModel.deleteMember(phone)
+                        }
+                        viewModel.addOrUpdateMember(editPhoneVal.trim(), editName.trim())
+                        editPhone = null
+                    }
+                }) { Text("บันทึก") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editPhone = null }) { Text("ยกเลิก") }
+            }
+        )
+    }
+
+    // Detail dialog
     selectedPhone?.let { phone ->
         val u = users[phone] ?: MemberUser(phoneNumber = phone)
         val memberOrders = orders.filter { it.customerPhone == phone }

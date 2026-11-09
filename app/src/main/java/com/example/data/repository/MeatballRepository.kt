@@ -419,6 +419,26 @@ fun addOrUpdateMenuItem(item: MenuItem) {
         persistState()
     }
 
+    fun addOrUpdateMember(phone: String, name: String = "") {
+        val clean = phone.trim()
+        if (clean.isEmpty()) return
+        val existing = _users.value[clean]
+        val updated = if (existing == null) {
+            MemberUser(phoneNumber = clean, name = name.trim(), stamps = 0, totalOrders = 0)
+        } else {
+            existing.copy(name = if (name.trim().isNotEmpty()) name.trim() else existing.name)
+        }
+        _users.value = _users.value + (clean to updated)
+        persistState()
+    }
+
+    fun deleteMember(phone: String) {
+        val clean = phone.trim()
+        if (clean.isEmpty()) return
+        _users.value = _users.value - clean
+        persistState()
+    }
+
     fun addMemberStamp(phone: String, count: Int = 1) {
         val clean = phone.trim()
         if (clean.isEmpty()) return

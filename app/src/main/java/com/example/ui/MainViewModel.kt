@@ -346,6 +346,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.setCustomerPhone(phone, name)
     }
 
+    fun addOrUpdateMember(phone: String, name: String = "") {
+        repository.addOrUpdateMember(phone, name)
+    }
+
+    fun deleteMember(phone: String) {
+        repository.deleteMember(phone)
+    }
+
     fun setFulfillment(type: FulfillmentType) {
         _fulfillmentType.value = type
         if (type == FulfillmentType.DELIVERY) refreshDeliveryQuote()
