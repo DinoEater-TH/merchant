@@ -24,11 +24,6 @@ import com.example.ui.MainViewModel
 import com.example.ui.admin.AdminPinDialog
 import com.example.ui.admin.AdminScreen
 import com.example.ui.admin.ThermalSlipDialog
-import com.example.ui.customer.AddonsDialog
-import com.example.ui.customer.CustomerScreen
-import com.example.ui.customer.OrderHistoryDialog
-import com.example.ui.customer.OrderTrackerDialog
-import com.example.ui.customer.PromptPayDialog
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -55,26 +50,14 @@ class MainActivity : ComponentActivity() {
                 // Keep this device registered for push so alerts arrive even when the app is closed.
                 LaunchedEffect(isAdminMode) {
                     if (isAdminMode) viewModel.registerAdminPushToken()
+                    else viewModel.openPinDialog()
                 }
 
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AnimatedContent(
-                        targetState = isAdminMode,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        label = "MainScreenTransition"
-                    ) { adminActive ->
-                        if (adminActive) {
-                            AdminScreen(viewModel = viewModel)
-                        } else {
-                            CustomerScreen(viewModel = viewModel)
-                        }
+                    if (isAdminMode) {
+                        AdminScreen(viewModel = viewModel)
                     }
-
-                    // Global Modals
-                    AddonsDialog(viewModel = viewModel)
-                    PromptPayDialog(viewModel = viewModel)
-                    OrderTrackerDialog(viewModel = viewModel)
-                    OrderHistoryDialog(viewModel = viewModel)
+                    // Global Modals (admin only)
                     AdminPinDialog(viewModel = viewModel)
                     ThermalSlipDialog(viewModel = viewModel)
                 }
