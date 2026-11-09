@@ -50,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -505,9 +506,22 @@ fun AddMenuItemDialog(
     var saleUnit by remember { mutableStateOf(existing?.saleUnit ?: "ไม้") }
     var stockQty by remember { mutableStateOf(existing?.stockQty?.toString() ?: "30") }
     var defaultResetQty by remember { mutableStateOf(existing?.defaultResetQty?.toString() ?: "30") }
-    var emoji by remember { mutableStateOf(existing?.emoji ?: "🍢") }
+    var emoji by remember { mutableStateOf("") }
     var description by remember { mutableStateOf(existing?.description ?: "") }
     var imageUrl by remember { mutableStateOf(existing?.imageUrl) }
+    var subItems by remember { mutableStateOf(existing?.subItems ?: "") }
+    val subItemList = remember { mutableStateListOf<String>() }
+    // init subItemList from subItems JSON
+    androidx.compose.runtime.LaunchedEffect(subItems) {
+        subItemList.clear()
+        try {
+            val arr = org.json.JSONArray(subItems)
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                if (o.optBoolean("enabled", true)) subItemList.add(o.optString("name", ""))
+            }
+        } catch (e: Exception) { }
+    }
     val context = LocalContext.current
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -551,11 +565,6 @@ fun AddMenuItemDialog(
                         ) {
                             Text(if (imageUrl.isNullOrBlank()) "📷 เลือกรูปอาหาร" else "📷 เปลี่ยนรูปอาหาร", fontSize = 12.sp)
                         }
-                        if (!imageUrl.isNullOrBlank()) {
-                            TextButton(onClick = { imageUrl = null }) {
-                                Text("ลบรูป (ใช้อีโมจิแทน)", fontSize = 11.sp, color = ChiliRed)
-                            }
-                        }
                     }
                 }
                 Text("หมวดหมู่", fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -567,7 +576,7 @@ fun AddMenuItemDialog(
                         FilterChip(
                             selected = categoryId == category.id,
                             onClick = { categoryId = category.id },
-                            label = { Text("${category.iconEmoji} ${category.name}", fontSize = 11.sp) }
+                            label = { Text(category.name, fontSize = 11.sp) }
                         )
                     }
                 }
@@ -578,7 +587,7 @@ fun AddMenuItemDialog(
                         FilterChip(
                             selected = saleUnit == unit,
                             onClick = { saleUnit = unit },
-                            label = { Text(if (unit == "ไม้") "🍢 ขายเป็นไม้" else "🍱 ขายเป็นชุด", fontSize = 11.sp) }
+                            label = { Text(if (unit == "ไม้") "ขายเป็นไม้" else "ขายเป็นชุด", fontSize = 11.sp) }
                         )
                     }
                 }
@@ -591,8 +600,47 @@ fun AddMenuItemDialog(
                     OutlinedTextField(value = stockQty, onValueChange = { stockQty = it }, label = { Text("สต็อกคงเหลือที่จะแสดงให้ลูกค้า") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = defaultResetQty, onValueChange = { defaultResetQty = it }, label = { Text("สต็อก reset รายวัน") }, modifier = Modifier.fillMaxWidth())
                 }
-                OutlinedTextField(value = emoji, onValueChange = { emoji = it }, label = { Text("อีโมจิ") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("คำอธิบาย") }, modifier = Modifier.fillMaxWidth())
+
+                // Sub-items manager (เมนูรอง)
+                Text("เมนูรอง (ให้ลูกค้าเลือก)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                subItemList.forEachIndexed { idx, name ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { subItemList[idx] = it },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        TextButton(onClick = { subItemList.removeAt(idx) }) {
+                            Text("ลบ", color = ChiliRed, fontSize = 11.sp)
+                        }
+                    }
+                }
+                var newSubItem by remember { mutableStateOf("") }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = newSubItem,
+                        onValueChange = { newSubItem = it },
+                        label = { Text("เพิ่มเมนูรอง") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    TextButton(onClick = {
+                        if (newSubItem.isNotBlank()) {
+                            subItemList.add(newSubItem.trim())
+                            newSubItem = ""
+                        }
+                    }) {
+                        Text("เพิ่ม", fontSize = 11.sp)
+                    }
+                }
             }
         },
         confirmButton = {
@@ -618,6 +666,7 @@ fun AddMenuItemDialog(
                         emoji = emoji.ifBlank { "🍢" },
                         description = description.trim(),
                         imageUrl = imageUrl,
+                        subItems = org.json.JSONArray().apply { subItemList.forEach { put(org.json.JSONObject().apply { put("id", "sub_${System.currentTimeMillis()}"); put("name", it); put("enabled", true) }) } }.toString(),
                         sortOrder = existing?.sortOrder ?: 0,
                         packagePrice = existing?.packagePrice ?: 0.0,
                         piecesPerPackage = existing?.piecesPerPackage ?: 0
