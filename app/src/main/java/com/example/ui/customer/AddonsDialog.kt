@@ -53,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -95,6 +96,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
     val distanceError by viewModel.deliveryDistanceError.collectAsState()
     val cartSummary by viewModel.cartSummary.collectAsState()
     val shopInfo by viewModel.shopInfo.collectAsState()
+    val menuItems by viewModel.menuItems.collectAsState()
 
     var tempAddons by remember(currentAddons) { mutableStateOf(currentAddons) }
     var tempFulfillment by remember(fulfillment) { mutableStateOf(fulfillment) }
@@ -398,6 +400,45 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 HorizontalDivider(color = Color(0xFFEEEEEE))
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Sub-items (admin-managed, e.g. เกี๊ยวห่อลูกชิ้น)
+                val subItemSelections = remember { mutableStateMapOf<String, MutableList<String>>() }
+                val cartWithSubItems = remember(cartSummary.orderItems, menuItems) {
+                    cartSummary.orderItems.mapNotNull { oi ->
+                        val m = menuItems.find { it.id == oi.itemId }
+                        val subs = parseSubItems(m?.subItems ?: "")
+                        if (subs.isEmpty()) null else Triple(oi, m!!, subs)
+                    }
+                }
+                if (cartWithSubItems.isNotEmpty()) {
+                    Text(text = "เมนูรอง (เลือกตามจำนวน)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    cartWithSubItems.forEach { (oi, m, subs) ->
+                        val sel = subItemSelections.getOrPut(oi.itemId) { mutableStateListOf() }
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(text = "${m.name} (x${oi.quantity}) — เลือก ${oi.quantity} รายการ", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            subs.filter { it.enabled }.forEach { sub ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = sel.contains(sub.name),
+                                        onCheckedChange = { checked ->
+                                            if (checked) sel.add(sub.name) else sel.remove(sub.name)
+                                        },
+                                        colors = CheckboxDefaults.colors(checkedColor = OrangePrimary)
+                                    )
+                                    Text(text = sub.name, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = Color(0xFFEEEEEE))
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
                 // 3. Free Condiments (Checkboxes)
                 Text(
                     text = "3. เครื่องเคียงและถ้วยน้ำจิ้ม (ฟรี)",
@@ -616,7 +657,9 @@ fun AddonsDialog(viewModel: MainViewModel) {
                 // Cash payment
                 Button(
                     onClick = {
-                        val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList(), skewerLabel = tempAddons.skewerLabel.ifBlank { "เสียบไม้" })
+                        val subItemsJson = org.json.JSONObject()
+subItemSelections.forEach { (k, v) -> subItemsJson.put(k, org.json.JSONArray(v)) }
+val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList(), skewerLabel = tempAddons.skewerLabel.ifBlank { "เสียบไม้" }, selectedSubItemsJson = subItemsJson.toString())
                         viewModel.setAddonOptions(finalOptions)
                         viewModel.setFulfillment(tempFulfillment)
                         if (tempFulfillment == FulfillmentType.DELIVERY) {
@@ -643,7 +686,9 @@ fun AddonsDialog(viewModel: MainViewModel) {
 // Action buttons
                 Button(
                     onClick = {
-                        val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList(), skewerLabel = tempAddons.skewerLabel.ifBlank { "เสียบไม้" })
+                        val subItemsJson = org.json.JSONObject()
+subItemSelections.forEach { (k, v) -> subItemsJson.put(k, org.json.JSONArray(v)) }
+val finalOptions = tempAddons.copy(comment = tempComment, selectedAddons = selectedAddons.toList(), skewerLabel = tempAddons.skewerLabel.ifBlank { "เสียบไม้" }, selectedSubItemsJson = subItemsJson.toString())
                         viewModel.setAddonOptions(finalOptions)
                         viewModel.setFulfillment(tempFulfillment)
                         if (tempFulfillment == FulfillmentType.DELIVERY) {
@@ -671,6 +716,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
 }
 data class AddonItem(val id: String, val name: String, val enabled: Boolean = true)
 data class SkewerItem(val id: String, val label: String, val icon: String = "", val enabled: Boolean = true)
+data class SubItem(val id: String, val name: String, val enabled: Boolean = true)
 
 fun parseAddonItems(config: String): List<AddonItem> {
     if (config.isBlank()) return listOf(
@@ -704,8 +750,23 @@ fun parseSkewerItems(config: String): List<SkewerItem> {
             val o = arr.getJSONObject(i)
             list.add(SkewerItem(o.optString("id", "skewer_$i"), o.optString("label", o.optString("name", "ตัวเลือก")), o.optString("icon", ""), o.optBoolean("enabled", true)))
         }
-        if (list.isEmpty()) listOf(SkewerItem("skewered", "เสียบไม้", "🍢", true), SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "🛍️", true), SkewerItem("separate", "รับไม้เสียบแยก", "🥢", true)) else list
+        if (list.isEmpty()) listOf(SkewerItem("skewered", "เสียบไม้", "🍢", true), SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "", true), SkewerItem("separate", "รับไม้เสียบแยก", "", true)) else list
     } catch (e: Exception) {
-        listOf(SkewerItem("skewered", "เสียบไม้", "🍢", true), SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "🛍️", true), SkewerItem("separate", "รับไม้เสียบแยก", "🥢", true))
+        listOf(SkewerItem("skewered", "เสียบไม้", "🍢", true), SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "", true), SkewerItem("separate", "รับไม้เสียบแยก", "", true))
+    }
+}
+
+fun parseSubItems(config: String): List<SubItem> {
+    if (config.isBlank()) return emptyList()
+    return try {
+        val arr = org.json.JSONArray(config)
+        val list = mutableListOf<SubItem>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            list.add(SubItem(o.optString("id", "sub_$i"), o.optString("name", "เมนูรอง"), o.optBoolean("enabled", true)))
+        }
+        list
+    } catch (e: Exception) {
+        emptyList()
     }
 }

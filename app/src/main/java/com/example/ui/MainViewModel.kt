@@ -468,7 +468,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             fulfillment = _fulfillmentType.value,
             deliveryAddress = if (_fulfillmentType.value == FulfillmentType.DELIVERY) _deliveryAddress.value else "",
             gpsCoordinates = if (_fulfillmentType.value == FulfillmentType.DELIVERY) _gpsCoordinates.value else "",
-            items = calculation.orderItems,
+            items = calculation.orderItems.map { oi ->
+                val subJson = _addonOptions.value.selectedSubItemsJson
+                val subs = try {
+                    if (subJson.isNotBlank()) {
+                        val o = org.json.JSONObject(subJson)
+                        if (o.has(oi.itemId)) o.getJSONArray(oi.itemId).let { arr ->
+                            (0 until arr.length()).map { arr.getString(it) }
+                        }.joinToString(",") else ""
+                    } else ""
+                } catch (e: Exception) { "" }
+                oi.copy(selectedSubItems = subs)
+            },
             options = _addonOptions.value,
             comment = _addonOptions.value.comment,
             subtotal = calculation.subtotal,

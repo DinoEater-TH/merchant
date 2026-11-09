@@ -115,6 +115,7 @@ enum class SauceChoice(val displayName: String) {
 data class AddonOptions(
     val skewer: SkewerOption = SkewerOption.SKEWERED,
     val skewerLabel: String = "",
+    val selectedSubItemsJson: String = "", // JSON: {"itemId":["subName",...]}
     val friedChili: Boolean = true,
     val cucumber: Boolean = true,
     val sauceCup: Boolean = true,
