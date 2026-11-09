@@ -1310,22 +1310,41 @@
       const menuEl = document.getElementById('posMenuList');
       if (menuEl) {
         const items = (state.menuItems || []).filter(m => m.status !== 'HIDDEN');
-        menuEl.innerHTML = items.map(m => `
-          <div class="border rounded-2xl p-3 bg-white flex gap-3">
-            ${m.imageUrl
-              ? `<img src="${m.imageUrl}" class="w-20 h-20 rounded-xl object-cover flex-shrink-0">`
-              : `<div class="w-20 h-20 rounded-xl bg-amber-50 flex items-center justify-center text-4xl flex-shrink-0"></div>`}
-            <div class="flex-1 min-w-0">
-              <div class="text-lg font-bold leading-snug">${m.name}</div>
-              <div class="text-base text-gray-600 mt-0.5">฿${m.price} / ${m.saleUnit || 'ไม้'} • <span class="text-gray-500">${stockText(m)}</span></div>
-              <div class="mt-2 flex items-center gap-3">
-                <button onclick="posChangeQty('${m.id}', -1)" ${posCart[m.id] ? '' : 'disabled'} class="w-14 h-14 rounded-full bg-gray-100 text-gray-700 text-2xl font-bold flex items-center justify-center active:scale-95 transition disabled:opacity-40 disabled:active:scale-100">−</button>
-                <span class="min-w-[2.5rem] text-center text-2xl font-bold tabular-nums">${posCart[m.id] || 0}</span>
-                <button onclick="posChangeQty('${m.id}', 1)" class="w-14 h-14 rounded-full bg-green-600 text-white text-2xl font-bold shadow-sm flex items-center justify-center active:scale-95 transition">+</button>
-              </div>
+        const cats = (state.categories || []).filter(c => c.id !== 'all').sort((a,b) => (a.sort||0)-(b.sort||0));
+        // group items by category, sorted by category sort then item sortOrder
+        const groups = [];
+        const used = new Set();
+        cats.forEach(c => {
+          const ci = items.filter(m => m.categoryId === c.id).sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0));
+          if (ci.length) { groups.push({ cat: c, items: ci }); ci.forEach(m => used.add(m.id)); }
+        });
+        // items without a known category go to "อื่นๆ"
+        const rest = items.filter(m => !used.has(m.id));
+        if (rest.length) groups.push({ cat: { id: '__other', name: 'อื่นๆ', iconEmoji: '' }, items: rest });
+        if (items.length === 0) { menuEl.innerHTML = '<p class="text-base text-gray-400 text-center py-6">ยังไม่มีเมนู</p>'; }
+        else {
+          menuEl.innerHTML = groups.map(g => `
+            <div class="space-y-2">
+              <div class="text-sm font-bold text-gray-700 px-1 pt-2">${g.cat.name || g.cat.id}</div>
+              ${g.items.map(m => `
+                <div class="border rounded-2xl p-3 bg-white flex gap-3">
+                  ${m.imageUrl
+                    ? `<img src="${m.imageUrl}" class="w-20 h-20 rounded-xl object-cover flex-shrink-0">`
+                    : `<div class="w-20 h-20 rounded-xl bg-gray-100 flex-shrink-0"></div>`}
+                  <div class="flex-1 min-w-0">
+                    <div class="text-lg font-bold leading-snug">${m.name}</div>
+                    <div class="text-base text-gray-600 mt-0.5">฿${m.price} / ${m.saleUnit || 'ไม้'} • <span class="text-gray-500">${stockText(m)}</span></div>
+                    <div class="mt-2 flex items-center gap-3">
+                      <button onclick="posChangeQty('${m.id}', -1)" ${posCart[m.id] ? '' : 'disabled'} class="w-14 h-14 rounded-full bg-gray-100 text-gray-700 text-2xl font-bold flex items-center justify-center active:scale-95 transition disabled:opacity-40 disabled:active:scale-100">−</button>
+                      <span class="min-w-[2.5rem] text-center text-2xl font-bold tabular-nums">${posCart[m.id] || 0}</span>
+                      <button onclick="posChangeQty('${m.id}', 1)" class="w-14 h-14 rounded-full bg-green-600 text-white text-2xl font-bold shadow-sm flex items-center justify-center active:scale-95 transition">+</button>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
             </div>
-          </div>
-        `).join('') || '<p class="text-base text-gray-400 text-center py-6">ยังไม่มีเมนู</p>';
+          `).join('');
+        }
       }
       renderPosCart();
     }
