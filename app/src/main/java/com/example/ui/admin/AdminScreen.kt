@@ -193,6 +193,18 @@ fun AdminScreen(viewModel: MainViewModel) {
                     ),
                     modifier = Modifier.testTag("nav_admin_members")
                 )
+                NavigationBarItem(
+                    selected = selectedTab == 8,
+                    onClick = { viewModel.setAdminTab(8) },
+                    icon = { Icon(Icons.Default.PointOfSale, contentDescription = "POS เมนู") },
+                    label = { Text("POS", fontSize = 9.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = OrangePrimary,
+                        selectedTextColor = OrangePrimary,
+                        indicatorColor = Color(0xFFFFF3E0)
+                    ),
+                    modifier = Modifier.testTag("nav_admin_posmenu")
+                )
             }
         }
     ) { innerPadding ->
@@ -210,6 +222,7 @@ fun AdminScreen(viewModel: MainViewModel) {
                 5 -> SettingsView(viewModel = viewModel)
                 6 -> PromotionView(viewModel = viewModel)
                 7 -> MembersView(viewModel = viewModel)
+                8 -> PosMenuView(viewModel = viewModel)
             }
         }
     }
