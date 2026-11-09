@@ -569,17 +569,17 @@
         stampsRequiredForReward: 10,
         rewardDescription: "ฟรี! ชุดลูกชิ้นรวมมิตร 1 ชุด",
         logoType: "EMOJI",
-        logoEmoji: "🍢",
-        stampEmoji: "🍢",
+        logoEmoji: "",
+        stampEmoji: "",
         showScanPayment: true,
         promptPayQrUri: null
       },
       categories: [
-        { id: "all", name: "ทั้งหมด", sort: 0, iconEmoji: "🥢" },
-        { id: "cat_1", name: "ลูกชิ้นทอด", sort: 1, iconEmoji: "🍢" },
-        { id: "cat_2", name: "ลูกชิ้นปิ้ง/นึ่ง", sort: 2, iconEmoji: "🍡" },
-        { id: "cat_3", name: "ชุดสุดคุ้ม Combo", sort: 3, iconEmoji: "⭐" },
-        { id: "cat_4", name: "เครื่องดื่ม & เคียง", sort: 4, iconEmoji: "🥤" }
+        { id: "all", name: "ทั้งหมด", sort: 0, iconEmoji: "" },
+        { id: "cat_1", name: "ลูกชิ้นทอด", sort: 1, iconEmoji: "" },
+        { id: "cat_2", name: "ลูกชิ้นปิ้ง/นึ่ง", sort: 2, iconEmoji: "" },
+        { id: "cat_3", name: "ชุดสุดคุ้ม Combo", sort: 3, iconEmoji: "" },
+        { id: "cat_4", name: "เครื่องดื่ม & เคียง", sort: 4, iconEmoji: "" }
       ],
       menuItems: [],
       orders: [],
@@ -1291,7 +1291,7 @@
           <div class="border rounded-2xl p-3 bg-white flex gap-3">
             ${m.imageUrl
               ? `<img src="${m.imageUrl}" class="w-20 h-20 rounded-xl object-cover flex-shrink-0">`
-              : `<div class="w-20 h-20 rounded-xl bg-amber-50 flex items-center justify-center text-4xl flex-shrink-0">${m.emoji || '🍢'}</div>`}
+              : `<div class="w-20 h-20 rounded-xl bg-amber-50 flex items-center justify-center text-4xl flex-shrink-0"></div>`}
             <div class="flex-1 min-w-0">
               <div class="text-lg font-bold leading-snug">${m.name}</div>
               <div class="text-base text-gray-600 mt-0.5">฿${m.price} / ${m.saleUnit || 'ไม้'} • <span class="text-gray-500">${stockText(m)}</span></div>
@@ -1675,7 +1675,7 @@
       const el = document.getElementById('promoFields');
       if (!el) return;
       if (type === 'buyXgetY') {
-        const menuOpts = (state.menuItems || []).map(m => `<option value="${m.id}">${m.emoji || ''} ${m.name}</option>`).join('');
+        const menuOpts = (state.menuItems || []).map(m => `<option value="${m.id}">${m.name}</option>`).join('');
         el.innerHTML = `
           <div class="flex gap-2">
             <select id="promoBuyItem" class="flex-1 border rounded-lg px-2 py-2 text-sm">${menuOpts}</select>
@@ -1854,7 +1854,7 @@
           const unit = (pkg > 0 && pieces > 0) ? (pkg / pieces) : (m.directCost || 0);
           const profit = (m.price || 0) - unit;
           return `<div class="border-b py-2 space-y-1">
-            <div class="font-bold text-sm">${m.emoji || ''} ${m.name} • ราคาขาย ฿${m.price}</div>
+            <div class="font-bold text-sm">${m.name} • ราคาขาย ฿${m.price}</div>
             <div class="flex gap-2 items-center text-xs">
               <label class="flex-1">ราคาถุง <input type="number" value="${pkg}" id="pkg_${m.id}" class="w-full border rounded px-1 py-1"></label>
               <label class="flex-1">จำนวน/ถุง <input type="number" value="${pieces}" id="pieces_${m.id}" class="w-full border rounded px-1 py-1"></label>
@@ -2121,7 +2121,7 @@
       document.getElementById('s_rewardDesc').value = s.rewardDescription || '';
       const rewardSel = document.getElementById('s_rewardItem');
       if (rewardSel) {
-        rewardSel.innerHTML = (state.menuItems || []).map(m => `<option value="${m.id}">${m.emoji || ''} ${m.name} (฿${m.price})</option>`).join('') || '<option value="">ไม่มีเมนู</option>';
+        rewardSel.innerHTML = (state.menuItems || []).map(m => `<option value="${m.id}">${m.name} (฿${m.price})</option>`).join('') || '<option value="">ไม่มีเมนู</option>';
         if (s.rewardItemId) rewardSel.value = s.rewardItemId;
       }
       const promoChk = document.getElementById('s_showPromo');
@@ -2158,9 +2158,9 @@
       try { skewerItems = JSON.parse(s.skewerOptions || '[]'); } catch (e) { skewerItems = []; }
       if (!Array.isArray(skewerItems) || skewerItems.length === 0) {
         skewerItems = [
-          { id: 'skewered', label: 'เสียบไม้', icon: '🍢', enabled: true },
-          { id: 'in_bag', label: 'ใส่ถุง (ไม่เสียบไม้)', icon: '🛍️', enabled: true },
-          { id: 'separate', label: 'รับไม้เสียบแยก', icon: '🥢', enabled: true }
+          { id: 'skewered', label: 'เสียบไม้', enabled: true },
+          { id: 'in_bag', label: 'ใส่ถุง (ไม่เสียบไม้)', enabled: true },
+          { id: 'separate', label: 'รับไม้เสียบแยก', enabled: true }
         ];
       }
       window.skewerAdminItems = skewerItems;
@@ -2253,7 +2253,7 @@
        container.innerHTML = window.skewerAdminItems.map((it, idx) => `
          <div class="flex items-center gap-2 text-sm">
            <input type="checkbox" ${it.enabled ? 'checked' : ''} onchange="toggleSkewer(${idx}, this.checked)">
-           <span class="flex-1">${it.icon || ''} ${it.label}</span>
+           <span class="flex-1">${it.label}</span>
            <button onclick="editSkewer(${idx})" class="text-blue-500 text-xs">แก้ไข</button>
            <button onclick="removeSkewer(${idx})" class="text-red-500 text-xs">ลบ</button>
          </div>

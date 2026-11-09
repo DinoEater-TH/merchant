@@ -551,7 +551,7 @@ fun SettingsView(viewModel: MainViewModel) {
                             OutlinedTextField(
                                 value = logoEmoji,
                                 onValueChange = { logoEmoji = it },
-                                label = { Text("อิโมจิโลโก้ (เช่น 🍢)") },
+                                label = { Text("อิโมจิโลโก้ (ไม่ใช้)") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -609,7 +609,7 @@ fun SettingsView(viewModel: MainViewModel) {
                         FilterChip(
                             selected = stampType == StampIconType.EMOJI,
                             onClick = { stampType = StampIconType.EMOJI },
-                            label = { Text("⭐ ไอคอนอิโมจิ", fontSize = 12.sp) },
+                            label = { Text("ไอคอน (ไม่ใช้)", fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = OrangePrimary,
                                 selectedLabelColor = Color.White
@@ -752,7 +752,7 @@ fun SettingsView(viewModel: MainViewModel) {
                             OutlinedTextField(
                                 value = stampEmoji,
                                 onValueChange = { stampEmoji = it },
-                                label = { Text("ไอคอนแสตมป์ (เช่น 🍢, ⭐, 🥟)") },
+                                label = { Text("ไอคอนแสตมป์ (ไม่ใช้)") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )

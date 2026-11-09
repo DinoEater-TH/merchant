@@ -238,7 +238,7 @@ fun OrderHistoryDialog(viewModel: MainViewModel) {
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "🍢", fontSize = 48.sp)
+                            Text(text = "", fontSize = 48.sp)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "ยังไม่มีประวัติการสั่งซื้อในหมวดนี้",
@@ -468,7 +468,7 @@ fun OrderHistoryCard(
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        text = "🍢 ${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }} • ${order.options.sauceChoice.displayName}",
+                        text = "${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }} • ${order.options.sauceChoice.displayName}",
                         fontSize = 11.sp,
                         color = Color.DarkGray
                     )

@@ -51,19 +51,19 @@ val promptPayQrUri: String? = null,
     val logoType: LogoType = LogoType.PRESET,
     val logoUri: String? = null,
     val logoPresetId: String = "preset_logo_retro",
-    val logoEmoji: String = "🍢",
+    val logoEmoji: String = "",
     // Stamp Icon Customization
     val stampType: StampIconType = StampIconType.PRESET,
     val stampIconUri: String? = null,
     val stampPresetId: String = "preset_stamp_badge",
-    val stampEmoji: String = "🍢"
+    val stampEmoji: String = ""
 )
 
 data class Category(
     val id: String,
     val name: String,
     val sort: Int,
-    val iconEmoji: String = "🍢"
+    val iconEmoji: String = ""
 )
 
 enum class ItemStatus {
@@ -84,7 +84,7 @@ data class MenuItem(
     val defaultResetQty: Int = 50,
     val isBestseller: Boolean = false,
     val saleUnit: String = "ไม้",
-    val emoji: String = "🍢",
+    val emoji: String = "",
     val description: String = "",
 val imageUrl: String? = null,
 val subItems: String = "", // JSON array: [{"id":..,"name":..,"enabled":..}]

@@ -390,7 +390,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
                             colors = RadioButtonDefaults.colors(selectedColor = OrangePrimary)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "${option.icon} ${option.label}", fontSize = 14.sp)
+                        Text(text = if (option.icon.isBlank()) option.label else "${option.icon} ${option.label}", fontSize = 14.sp)
                     }
                 }
 
@@ -670,7 +670,7 @@ fun AddonsDialog(viewModel: MainViewModel) {
     }
 }
 data class AddonItem(val id: String, val name: String, val enabled: Boolean = true)
-data class SkewerItem(val id: String, val label: String, val icon: String = "🍢", val enabled: Boolean = true)
+data class SkewerItem(val id: String, val label: String, val icon: String = "", val enabled: Boolean = true)
 
 fun parseAddonItems(config: String): List<AddonItem> {
     if (config.isBlank()) return listOf(
@@ -693,16 +693,16 @@ fun parseAddonItems(config: String): List<AddonItem> {
 
 fun parseSkewerItems(config: String): List<SkewerItem> {
     if (config.isBlank()) return listOf(
-        SkewerItem("skewered", "เสียบไม้", "🍢", true),
-        SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "🛍️", true),
-        SkewerItem("separate", "รับไม้เสียบแยก", "🥢", true)
+        SkewerItem("skewered", "เสียบไม้", "", true),
+        SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "", true),
+        SkewerItem("separate", "รับไม้เสียบแยก", "", true)
     )
     return try {
         val arr = org.json.JSONArray(config)
         val list = mutableListOf<SkewerItem>()
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
-            list.add(SkewerItem(o.optString("id", "skewer_$i"), o.optString("label", o.optString("name", "ตัวเลือก")), o.optString("icon", "🍢"), o.optBoolean("enabled", true)))
+            list.add(SkewerItem(o.optString("id", "skewer_$i"), o.optString("label", o.optString("name", "ตัวเลือก")), o.optString("icon", ""), o.optBoolean("enabled", true)))
         }
         if (list.isEmpty()) listOf(SkewerItem("skewered", "เสียบไม้", "🍢", true), SkewerItem("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "🛍️", true), SkewerItem("separate", "รับไม้เสียบแยก", "🥢", true)) else list
     } catch (e: Exception) {
