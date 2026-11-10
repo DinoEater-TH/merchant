@@ -49,8 +49,16 @@ class MainActivity : ComponentActivity() {
 
                 // Keep this device registered for push so alerts arrive even when the app is closed.
                 LaunchedEffect(isAdminMode) {
-                    if (isAdminMode) viewModel.registerAdminPushToken()
-                    else viewModel.openPinDialog()
+                    if (isAdminMode) {
+                        viewModel.registerAdminPushToken()
+                        // Auto-start order alert service if enabled
+                        val prefs = getSharedPreferences("order_alert_service", android.content.Context.MODE_PRIVATE)
+                        if (prefs.getBoolean("enabled", false)) {
+                            com.example.util.OrderAlertService.start(this@MainActivity)
+                        }
+                    } else {
+                        viewModel.openPinDialog()
+                    }
                 }
 
                 Surface(modifier = Modifier.fillMaxSize()) {

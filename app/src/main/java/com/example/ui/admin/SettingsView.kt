@@ -126,6 +126,9 @@ fun SettingsView(viewModel: MainViewModel) {
     // Sound settings (local, not synced to Firebase)
     var soundEnabled by remember { mutableStateOf(com.example.util.SoundHelper.soundEnabled) }
     var soundVolume by remember { mutableStateOf(com.example.util.SoundHelper.volume) }
+    // Foreground service: keep listening for new orders even when app is closed
+    val servicePrefs = context.getSharedPreferences("order_alert_service", Context.MODE_PRIVATE)
+    var serviceEnabled by remember { mutableStateOf(servicePrefs.getBoolean("enabled", false)) }
     var isLocatingShop by remember { mutableStateOf(false) }
     var showLongdoMapPicker by remember { mutableStateOf(false) }
 
@@ -983,6 +986,23 @@ fun SettingsView(viewModel: MainViewModel) {
                         },
                         valueRange = 0f..100f,
                         modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text("บริการฟังออเดอร์ตลอด (แม้ปิดแอป)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = serviceEnabled, onCheckedChange = { enabled ->
+                            serviceEnabled = enabled
+                            servicePrefs.edit().putBoolean("enabled", enabled).apply()
+                            if (enabled) com.example.util.OrderAlertService.start(context)
+                            else com.example.util.OrderAlertService.stop(context)
+                        })
+                        Text("เปิดบริการ (แสดง notification ค้าง)", fontSize = 13.sp)
+                    }
+                    Text(
+                        "เปิดไว้ = แอปทำงานต่อเนื่อง ได้ยินเสียงเมื่อมีออเดอร์ใหม่แม้ปิดหน้าจอ (ใช้แบตมากขึ้น)",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
