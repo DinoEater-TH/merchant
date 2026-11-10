@@ -38,6 +38,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val repository = MeatballRepository(application)
     val firebaseSync = FirebaseSyncManager(application, repository).apply { start() }
+    val syncStatus: StateFlow<String> = firebaseSync.status
 
     val shopInfo = repository.shopInfo
     val categories = repository.categories
@@ -607,6 +608,65 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun removeOrderItem(orderId: String, itemId: String) {
         repository.removeOrderItem(orderId, itemId)
+    }
+
+    fun retrySync() {
+        firebaseSync.retry()
+    }
+
+    /**
+     * Creates a completed POS (walk-in) order: deducts stock, awards member
+     * stamps and syncs to Firebase. Returns the new order id, or null when the
+     * cart is empty / items are no longer available.
+     */
+    fun submitPosOrder(cart: Map<String, Int>, phone: String): String? {
+        val items = cart.mapNotNull { (id, qty) ->
+            if (qty <= 0) null
+            else menuItems.value.find { it.id == id }?.let { m ->
+                OrderItem(
+                    itemId = m.id,
+                    name = m.name,
+                    price = m.price,
+                    directCost = m.directCost,
+                    quantity = qty
+                )
+            }
+        }
+        if (items.isEmpty()) return null
+
+        val subtotal = items.sumOf { it.price * it.quantity }
+        val discount = if (shopInfo.value.promoDiscountEnabled && subtotal >= shopInfo.value.minOrderForDiscount) {
+            shopInfo.value.discountAmount
+        } else {
+            0.0
+        }
+        val total = (subtotal - discount).coerceAtLeast(0.0)
+
+        var orderId = "ORD-" + (100..999).random()
+        var guard = 0
+        while (orders.value.any { it.id == orderId } && guard < 50) {
+            orderId = "ORD-" + (100..999).random()
+            guard++
+        }
+
+        val order = Order(
+            id = orderId,
+            customerPhone = phone.trim(),
+            isGuest = phone.isBlank(),
+            fulfillment = FulfillmentType.PICKUP,
+            items = items,
+            comment = "POS (เงินสด)",
+            subtotal = subtotal,
+            discount = discount,
+            deliveryFee = 0.0,
+            totalAmount = total,
+            status = OrderStatus.COMPLETED,
+            timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date()),
+            slipAttached = false,
+            slipImageUri = null
+        )
+        repository.addOrder(order)
+        return orderId
     }
 
     fun deleteOrder(orderId: String) {

@@ -257,6 +257,22 @@ class FirebaseSyncManager(
         listener = null
     }
 
+    /** Re-attempt the Firebase connection (used by the "เชื่อมต่อใหม่" button). */
+    fun retry() {
+        scope.launch {
+            try {
+                _status.value = "กำลังเชื่อมต่อ Firebase ใหม่..."
+                val authResult = FirebaseAuth.getInstance().signInAnonymously().await()
+                fetchInitialViaRest(authResult.user?.getIdToken(false)?.await()?.token)
+                listener?.let { stateRef.removeEventListener(it) }
+                listener = null
+                observeRemote()
+            } catch (e: Exception) {
+                _status.value = "Firebase ยังไม่พร้อม: ${e.message ?: "unknown"}"
+            }
+        }
+    }
+
     companion object {
         private const val DATABASE_URL =
             "https://dinoeater-merchant-default-rtdb.asia-southeast1.firebasedatabase.app"

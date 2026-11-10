@@ -1,10 +1,12 @@
 package com.example.ui.admin
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +29,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -201,6 +204,26 @@ fun AdminScreen(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            val syncStatus by viewModel.syncStatus.collectAsState()
+            if (!syncStatus.startsWith("เชื่อมต่อ Firebase แล้ว")) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFFF3E0))
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = syncStatus,
+                        fontSize = 11.sp,
+                        color = Color(0xFF8A4B00),
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { viewModel.retrySync() }) {
+                        Text("เชื่อมต่อใหม่", fontSize = 11.sp, color = OrangePrimary)
+                    }
+                }
+            }
             when (selectedTab) {
                 0 -> OrderManagementView(viewModel = viewModel)
                 1 -> PosMenuView(viewModel = viewModel)
