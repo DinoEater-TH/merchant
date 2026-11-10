@@ -631,28 +631,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * stamps and syncs to Firebase. Returns the new order id, or null when the
      * cart is empty / items are no longer available.
      */
-    fun submitPosOrder(cart: Map<String, Int>, phone: String): String? {
-        val items = cart.mapNotNull { (id, qty) ->
-            if (qty <= 0) null
-            else menuItems.value.find { it.id == id }?.let { m ->
-                OrderItem(
-                    itemId = m.id,
-                    name = m.name,
-                    price = m.price,
-                    directCost = m.directCost,
-                    quantity = qty
-                )
-            }
-        }
-        if (items.isEmpty()) return null
-
-        val subtotal = items.sumOf { it.price * it.quantity }
-        val discount = if (shopInfo.value.promoDiscountEnabled && subtotal >= shopInfo.value.minOrderForDiscount) {
-            shopInfo.value.discountAmount
-        } else {
-            0.0
-        }
-        val total = (subtotal - discount).coerceAtLeast(0.0)
+    fun submitPosOrder(cart: Map<String, Int>, phone: String, note: String = ""): String? {
+        val preview = posOrderPreview(cart, phone) ?: return null
+        val items = preview.orderItems
+        val subtotal = preview.subtotal
+        val discount = preview.discount
+        val total = preview.totalAmount
 
         var orderId = "ORD-" + (100..999).random()
         var guard = 0
@@ -667,7 +651,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             isGuest = phone.isBlank(),
             fulfillment = FulfillmentType.PICKUP,
             items = items,
-            comment = "POS (เงินสด)",
+            comment = buildString {
+                append("POS (เงินสด)")
+                if (note.isNotBlank()) append(" - ").append(note.trim())
+            },
             subtotal = subtotal,
             discount = discount,
             deliveryFee = 0.0,
@@ -679,6 +666,99 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
         repository.addOrder(order)
         return orderId
+    }
+
+    /** Everything the POS review dialog shows, in one place. */
+    data class PosReview(
+        val orderItems: List<OrderItem>,
+        val subtotal: Double,
+        val appliedPromos: List<String>,
+        val discount: Double,
+        val totalAmount: Double,
+        val memberName: String,
+        val memberStamps: Int,
+        val stampsEarned: Int,
+        val stampsPerReward: Int,
+        val stampsAfter: Int,
+        val rewardDescription: String,
+        val rewardItemName: String,
+        val rewardReached: Boolean
+    ) {
+        val totalItemsCount: Int get() = orderItems.sumOf { it.quantity }
+    }
+
+    /**
+     * Builds the POS review (items, applicable promotions, prices, member stamps)
+     * without touching any data. Returns null when nothing is selected.
+     */
+    fun posOrderPreview(cart: Map<String, Int>, phone: String): PosReview? {
+        val items = cart.entries
+            .filter { it.value > 0 }
+            .mapNotNull { (id, qty) ->
+                menuItems.value.find { it.id == id }?.let { m ->
+                    OrderItem(
+                        itemId = m.id,
+                        name = m.name,
+                        price = m.price,
+                        directCost = m.directCost,
+                        quantity = qty
+                    )
+                }
+            }
+        if (items.isEmpty()) return null
+
+        val shop = shopInfo.value
+        val subtotal = items.sumOf { it.price * it.quantity }
+        val totalQty = items.sumOf { it.quantity }
+        val applied = mutableListOf<String>()
+        var discount = 0.0
+
+        if (shop.promoDiscountEnabled && subtotal >= shop.minOrderForDiscount) {
+            discount += shop.discountAmount
+            applied.add("ซื้อครบ ฿${shop.minOrderForDiscount.toInt()} ลด ฿${shop.discountAmount.toInt()}")
+        }
+        customPromos.value.filter { it.enabled }.forEach { promo ->
+            val label = promo.name.ifBlank { "โปรโมชั่น" }
+            when (promo.type) {
+                "percentOff" -> if (totalQty >= promo.minQty) {
+                    discount += subtotal * promo.discountPercent / 100.0
+                    applied.add("$label: ซื้อครบ ${promo.minQty} รายการ ลด ${promo.discountPercent.toInt()}%")
+                }
+                "fixedOff" -> if (totalQty >= promo.minQty) {
+                    discount += promo.discountAmount
+                    applied.add("$label: ซื้อครบ ${promo.minQty} รายการ ลด ฿${promo.discountAmount.toInt()}")
+                }
+                "buyXgetY" -> if (totalQty >= promo.buyQty && promo.buyQty > 0) {
+                    val freeQty = (totalQty / promo.buyQty) * promo.getQty
+                    applied.add("$label: ซื้อ ${promo.buyQty} แถม ${promo.getQty} (ได้ฟรี $freeQty รายการ)")
+                }
+            }
+        }
+        discount = discount.coerceAtMost(subtotal)
+        val total = (subtotal - discount).coerceAtLeast(0.0)
+
+        val member = users.value[phone.trim()]
+        val earned = if (phone.trim().isNotBlank()) repository.stampsForAmount(total) else 0
+        val perReward = shop.stampsRequiredForReward.coerceAtLeast(1)
+        val currentStamps = member?.stamps ?: 0
+        val after = currentStamps + earned
+        val rewardItem = menuItems.value.find { it.id == shop.rewardItemId }
+
+        return PosReview(
+            orderItems = items,
+            subtotal = subtotal,
+            appliedPromos = applied,
+            discount = discount,
+            totalAmount = total,
+            memberName = member?.name ?: "",
+            memberStamps = currentStamps,
+            stampsEarned = earned,
+            stampsPerReward = perReward,
+            stampsAfter = after,
+            rewardDescription = shop.rewardDescription,
+            rewardItemName = rewardItem?.name ?: "",
+            rewardReached = shop.promoRewardEnabled && after >= perReward
+        )
     }
 
     fun deleteOrder(orderId: String) {

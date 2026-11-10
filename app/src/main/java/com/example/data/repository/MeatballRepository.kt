@@ -248,10 +248,12 @@ class MeatballRepository(context: Context? = null) {
      * 1 stamp per [ShopInfo.spendPerStamp] baht. Orders below that amount earn
      * no stamp. A value of 0 (or less) falls back to 1 stamp per order.
      */
-    private fun stampsEarnedFor(totalAmount: Double): Int {
+    fun stampsForAmount(totalAmount: Double): Int {
         val per = _shopInfo.value.spendPerStamp
         return if (per <= 0.0) 1 else (totalAmount / per).toInt().coerceAtLeast(0)
     }
+
+    private fun stampsEarnedFor(totalAmount: Double): Int = stampsForAmount(totalAmount)
 
     fun updateOrderStatus(orderId: String, newStatus: OrderStatus) {
         // Cancelling an order returns its limited-stock items to inventory.

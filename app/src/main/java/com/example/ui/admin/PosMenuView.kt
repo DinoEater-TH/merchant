@@ -51,6 +51,7 @@ fun PosMenuView(viewModel: MainViewModel) {
     var selectedCategory by remember { mutableStateOf("all") }
     var phone by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
+    var showReview by remember { mutableStateOf(false) }
 
     // map categoryId -> display name (Thai). Fall back to id when no category found.
     fun categoryName(id: String): String {
@@ -63,6 +64,7 @@ fun PosMenuView(viewModel: MainViewModel) {
     val filtered = remember(menuItems, selectedCategory) {
         menuItems.filter { it.status.name != "HIDDEN" && (selectedCategory == "all" || it.categoryId == selectedCategory) }
     }
+    val review = if (showReview) viewModel.posOrderPreview(cart.toMap(), phone) else null
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         // Category chips
@@ -162,11 +164,10 @@ fun PosMenuView(viewModel: MainViewModel) {
 
         // Cart summary
         Spacer(modifier = Modifier.height(8.dp))
-        val subtotal = cart.entries.sumOf { (id, q) ->
-            (menuItems.find { it.id == id }?.price ?: 0.0) * q
-        }
-        val discount = if (shopInfo.promoDiscountEnabled && subtotal >= shopInfo.minOrderForDiscount) shopInfo.discountAmount else 0.0
-        val total = (subtotal - discount).coerceAtLeast(0.0)
+        val preview = viewModel.posOrderPreview(cart.toMap(), phone)
+        val subtotal = preview?.subtotal ?: 0.0
+        val discount = preview?.discount ?: 0.0
+        val total = preview?.totalAmount ?: 0.0
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
@@ -195,22 +196,36 @@ fun PosMenuView(viewModel: MainViewModel) {
                             message = "กรุณาเลือกรายการก่อน"
                             return@Button
                         }
-                        val orderId = viewModel.submitPosOrder(cart.toMap(), phone)
-                        if (orderId == null) {
-                            message = "บันทึกไม่สำเร็จ: ไม่พบรายการเมนู"
-                        } else {
-                            message = "สร้างออเดอร์ $orderId สำเร็จ ฿${String.format("%.0f", total)}"
-                            cart.clear()
-                        }
+                        message = ""
+                        showReview = true
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("ยืนยันขาย (เงินสด)")
+                    Text("ตรวจสอบออเดอร์")
                 }
                 if (message.isNotBlank()) {
                     Text(message, fontSize = 12.sp, color = OrangePrimary)
                 }
             }
+        }
+
+        // Review dialog: items, promotions, prices and stamps before confirming
+        if (showReview && review != null) {
+            PosOrderReviewDialog(
+                review = review,
+                phone = phone,
+                onConfirm = { _ ->
+                    val orderId = viewModel.submitPosOrder(cart.toMap(), phone)
+                    showReview = false
+                    if (orderId == null) {
+                        message = "บันทึกไม่สำเร็จ: ไม่พบรายการเมนู"
+                    } else {
+                        message = "สร้างออเดอร์ $orderId สำเร็จ ฿${String.format("%.0f", review.totalAmount)}"
+                        cart.clear()
+                    }
+                },
+                onDismiss = { showReview = false }
+            )
         }
     }
 }

@@ -1,7 +1,7 @@
 {
-  "versionCode": 2,
-  "versionName": "1.1",
+  "versionCode": 3,
+  "versionName": "1.2",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "เพิ่มระบบอัปเดตในแอป (แจ้งเตือนเวอร์ชันใหม่ + ดาวน์โหลดในแอป) และประวัติการซื้อถาวรของสมาชิก พร้อมกติกาแต้มตามยอดซื้อ",
+  "notes": "เพิ่มหน้าต่างตรวจสอบออเดอร์ก่อนยืนยันขายในหน้า POS (รายการสินค้า โปรโมชั่นที่เข้าเงื่อนไข ยอดเงินสุทธิ และแต้มสะสมของสมาชิก)",
   "mandatory": false
 }
