@@ -152,27 +152,21 @@
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
         <h3 class="font-bold text-base">สรุปออเดอร์หน้าร้าน</h3>
         <div id="posCart" class="text-base space-y-1.5"></div>
-        <div class="flex justify-between text-sm text-gray-500"><span>ส่วนลด</span><span id="posDiscount">฿0</span></div>
-        <div class="flex justify-between font-bold text-lg"><span>ยอดรวม</span><span id="posTotal">฿0</span></div>
+        <div id="posPromoApplied" class="text-xs space-y-0.5"></div>
+        <div class="flex justify-between text-sm text-gray-500"><span>ยอดรวมสินค้า</span><span id="posSubtotal">฿0</span></div>
+        <div class="flex justify-between text-sm text-gray-500"><span>ส่วนลดรวม</span><span id="posDiscount">-฿0</span></div>
+        <div class="flex justify-between font-bold text-lg"><span>ยอดสุทธิที่ต้องเก็บ</span><span id="posTotal" class="text-orange-600">฿0</span></div>
+        <div id="posStampInfo" class="text-xs text-gray-500"></div>
+        <input id="posPhoneInput" type="text" placeholder="เบอร์สมาชิก (ไม่บังคับ)" class="w-full border rounded-lg px-3 py-2 text-sm" oninput="renderPosCart()">
+        <div id="posResult" class="text-xs text-gray-600"></div>
         <div class="flex gap-2">
-          <button onclick="openPosReview()" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm">ตรวจสอบออเดอร์ / ยืนยันขาย</button>
+          <button onclick="posConfirmOrder('cash', true)" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm">ยืนยันขาย</button>
           <button onclick="posConfirmOrder('scan')" class="hidden">📱 สแกน</button>
         </div>
       </div>
 
     </section>
 
-    <!-- POS Order Review Modal -->
-    <div id="posReviewModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-2xl max-h-[90vh] overflow-auto">
-        <h3 class="font-bold text-base">ตรวจสอบออเดอร์ก่อนยืนยันขาย</h3>
-        <div id="posReviewBody" class="text-sm space-y-2.5"></div>
-        <div class="flex gap-2 pt-1">
-          <button onclick="closePosReview()" class="bg-gray-200 text-gray-700 flex-1 py-2.5 rounded-lg text-sm font-bold">กลับไปแก้ไข</button>
-          <button id="posReviewConfirm" onclick="posConfirmOrder('cash', true)" class="bg-orange-600 text-white flex-1 py-2.5 rounded-lg text-sm font-bold">ยืนยันขาย</button>
-        </div>
-      </div>
-    </div>
 
     <!-- Member History Modal -->
     <div id="memberModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
@@ -236,7 +230,7 @@
         <input id="posNameInput2" type="text" placeholder="ชื่อ (ไม่จำเป็น)" class="w-full border rounded-lg px-3 py-2 text-sm">
         <div class="flex gap-2">
           <button onclick="addMemberFromTab()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm">เพิ่มสมาชิก</button>
-          <button onclick="redeemPosReward()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm">แลกรางวัล</button>
+          <button onclick="redeemMemberReward()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm">แลกรางวัล</button>
         </div>
         <div id="posResult2" class="text-sm text-gray-600"></div>
       </div>
@@ -1264,19 +1258,38 @@
     function addMemberFromTab() {
       const p = document.getElementById('posPhoneInput2').value.trim();
       const n = document.getElementById('posNameInput2').value.trim();
-      document.getElementById('posPhoneInput').value = p;
-      document.getElementById('posNameInput').value = n;
-      addMember();
+      const out = document.getElementById('posResult2');
+      if (!/^0\d{9}$/.test(p)) { out.textContent = 'เบอร์โทรไม่ถูกต้อง'; return; }
+      if (!state.users) state.users = {};
+      if (state.users[p]) { out.textContent = 'เบอร์โทรนี้มีสมาชิกอยู่แล้ว'; return; }
+      state.users[p] = { phoneNumber: p, name: n, stamps: 0, totalOrders: 0, lastOrder: null, history: [] };
+      out.textContent = `เพิ่มสมาชิก ${p} แล้ว`;
       document.getElementById('posPhoneInput2').value = '';
       document.getElementById('posNameInput2').value = '';
+      renderUsers(); schedulePush();
+    }
+
+    /** Redeem a reward using the phone typed in the members tab. */
+    function redeemMemberReward() {
+      const phone = document.getElementById('posPhoneInput2').value.trim();
+      const out = document.getElementById('posResult2');
+      const si = state.shopInfo || {};
+      if (si.promoRewardEnabled === false) { out.textContent = 'โปรโมชั่นแลกรางวัลถูกปิดอยู่'; return; }
+      if (!phone || !state.users || !state.users[phone]) { out.textContent = 'ไม่พบสมาชิก'; return; }
+      const cost = si.stampsRequiredForReward || 10;
+      if ((state.users[phone].stamps || 0) < cost) { out.textContent = 'แต้มไม่พอ'; return; }
+      state.users[phone].stamps -= cost;
+      renderUsers(); schedulePush();
+      out.textContent = `แลกรางวัลให้ ${phone} แล้ว: ${rewardItemName()} ฟรี 1 รายการ`;
     }
     function addMember() {
       const phone = document.getElementById('posPhoneInput').value.trim();
-      const name = document.getElementById('posNameInput').value.trim();
+      const nameInput = document.getElementById('posNameInput');
+      const name = nameInput ? nameInput.value.trim() : '';
       if (!/^0\d{9}$/.test(phone)) { document.getElementById('posResult').textContent = 'เบอร์โทรไม่ถูกต้อง'; return; }
       if (!state.users) state.users = {};
       if (state.users[phone]) { document.getElementById('posResult').textContent = 'เบอร์โทรนี้มีสมาชิกอยู่แล้ว'; return; }
-      state.users[phone] = { phoneNumber: phone, name, stamps: 0, totalOrders: 0, lastOrder: null };
+      state.users[phone] = { phoneNumber: phone, name, stamps: 0, totalOrders: 0, lastOrder: null, history: [] };
       document.getElementById('posResult').textContent = `เพิ่มสมาชิก ${phone} แล้ว`;
       renderUsers(); schedulePush();
     }
@@ -1462,66 +1475,44 @@
       return { phone, earned, current, after, perReward, rewardReached: si.promoRewardEnabled !== false && after >= perReward, rewardName: rewardItem ? rewardItem.name : '', rewardDesc: si.rewardDescription || '' };
     }
 
-    /** In-app review screen shown before the sale is written. */
-    function openPosReview() {
-      const entries = Object.entries(posCart);
-      if (!entries.length) { alert('กรุณาเลือกรายการก่อน'); return; }
-      const t = posTotals();
-      const mi = posMemberInfo(t.total);
-      const itemRows = entries.map(([id, qty]) => {
-        const m = (state.menuItems || []).find(x => x.id === id) || { name: id, price: 0 };
-        return `<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${m.name} <span style="color:#888">x${qty}</span></span><span><b>฿${(m.price || 0) * qty}</b></span></div>`;
-      }).join('');
-      const promoRows = t.applied.length
-        ? t.applied.map(p => `<div style="color:#EA580C;font-size:12px">• ${p}</div>`).join('')
-        : '<div style="color:#9CA3AF;font-size:12px">ไม่มีโปรโมชั่นที่เข้าเงื่อนไขในออเดอร์นี้</div>';
-      const memberBlock = mi.phone
-        ? `<div><b>สมาชิก:</b> ${mi.phone}</div>
-           <div>แต้มที่มีอยู่ ${mi.current} + ออเดอร์นี้ ${mi.earned} = <b>${mi.after} ดวง</b></div>
-           ${mi.earned === 0 ? '<div style="color:#9CA3AF;font-size:11px">ยอดนี้ยังไม่ถึงเกณฑ์รับแต้ม</div>' : ''}
-           ${mi.rewardReached ? `<div style="color:#EA580C;font-weight:bold">ถึงเกณฑ์แลกฟรีแล้ว: ${mi.rewardName || mi.rewardDesc || 'เมนูรางวัล'}</div>` : ''}`
-        : '<div style="color:#9CA3AF">ขายแบบลูกค้าทั่วไป (ไม่สะสมแต้ม)</div>';
 
-      const el = document.getElementById('posReviewBody');
-      if (!el) { posConfirmOrder('cash'); return; }
-      el.innerHTML = `
-        <div style="background:#F7F7F8;border-radius:10px;padding:10px">
-          <div style="font-weight:bold;font-size:13px">รายการ (${t.totalQty} ชิ้น)</div>
-          ${itemRows}
-        </div>
-        <div style="background:#F7F7F8;border-radius:10px;padding:10px">
-          <div style="font-weight:bold;font-size:13px">โปรโมชั่นที่ใช้ได้</div>
-          ${promoRows}
-        </div>
-        <div style="background:#F7F7F8;border-radius:10px;padding:10px">
-          <div style="display:flex;justify-content:space-between"><span>ยอดรวมสินค้า</span><span>฿${t.subtotal}</span></div>
-          <div style="display:flex;justify-content:space-between"><span>ส่วนลดรวม</span><span style="color:#EA580C">-฿${t.discount}</span></div>
-          <div style="display:flex;justify-content:space-between;padding-top:6px"><b>ยอดสุทธิที่ต้องเก็บ</b><b style="color:#EA580C;font-size:16px">฿${t.total}</b></div>
-        </div>
-        <div style="background:#F7F7F8;border-radius:10px;padding:10px">
-          <div style="font-weight:bold;font-size:13px">สมาชิกและแต้มสะสม</div>
-          ${memberBlock}
-        </div>`;
-      document.getElementById('posReviewConfirm').textContent = `ยืนยันขาย ฿${t.total}`;
-      document.getElementById('posReviewModal').classList.remove('hidden');
-    }
-    function closePosReview() {
-      document.getElementById('posReviewModal').classList.add('hidden');
-    }
+    function safeName() { var e = document.getElementById('posNameInput'); return e ? e.value.trim() : ''; }
     function renderPosCart() {
       const el = document.getElementById('posCart');
       if (!el) return;
       const entries = Object.entries(posCart);
+      const t = posTotals();
       if (!entries.length) { el.innerHTML = '<p class="text-xs text-gray-400">ยังไม่ได้เลือกรายการ</p>'; }
       else {
         el.innerHTML = entries.map(([id, qty]) => {
           const m = (state.menuItems || []).find(x => x.id === id) || { name: id, price: 0 };
-          return `<div class="flex justify-between"><span>${m.name} x${qty}</span><span>฿${(m.price||0)*qty}</span></div>`;
+          return `<div class="flex justify-between"><span>${m.name} <span class="text-gray-400 text-xs">฿${m.price || 0} x${qty}</span></span><span class="font-bold">฿${(m.price || 0) * qty}</span></div>`;
         }).join('');
       }
-      const t = posTotals();
+      const promoEl = document.getElementById('posPromoApplied');
+      if (promoEl) {
+        promoEl.innerHTML = entries.length
+          ? (t.applied.length
+            ? t.applied.map(p => `<div class="text-orange-600">• ${p}</div>`).join('')
+            : '<div class="text-gray-400">ไม่มีโปรโมชั่นที่เข้าเงื่อนไขในออเดอร์นี้</div>')
+          : '';
+      }
+      const subEl = document.getElementById('posSubtotal');
+      if (subEl) subEl.textContent = `฿${t.subtotal}`;
       document.getElementById('posDiscount').textContent = `-฿${t.discount}`;
       document.getElementById('posTotal').textContent = `฿${t.total}`;
+      const stampEl = document.getElementById('posStampInfo');
+      if (stampEl) {
+        const phone = document.getElementById('posPhoneInput').value.trim();
+        if (!entries.length) { stampEl.textContent = ''; }
+        else if (!phone) { stampEl.textContent = 'ลูกค้าทั่วไป (ไม่สะสมแต้ม)'; }
+        else {
+          const mi = posMemberInfo(t.total);
+          stampEl.textContent = `แต้ม: ${mi.current} + ${mi.earned} = ${mi.after} ดวง` +
+            (mi.earned === 0 ? ' (ยอดยังไม่ถึงเกณฑ์)' : '') +
+            (mi.rewardReached ? ` • ถึงเกณฑ์แลกฟรี: ${mi.rewardName || mi.rewardDesc || 'เมนูรางวัล'}` : '');
+        }
+      }
     }
     function posConfirmOrder(method, skipPrompt) {
       const entries = Object.entries(posCart);
@@ -1536,7 +1527,6 @@
         const msg = `สรุปออเดอร์ POS\n${lines}\n----------------\nยอดรวม: ฿${t.subtotal}\nส่วนลด: -฿${t.discount}\nราคาสุทธิ: ฿${t.total}\n\nยืนยันการขายเรียบร้อย?`;
         if (!confirm(msg)) return;
       }
-      closePosReview();
       const items = entries.map(([id, qty]) => {
         const m = (state.menuItems || []).find(x => x.id === id) || { name: id, price: 0, directCost: 0 };
         return { itemId: id, name: m.name, price: m.price, directCost: m.directCost || 0, quantity: qty };
@@ -1570,7 +1560,7 @@
       // member stamps + permanent purchase history (spend-based)
       if (phone) {
         if (!state.users) state.users = {};
-        if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: document.getElementById('posNameInput') ? document.getElementById('posNameInput').value.trim() : '', stamps: 0, totalOrders: 0, lastOrder: order, history: [] };
+        if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: safeName(), stamps: 0, totalOrders: 0, lastOrder: order, history: [] };
         const mu = state.users[phone];
         const earned = stampsForAmount(order.totalAmount);
         mu.stamps = (mu.stamps || 0) + earned;

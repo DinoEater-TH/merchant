@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -51,7 +53,6 @@ fun PosMenuView(viewModel: MainViewModel) {
     var selectedCategory by remember { mutableStateOf("all") }
     var phone by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
-    var showReview by remember { mutableStateOf(false) }
 
     // map categoryId -> display name (Thai). Fall back to id when no category found.
     fun categoryName(id: String): String {
@@ -64,8 +65,6 @@ fun PosMenuView(viewModel: MainViewModel) {
     val filtered = remember(menuItems, selectedCategory) {
         menuItems.filter { it.status.name != "HIDDEN" && (selectedCategory == "all" || it.categoryId == selectedCategory) }
     }
-    val review = if (showReview) viewModel.posOrderPreview(cart.toMap(), phone) else null
-
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         // Category chips
         Row(
@@ -162,27 +161,115 @@ fun PosMenuView(viewModel: MainViewModel) {
             }
         }
 
-        // Cart summary
+        // Live order detail: updates the moment an item is added or removed,
+        // so the shop never has to open a separate review screen.
         Spacer(modifier = Modifier.height(8.dp))
         val preview = viewModel.posOrderPreview(cart.toMap(), phone)
-        val subtotal = preview?.subtotal ?: 0.0
-        val discount = preview?.discount ?: 0.0
-        val total = preview?.totalAmount ?: 0.0
         Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(12.dp)
+                    .heightIn(max = 340.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
-                    text = "ยอดรวม: ฿${String.format("%.0f", total)}",
+                    text = "สรุปออเดอร์ (${preview?.totalItemsCount ?: 0} ชิ้น)",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = OrangePrimary
+                    fontSize = 14.sp
                 )
-                if (discount > 0) {
+                Spacer(modifier = Modifier.height(6.dp))
+
+                if (preview == null) {
                     Text(
-                        text = "ส่วนลด: -฿${String.format("%.0f", discount)}",
+                        text = "ยังไม่ได้เลือกรายการ",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                } else {
+                    preview.orderItems.forEach { oi ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = oi.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                Text(
+                                    text = "฿${fmtBaht(oi.price)} x ${oi.quantity}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "฿${fmtBaht(oi.price * oi.quantity)}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "โปรโมชั่นที่ใช้ได้", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    if (preview.appliedPromos.isEmpty()) {
+                        Text(
+                            text = "ไม่มีโปรโมชั่นที่เข้าเงื่อนไขในออเดอร์นี้",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        preview.appliedPromos.forEach { p ->
+                            Text(text = "• $p", fontSize = 11.sp, color = OrangePrimary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SummaryLine("ยอดรวมสินค้า", "฿${fmtBaht(preview.subtotal)}")
+                    SummaryLine(
+                        "ส่วนลดรวม",
+                        "-฿${fmtBaht(preview.discount)}",
+                        valueColor = if (preview.discount > 0) OrangePrimary else MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "ยอดสุทธิที่ต้องเก็บ",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "฿${fmtBaht(preview.totalAmount)}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OrangePrimary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    if (phone.isBlank()) {
+                        Text(
+                            text = "ลูกค้าทั่วไป (ไม่สะสมแต้ม)",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = "แต้ม: ${preview.memberStamps} + ${preview.stampsEarned} = ${preview.stampsAfter} ดวง" +
+                                if (preview.stampsEarned == 0) " (ยอดยังไม่ถึงเกณฑ์)" else "",
+                            fontSize = 11.sp
+                        )
+                        if (preview.rewardReached) {
+                            Text(
+                                text = "ถึงเกณฑ์แลกฟรี: " + preview.rewardItemName.ifBlank { preview.rewardDescription }.ifBlank { "เมนูรางวัล" },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OrangePrimary
+                            )
+                        }
+                    }
                 }
+
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
@@ -196,36 +283,37 @@ fun PosMenuView(viewModel: MainViewModel) {
                             message = "กรุณาเลือกรายการก่อน"
                             return@Button
                         }
-                        message = ""
-                        showReview = true
+                        val orderId = viewModel.submitPosOrder(cart.toMap(), phone)
+                        if (orderId == null) {
+                            message = "บันทึกไม่สำเร็จ: ไม่พบรายการเมนู"
+                        } else {
+                            message = "สร้างออเดอร์ $orderId สำเร็จ ฿${fmtBaht(preview?.totalAmount ?: 0.0)}"
+                            cart.clear()
+                        }
                     },
+                    enabled = preview != null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("ตรวจสอบออเดอร์")
+                    Text("ยืนยันขาย ฿${fmtBaht(preview?.totalAmount ?: 0.0)}")
                 }
                 if (message.isNotBlank()) {
                     Text(message, fontSize = 12.sp, color = OrangePrimary)
                 }
             }
         }
-
-        // Review dialog: items, promotions, prices and stamps before confirming
-        if (showReview && review != null) {
-            PosOrderReviewDialog(
-                review = review,
-                phone = phone,
-                onConfirm = { _ ->
-                    val orderId = viewModel.submitPosOrder(cart.toMap(), phone)
-                    showReview = false
-                    if (orderId == null) {
-                        message = "บันทึกไม่สำเร็จ: ไม่พบรายการเมนู"
-                    } else {
-                        message = "สร้างออเดอร์ $orderId สำเร็จ ฿${String.format("%.0f", review.totalAmount)}"
-                        cart.clear()
-                    }
-                },
-                onDismiss = { showReview = false }
-            )
-        }
     }
 }
+
+@Composable
+private fun SummaryLine(
+    label: String,
+    value: String,
+    valueColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified
+) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+        Text(text = label, fontSize = 12.sp, modifier = Modifier.weight(1f))
+        Text(text = value, fontSize = 12.sp, color = valueColor)
+    }
+}
+
+private fun fmtBaht(v: Double): String = if (v % 1.0 == 0.0) v.toInt().toString() else String.format("%.2f", v)

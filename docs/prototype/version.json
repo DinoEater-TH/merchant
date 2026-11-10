@@ -1,7 +1,7 @@
 {
-  "versionCode": 3,
-  "versionName": "1.2",
+  "versionCode": 4,
+  "versionName": "1.3",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "เพิ่มหน้าต่างตรวจสอบออเดอร์ก่อนยืนยันขายในหน้า POS (รายการสินค้า โปรโมชั่นที่เข้าเงื่อนไข ยอดเงินสุทธิ และแต้มสะสมของสมาชิก)",
+  "notes": "หน้า POS แสดงรายละเอียดออเดอร์ทันทีเมื่อเลือกรายการ (รายการสินค้า โปรโมชั่นที่เข้าเงื่อนไข ยอดสุทธิ และแต้มสมาชิก) ไม่ต้องกดปุ่มตรวจสอบก่อน",
   "mandatory": false
 }
