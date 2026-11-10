@@ -1,6 +1,7 @@
 package com.example.util
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
@@ -14,6 +15,17 @@ import kotlinx.coroutines.launch
 
 object SoundHelper {
     private var toneGenerator: ToneGenerator? = null
+    private var appContext: Context? = null
+
+    // User-configurable settings (persisted in SharedPreferences)
+    var soundEnabled: Boolean = true
+        private set
+    var volume: Int = 95
+        private set
+
+    private const val PREFS_NAME = "sound_settings"
+    private const val KEY_ENABLED = "sound_enabled"
+    private const val KEY_VOLUME = "sound_volume"
 
     init {
         try {
@@ -23,7 +35,40 @@ object SoundHelper {
         }
     }
 
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        soundEnabled = prefs.getBoolean(KEY_ENABLED, true)
+        volume = prefs.getInt(KEY_VOLUME, 95).coerceIn(0, 100)
+        rebuildToneGenerator()
+    }
+
+    fun configure(enabled: Boolean, volumeLevel: Int) {
+        soundEnabled = enabled
+        volume = volumeLevel.coerceIn(0, 100)
+        appContext?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)?.edit()?.apply {
+            putBoolean(KEY_ENABLED, soundEnabled)
+            putInt(KEY_VOLUME, volume)
+            apply()
+        }
+        rebuildToneGenerator()
+    }
+
+    private fun rebuildToneGenerator() {
+        try { toneGenerator?.release() } catch (_: Exception) {}
+        toneGenerator = if (soundEnabled && volume > 0) {
+            try { ToneGenerator(AudioManager.STREAM_NOTIFICATION, volume) } catch (_: Exception) { null }
+        } else null
+    }
+
+    fun stopAlert() {
+        try { toneGenerator?.release() } catch (_: Exception) {}
+        // rebuild so future alerts still work
+        rebuildToneGenerator()
+    }
+
     fun playOrderReadyChime(context: Context) {
+        if (!soundEnabled) return
         vibrate(context, 350)
         CoroutineScope(Dispatchers.Default).launch {
             try {
@@ -38,6 +83,7 @@ object SoundHelper {
     }
 
     fun playNewOrderAlert(context: Context) {
+        if (!soundEnabled) return
         vibrate(context, 200)
         CoroutineScope(Dispatchers.Default).launch {
             try {
@@ -50,6 +96,7 @@ object SoundHelper {
     }
 
     fun playStampSuccessSound(context: Context) {
+        if (!soundEnabled) return
         vibrate(context, 100)
         CoroutineScope(Dispatchers.Default).launch {
             try {

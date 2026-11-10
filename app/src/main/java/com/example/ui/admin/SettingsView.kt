@@ -123,6 +123,9 @@ fun SettingsView(viewModel: MainViewModel) {
     var shopLngText by remember(syncedShopInfo.shopLng) { mutableStateOf(syncedShopInfo.shopLng?.toString() ?: "") }
     var showShopLocation by remember(syncedShopInfo.showShopLocation) { mutableStateOf(syncedShopInfo.showShopLocation) }
     var deliveryGpsEnabled by remember(syncedShopInfo.deliveryGpsEnabled) { mutableStateOf(syncedShopInfo.deliveryGpsEnabled) }
+    // Sound settings (local, not synced to Firebase)
+    var soundEnabled by remember { mutableStateOf(com.example.util.SoundHelper.soundEnabled) }
+    var soundVolume by remember { mutableStateOf(com.example.util.SoundHelper.volume) }
     var isLocatingShop by remember { mutableStateOf(false) }
     var showLongdoMapPicker by remember { mutableStateOf(false) }
 
@@ -960,6 +963,26 @@ fun SettingsView(viewModel: MainViewModel) {
                         "ปิดไว้ = ปุ่ม GPS/แผนที่/ระยะทางจะถูกซ่อน และปุ่มชำระเงินทำงานได้เลยเมื่อเลือกจัดส่ง",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text("เสียงแจ้งเตือนออเดอร์ใหม่", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = soundEnabled, onCheckedChange = {
+                            soundEnabled = it
+                            com.example.util.SoundHelper.configure(soundEnabled, soundVolume)
+                        })
+                        Text("เปิดเสียงแจ้งเตือน", fontSize = 13.sp)
+                    }
+                    Text("ระดับความดัง: $soundVolume", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    androidx.compose.material3.Slider(
+                        value = soundVolume.toFloat(),
+                        onValueChange = { soundVolume = it.toInt() },
+                        onValueChangeFinished = {
+                            com.example.util.SoundHelper.configure(soundEnabled, soundVolume)
+                        },
+                        valueRange = 0f..100f,
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))

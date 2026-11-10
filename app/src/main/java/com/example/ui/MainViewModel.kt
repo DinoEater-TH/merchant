@@ -59,6 +59,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var knownOrderIds: Set<String>? = null
 
     init {
+        // Initialize sound settings from SharedPreferences
+        SoundHelper.init(getApplication())
         // Auto-login if the admin has logged in before on this device (PIN remembered).
         if (repository.hasAdminLoggedIn()) {
             _isAdminMode.value = true
@@ -576,6 +578,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Admin Controls
     fun setAdminTab(tab: Int) {
         _adminSelectedTab.value = tab
+        // Stop new-order sound when admin opens the orders tab
+        if (tab == 0) SoundHelper.stopAlert()
+    }
+
+    fun stopNewOrderSound() {
+        SoundHelper.stopAlert()
     }
 
     fun setAdminOrderFilter(filter: OrderStatus?) {
@@ -584,6 +592,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateOrderStatus(orderId: String, newStatus: OrderStatus) {
         repository.updateOrderStatus(orderId, newStatus)
+        // Stop new-order alert sound once admin acts on an order
+        SoundHelper.stopAlert()
         if (newStatus == OrderStatus.READY) {
             SoundHelper.playOrderReadyChime(getApplication())
         }
