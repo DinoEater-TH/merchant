@@ -647,6 +647,25 @@
       });
     }
 
+    // 1 stamp per shopCfg.spendPerStamp baht. Below that amount = 0 stamps.
+    // spendPerStamp <= 0 means "1 stamp per order" (legacy behaviour).
+    function stampsForAmount(totalAmount) {
+      const per = Number(shopCfg && shopCfg.spendPerStamp) || 0;
+      if (per <= 0) return 1;
+      return Math.max(0, Math.floor((Number(totalAmount) || 0) / per));
+    }
+
+    function makeHistoryEntry(order, earned, channel) {
+      return {
+        orderId: order.id || '',
+        timestamp: order.timestamp || '',
+        total: Number(order.totalAmount) || 0,
+        itemsText: (order.items || []).map(i => `${i.name} x${i.quantity}`).join(', '),
+        stampsEarned: earned || 0,
+        channel: channel || ''
+      };
+    }
+
     function renderStamps() {
       if (!isMember) return;
       const need = shopCfg.stampsRequired || 10;
@@ -1035,12 +1054,16 @@
               }
             });
           }
-          // +1 stamp for members
+          // Spend-based stamps + permanent purchase history for members
           if (order.customerPhone && parsed.users && parsed.users[order.customerPhone]) {
             const u = parsed.users[order.customerPhone];
-            u.stamps = (u.stamps || 0) + 1;
+            const earned = stampsForAmount(order.totalAmount);
+            u.stamps = (u.stamps || 0) + earned;
             u.totalOrders = (u.totalOrders || 0) + 1;
             u.lastOrder = order;
+            if (!Array.isArray(u.history)) u.history = [];
+            u.history.unshift(makeHistoryEntry(order, earned, 'ออนไลน์'));
+            if (u.history.length > 100) u.history = u.history.slice(0, 100);
           }
           window.remoteState = parsed;
           return typeof current === 'string' ? JSON.stringify(parsed) : parsed;
@@ -1104,22 +1127,39 @@
         customerPhone = p;
         isMember = true;
         stamps = users[p].stamps || 0;
-        // +1 stamp for this purchase if not already counted (guest order had no stamp)
+        // Award spend-based stamps for this purchase if not already counted
+        const earned = stampsForAmount(activeOrder ? activeOrder.totalAmount : 0);
         try {
           const ref = firebase.database().ref(STATE_PATH);
           await ref.transaction(cur => {
             if (cur == null) return cur;
             const parsed = typeof cur === 'string' ? JSON.parse(cur) : cur;
             if (parsed.users && parsed.users[p]) {
-              parsed.users[p].stamps = (parsed.users[p].stamps || 0) + 1;
-              parsed.users[p].totalOrders = (parsed.users[p].totalOrders || 0) + 1;
+              const mu = parsed.users[p];
+              mu.stamps = (mu.stamps || 0) + earned;
+              mu.totalOrders = (mu.totalOrders || 0) + 1;
+              if (activeOrder) {
+                mu.lastOrder = activeOrder;
+                if (!Array.isArray(mu.history)) mu.history = [];
+                mu.history.unshift(makeHistoryEntry(activeOrder, earned, 'ออนไลน์'));
+                if (mu.history.length > 100) mu.history = mu.history.slice(0, 100);
+                // link the order to this member so it shows in both places
+                if (Array.isArray(parsed.orders)) {
+                  const ord = parsed.orders.find(o => o.id === activeOrder.id);
+                  if (ord) { ord.customerPhone = p; ord.isGuest = false; }
+                  activeOrder.customerPhone = p;
+                  activeOrder.isGuest = false;
+                }
+              }
             }
             window.remoteState = parsed;
             return typeof cur === 'string' ? JSON.stringify(parsed) : parsed;
           });
         } catch (e) { console.error(e); }
         if (window.remoteState) hydrateMemberData(window.remoteState);
-        alert('บันทึกแล้ว — คุณได้รับ +1 stamp จากรายการนี้');
+        alert(earned > 0
+          ? `บันทึกแล้ว — คุณได้รับ +${earned} stamp จากรายการนี้`
+          : `บันทึกแล้ว — ยอดนี้ยังไม่ถึงเกณฑ์รับ stamp (ซื้อครบ ฿${Number(shopCfg.spendPerStamp) || 0} = 1 stamp)`);
       } else {
         // not found: ask to register
         const reg = confirm('ไม่พบสมาชิกเบอร์นี้ ต้องการลงทะเบียนสมาชิกใหม่หรือไม่?');
@@ -1127,20 +1167,40 @@
           const name = prompt('กรุณาใส่ชื่อ (หรือเว้นว่าง):') || '';
           customerPhone = p;
           isMember = true;
-          stamps = 1; // +1 for this purchase
+          const earned = stampsForAmount(activeOrder ? activeOrder.totalAmount : 0);
+          stamps = earned;
           try {
             const ref = firebase.database().ref(STATE_PATH);
             await ref.transaction(cur => {
               if (cur == null) return cur;
               const parsed = typeof cur === 'string' ? JSON.parse(cur) : cur;
               if (!parsed.users) parsed.users = {};
-              parsed.users[p] = { phoneNumber: p, name: name.trim(), stamps: 1, totalOrders: 1 };
+              const history = [];
+              if (activeOrder) {
+                history.push(makeHistoryEntry(activeOrder, earned, 'ออนไลน์'));
+                if (Array.isArray(parsed.orders)) {
+                  const ord = parsed.orders.find(o => o.id === activeOrder.id);
+                  if (ord) { ord.customerPhone = p; ord.isGuest = false; }
+                  activeOrder.customerPhone = p;
+                  activeOrder.isGuest = false;
+                }
+              }
+              parsed.users[p] = {
+                phoneNumber: p,
+                name: name.trim(),
+                stamps: earned,
+                totalOrders: 1,
+                lastOrder: activeOrder || null,
+                history
+              };
               window.remoteState = parsed;
               return typeof cur === 'string' ? JSON.stringify(parsed) : parsed;
             });
           } catch (e) { console.error(e); }
           if (window.remoteState) hydrateMemberData(window.remoteState);
-          alert('ลงทะเบียนสำเร็จ — คุณได้รับ +1 stamp จากรายการนี้');
+          alert(earned > 0
+            ? `ลงทะเบียนสำเร็จ — คุณได้รับ +${earned} stamp จากรายการนี้`
+            : `ลงทะเบียนสำเร็จ — ยอดนี้ยังไม่ถึงเกณฑ์รับ stamp (ซื้อครบ ฿${Number(shopCfg.spendPerStamp) || 0} = 1 stamp)`);
         }
       }
       closeTrackerModal();

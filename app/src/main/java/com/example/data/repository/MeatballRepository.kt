@@ -5,6 +5,7 @@ import com.example.data.model.Category
 import com.example.data.model.CustomPromo
 import com.example.data.model.HiddenCostLog
 import com.example.data.model.ItemStatus
+import com.example.data.model.MemberHistoryEntry
 import com.example.data.model.MemberUser
 import com.example.data.model.MenuItem
 import com.example.data.model.Order
@@ -161,6 +162,7 @@ class MeatballRepository(context: Context? = null) {
         private const val KEY_STATE = "state_json"
         private const val KEY_ADMIN_LOGGED_IN = "admin_logged_in"
         private const val DEFAULT_ADMIN_PIN = "09286840"
+        private const val MAX_MEMBER_HISTORY = 100
     }
 
     private fun defaultCategories(): List<Category> = listOf(
@@ -218,18 +220,37 @@ class MeatballRepository(context: Context? = null) {
         }
         _menuItems.value = currentMenu
 
-        // Update member stamps if phone provided
+        // Update member stamps + permanent purchase history when a phone is provided
         if (newOrder.customerPhone.isNotEmpty()) {
             val phone = newOrder.customerPhone
             val existing = _users.value[phone] ?: MemberUser(phoneNumber = phone)
+            val earned = stampsEarnedFor(newOrder.totalAmount)
+            val entry = MemberHistoryEntry(
+                orderId = newOrder.id,
+                timestamp = newOrder.timestamp,
+                total = newOrder.totalAmount,
+                itemsText = newOrder.items.joinToString(", ") { "${it.name} x${it.quantity}" },
+                stampsEarned = earned,
+                channel = if (newOrder.comment.trim().uppercase().startsWith("POS")) "POS" else "ออนไลน์"
+            )
             val updatedUser = existing.copy(
-                stamps = (existing.stamps + 1),
+                stamps = existing.stamps + earned,
                 totalOrders = existing.totalOrders + 1,
-                lastOrder = newOrder
+                lastOrder = newOrder,
+                history = (listOf(entry) + existing.history).take(MAX_MEMBER_HISTORY)
             )
             _users.value = _users.value + (phone to updatedUser)
         }
         persistState()
+    }
+
+    /**
+     * 1 stamp per [ShopInfo.spendPerStamp] baht. Orders below that amount earn
+     * no stamp. A value of 0 (or less) falls back to 1 stamp per order.
+     */
+    private fun stampsEarnedFor(totalAmount: Double): Int {
+        val per = _shopInfo.value.spendPerStamp
+        return if (per <= 0.0) 1 else (totalAmount / per).toInt().coerceAtLeast(0)
     }
 
     fun updateOrderStatus(orderId: String, newStatus: OrderStatus) {

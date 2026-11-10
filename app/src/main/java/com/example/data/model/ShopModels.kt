@@ -172,7 +172,18 @@ data class MemberUser(
     val name: String = "",
     val stamps: Int = 0,
     val totalOrders: Int = 0,
-    val lastOrder: Order? = null
+    val lastOrder: Order? = null,
+    val history: List<MemberHistoryEntry> = emptyList()
+)
+
+/** One permanent purchase-history line stored inside a member record. */
+data class MemberHistoryEntry(
+    val orderId: String = "",
+    val timestamp: String = "",
+    val total: Double = 0.0,
+    val itemsText: String = "",
+    val stampsEarned: Int = 0,
+    val channel: String = ""
 )
 
 data class HiddenCostLog(

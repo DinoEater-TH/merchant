@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.MemberHistoryEntry
 import com.example.data.model.MemberUser
 import com.example.data.model.Order
 import com.example.ui.MainViewModel
@@ -169,6 +170,22 @@ fun MembersView(viewModel: MainViewModel) {
     selectedPhone?.let { phone ->
         val u = users[phone] ?: MemberUser(phoneNumber = phone)
         val memberOrders = orders.filter { it.customerPhone == phone }
+        // Permanent history stored on the member; fall back to linked orders
+        // for members created before history existed.
+        val historyEntries = if (u.history.isNotEmpty()) {
+            u.history
+        } else {
+            memberOrders.map { o ->
+                MemberHistoryEntry(
+                    orderId = o.id,
+                    timestamp = o.timestamp,
+                    total = o.totalAmount,
+                    itemsText = o.items.joinToString(", ") { "${it.name} x${it.quantity}" },
+                    stampsEarned = 0,
+                    channel = if (o.comment.trim().uppercase().startsWith("POS")) "POS" else "ออนไลน์"
+                )
+            }
+        }
         AlertDialog(
             onDismissRequest = { selectedPhone = null },
             title = { Text("สมาชิก $phone", fontWeight = FontWeight.Bold) },
@@ -179,15 +196,19 @@ fun MembersView(viewModel: MainViewModel) {
                     Text("Stamp สะสม: ${u.stamps} ดวง", fontSize = 13.sp, color = OrangePrimary, fontWeight = FontWeight.Bold)
                     Text("จำนวนออเดอร์: ${u.totalOrders}", fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("ประวัติการสั่งซื้อ (${memberOrders.size})", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    if (memberOrders.isEmpty()) {
+                    Text("ประวัติการสั่งซื้อ (${historyEntries.size})", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    if (historyEntries.isEmpty()) {
                         Text("ยังไม่มีประวัติ", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        memberOrders.forEach { o ->
+                        historyEntries.forEach { h ->
                             Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                Text("${o.id} • ${o.timestamp}", fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                Text((o.items ?: emptyList()).joinToString(", ") { "${it.name} x${it.quantity}" }, fontSize = 11.sp)
-                                Text("฿${o.totalAmount}", fontSize = 11.sp, color = OrangePrimary)
+                                Text("${h.orderId} • ${h.timestamp}", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                Text(h.itemsText, fontSize = 11.sp)
+                                Text(
+                                    "฿${String.format("%.0f", h.total)} • +${h.stampsEarned} แต้ม • ${h.channel}",
+                                    fontSize = 11.sp,
+                                    color = OrangePrimary
+                                )
                             }
                         }
                     }

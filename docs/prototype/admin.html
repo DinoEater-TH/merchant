@@ -394,7 +394,7 @@
          <div id="stampIconPreview" class="mt-2"></div>
        </div>
        <div>
-         <label class="text-xs text-gray-500">ซื้อเท่าไหร่ (บาท) ได้ 1 แต้ม</label>
+         <label class="text-xs text-gray-500">ซื้อเท่าไหร่ (บาท) ได้ 1 แต้ม <span class="text-gray-400">(ยอดไม่ถึง = ไม่ได้แต้ม, ใส่ 0 = 1 แต้มต่อออเดอร์)</span></label>
         <input id="s_spendPerStamp" type="number" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="เช่น 50">
       </div>
       <div>
@@ -1094,6 +1094,25 @@
     function isPosOrder(o) {
       return (o.comment || '').trim().toUpperCase().indexOf('POS') === 0;
     }
+
+    // 1 stamp per shopInfo.spendPerStamp baht. Below that amount = 0 stamps.
+    // spendPerStamp <= 0 means "1 stamp per order" (legacy behaviour).
+    function stampsForAmount(totalAmount) {
+      const per = Number((state.shopInfo || {}).spendPerStamp) || 0;
+      if (per <= 0) return 1;
+      return Math.max(0, Math.floor((Number(totalAmount) || 0) / per));
+    }
+
+    function makeHistoryEntry(order, earned, channel) {
+      return {
+        orderId: order.id || '',
+        timestamp: order.timestamp || '',
+        total: Number(order.totalAmount) || 0,
+        itemsText: (order.items || []).map(i => `${i.name} x${i.quantity}`).join(', '),
+        stampsEarned: earned || 0,
+        channel: channel || ''
+      };
+    }
     function resetSalesFilter() {
       ['salesFrom', 'salesTo', 'salesSearch'].forEach(id => {
         const el = document.getElementById(id);
@@ -1272,19 +1291,31 @@
       editingMemberPhone = phone;
       const u = (state.users || {})[phone] || {};
       const orders = (state.orders || []).filter(o => o.customerPhone === phone);
-       document.getElementById('memberModalTitle').textContent = `สมาชิก ${phone}`;
-       let body = '';
-       body += `<div class="bg-gray-50 rounded-lg p-2 space-y-1">
-         <div><b>ชื่อ:</b> ${u.name || '-'}</div>
-         <div><b>เบอร์โทร:</b> ${phone}</div>
-         <div><b>Stamp สะสม:</b> <span class="text-orange-600 font-bold">${u.stamps || 0} ดวง</span></div>
-         <div><b>จำนวนออเดอร์:</b> ${u.totalOrders || orders.length}</div>
-       </div>`;
-       body += `<div class="font-bold text-sm mt-2">ประวัติการสั่งซื้อ (${orders.length})</div>`;
-       body += orders.length
-         ? orders.map(o => `<div class="border-b py-1 text-xs">${o.id} • ${o.timestamp}<br>${(o.items||[]).map(i => `${i.name} x${i.quantity}`).join(', ')} • ฿${o.totalAmount}</div>`).join('')
-         : '<p class="text-xs text-gray-400">ยังไม่มีประวัติสั่งซื้อ</p>';
-       document.getElementById('memberModalBody').innerHTML = body;
+      // Permanent history stored on the member; fall back to linked orders for
+      // members created before history existed.
+      const history = Array.isArray(u.history) && u.history.length
+        ? u.history
+        : orders.map(o => ({
+            orderId: o.id,
+            timestamp: o.timestamp,
+            total: o.totalAmount,
+            itemsText: (o.items || []).map(i => `${i.name} x${i.quantity}`).join(', '),
+            stampsEarned: 0,
+            channel: isPosOrder(o) ? 'POS' : 'ออนไลน์'
+          }));
+      document.getElementById('memberModalTitle').textContent = `สมาชิก ${phone}`;
+      let body = '';
+      body += `<div class="bg-gray-50 rounded-lg p-2 space-y-1">
+        <div><b>ชื่อ:</b> ${u.name || '-'}</div>
+        <div><b>เบอร์โทร:</b> ${phone}</div>
+        <div><b>Stamp สะสม:</b> <span class="text-orange-600 font-bold">${u.stamps || 0} ดวง</span></div>
+        <div><b>จำนวนออเดอร์:</b> ${u.totalOrders || orders.length}</div>
+      </div>`;
+      body += `<div class="font-bold text-sm mt-2">ประวัติการสั่งซื้อ (${history.length})</div>`;
+      body += history.length
+        ? history.map(h => `<div class="border-b py-1 text-xs">${h.orderId} • ${h.timestamp}<br>${h.itemsText} • ฿${h.total}<br><span class="text-orange-600">+${h.stampsEarned || 0} แต้ม • ${h.channel || '-'}</span></div>`).join('')
+        : '<p class="text-xs text-gray-400">ยังไม่มีประวัติสั่งซื้อ</p>';
+      document.getElementById('memberModalBody').innerHTML = body;
       document.getElementById('editMemberName').value = u.name || '';
       document.getElementById('editMemberStamps').value = u.stamps ?? 0;
       document.getElementById('memberModal').classList.remove('hidden');
@@ -1441,13 +1472,18 @@
         const q = posCart[m.id] || 0;
         if (q > 0 && !isUnlimitedStock(m)) m.stockQty = Math.max(0, (m.stockQty || 0) - q);
       });
-      // member stamps
+      // member stamps + permanent purchase history (spend-based)
       if (phone) {
         if (!state.users) state.users = {};
-        if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: document.getElementById('posNameInput') ? document.getElementById('posNameInput').value.trim() : '', stamps: 0, totalOrders: 0, lastOrder: order };
-        state.users[phone].stamps = (state.users[phone].stamps || 0) + 1;
-        state.users[phone].totalOrders = (state.users[phone].totalOrders || 0) + 1;
-        state.users[phone].lastOrder = order;
+        if (!state.users[phone]) state.users[phone] = { phoneNumber: phone, name: document.getElementById('posNameInput') ? document.getElementById('posNameInput').value.trim() : '', stamps: 0, totalOrders: 0, lastOrder: order, history: [] };
+        const mu = state.users[phone];
+        const earned = stampsForAmount(order.totalAmount);
+        mu.stamps = (mu.stamps || 0) + earned;
+        mu.totalOrders = (mu.totalOrders || 0) + 1;
+        mu.lastOrder = order;
+        if (!Array.isArray(mu.history)) mu.history = [];
+        mu.history.unshift(makeHistoryEntry(order, earned, 'POS'));
+        if (mu.history.length > 100) mu.history = mu.history.slice(0, 100);
       }
       posCart = {};
       document.getElementById('posResult').textContent = `สร้างออเดอร์ ${order.id} เรียบร้อย ฿${t.total}`;
@@ -2442,7 +2478,10 @@ function finishSaveSettings() {
       state.shopInfo.minOrderForFreeDelivery = parseFloat(document.getElementById('s_freeDelivery').value) || state.shopInfo.minOrderForFreeDelivery;
       state.shopInfo.stampsRequiredForReward = parseInt(document.getElementById('s_stamps').value) || state.shopInfo.stampsRequiredForReward;
       const spendPerStampEl2 = document.getElementById('s_spendPerStamp');
-      if (spendPerStampEl2) state.shopInfo.spendPerStamp = parseFloat(spendPerStampEl2.value) || state.shopInfo.spendPerStamp || 50;
+      if (spendPerStampEl2) {
+        const v = parseFloat(spendPerStampEl2.value);
+        state.shopInfo.spendPerStamp = isNaN(v) ? (state.shopInfo.spendPerStamp || 50) : v;
+      }
       state.shopInfo.rewardDescription = document.getElementById('s_rewardDesc').value.trim() || state.shopInfo.rewardDescription;
       const rewardItemEl = document.getElementById('s_rewardItem');
       if (rewardItemEl) state.shopInfo.rewardItemId = rewardItemEl.value;
