@@ -869,12 +869,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val file = AppUpdater.download(app, info) { p -> _updateProgress.value = p }
                 _updateProgress.value = 100
-                val opened = AppUpdater.install(app, file)
-                _updateStatus.value = if (opened) {
-                    "เปิดหน้าติดตั้งแล้ว กรุณากด \"ติดตั้ง\""
-                } else {
-                    "กรุณาอนุญาต \"ติดตั้งแอปจากแหล่งอื่น\" ให้แอปนี้ แล้วกดอัปเดตอีกครั้ง"
-                }
+                _updateStatus.value = installMessage(AppUpdater.install(app, file, info.apkUrl))
             } catch (e: Exception) {
                 _updateProgress.value = -1
                 _updateStatus.value = "ดาวน์โหลดไม่สำเร็จ: ${e.message ?: "ไม่ทราบสาเหตุ"}"
@@ -882,10 +877,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Resets the dialog after the user granted the install permission. */
+    private fun installMessage(result: com.example.util.InstallResult): String = when (result) {
+        com.example.util.InstallResult.INSTALLER_OPENED ->
+            "เปิดหน้าติดตั้งแล้ว กรุณากด \"ติดตั้ง\""
+        com.example.util.InstallResult.NEED_PERMISSION ->
+            "กรุณาอนุญาต \"ติดตั้งแอปจากแหล่งอื่น\" ให้แอปนี้ แล้วกด \"ติดตั้งอีกครั้ง\""
+        com.example.util.InstallResult.BROWSER_FALLBACK ->
+            "เปิดหน้าดาวน์โหลดในเบราว์เซอร์แล้ว กรุณาดาวน์โหลดและติดตั้ง"
+    }
+
+    /** Re-opens the installer with the already-downloaded APK (no re-download). */
     fun retryUpdateInstall() {
-        _updateDismissed.value = false
-        downloadAndInstallUpdate()
+        val info = _updateInfo.value ?: return
+        val app = getApplication<android.app.Application>()
+        val cached = java.io.File(app.cacheDir, "updates/update.apk")
+        if (cached.exists() && cached.length() > 1_000_000L) {
+            _updateStatus.value = installMessage(AppUpdater.install(app, cached, info.apkUrl))
+        } else {
+            _updateProgress.value = -1
+            downloadAndInstallUpdate()
+        }
     }
 }
 

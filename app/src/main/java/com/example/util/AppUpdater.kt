@@ -31,6 +31,9 @@ data class UpdateInfo(
  * to the system installer. Fully silent installs are not possible for a normal
  * APK, so the user taps "ติดตั้ง" once.
  */
+/** Result of handing the downloaded APK to the system. */
+enum class InstallResult { INSTALLER_OPENED, NEED_PERMISSION, BROWSER_FALLBACK }
+
 object AppUpdater {
     private const val VERSION_URL = "https://dinoeater-merchant.web.app/version.json"
 
@@ -133,10 +136,10 @@ object AppUpdater {
     }
 
     /**
-     * Opens the system installer. Returns false when the user still has to grant
-     * the "install unknown apps" permission (Android opens that settings page).
+     * Opens the system installer. Returns NEED_PERMISSION when the user still has
+     * to grant the "install unknown apps" permission (Android opens that page).
      */
-    fun install(context: Context, apk: File): Boolean {
+    fun install(context: Context, apk: File, fallbackUrl: String = ""): InstallResult {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             !context.packageManager.canRequestPackageInstalls()
         ) {
@@ -151,18 +154,34 @@ object AppUpdater {
                 // Some devices do not expose this screen; the install intent below
                 // will still prompt the user.
             }
-            return false
+            return InstallResult.NEED_PERMISSION
         }
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.updatefileprovider",
-            apk
-        )
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.updatefileprovider",
+                apk
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            InstallResult.INSTALLER_OPENED
+        } catch (e: Exception) {
+            // Fall back to the browser download page (e.g. devices without a
+            // package-installer activity, such as some emulators).
+            if (fallbackUrl.isNotBlank()) {
+                try {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUrl))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                    return InstallResult.BROWSER_FALLBACK
+                } catch (ignored: Exception) {
+                }
+            }
+            InstallResult.BROWSER_FALLBACK
         }
-        context.startActivity(intent)
-        return true
     }
 }
