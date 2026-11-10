@@ -26,6 +26,7 @@ class NewOrderMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+        SoundHelper.init(this)
         val orderId = message.data["orderId"] ?: message.notification?.title ?: "ออเดอร์ใหม่"
         val total = message.data["totalAmount"]?.toDoubleOrNull()
         NotificationHelper.showNewOrderNotification(this, orderId, total)

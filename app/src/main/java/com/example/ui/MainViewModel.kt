@@ -15,8 +15,10 @@ import com.example.data.model.CustomPromo
 import com.example.data.repository.FirebaseSyncManager
 import com.example.data.repository.MeatballRepository
 import com.example.util.DeliveryRouteHelper
+import com.example.util.AppVisibility
 import com.example.util.NewOrderMessagingService
 import com.example.util.NotificationHelper
+import com.example.util.OrderAlertService
 import com.example.util.SoundHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -88,13 +90,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 knownOrderIds = currentIds
                 if (incoming.isNotEmpty()) {
-                    SoundHelper.playNewOrderAlert(getApplication())
-                    val latest = incoming.lastOrNull()
-                    NotificationHelper.showNewOrderNotification(
-                        getApplication(),
-                        latest?.id ?: "ออเดอร์ใหม่",
-                        latest?.totalAmount
-                    )
+                    // Avoid double alerts: when the foreground service is alive
+                    // and the app is in the background, the service alerts.
+                    if (AppVisibility.isForeground || !OrderAlertService.isRunning) {
+                        SoundHelper.playNewOrderAlert(getApplication())
+                        val latest = incoming.lastOrNull()
+                        NotificationHelper.showNewOrderNotification(
+                            getApplication(),
+                            latest?.id ?: "ออเดอร์ใหม่",
+                            latest?.totalAmount
+                        )
+                    }
                 }
             }
         }
@@ -605,6 +611,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteOrder(orderId: String) {
         repository.deleteOrder(orderId)
+        SoundHelper.stopAlert()
     }
 
     fun updateItemStatus(itemId: String, status: ItemStatus) {
@@ -724,6 +731,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun exitAdminMode() {
         _isAdminMode.value = false
         repository.setAdminLoggedIn(false)
+        SoundHelper.stopAlert()
+        OrderAlertService.stop(getApplication())
     }
 
     fun setAdminPin(newPin: String) {

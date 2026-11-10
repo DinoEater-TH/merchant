@@ -987,6 +987,17 @@ fun SettingsView(viewModel: MainViewModel) {
                         valueRange = 0f..100f,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    OutlinedButton(
+                        onClick = { com.example.util.SoundHelper.playTestAlert(context) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("ทดสอบเสียงแจ้งเตือน", fontSize = 12.sp)
+                    }
+                    Text(
+                        "ถ้าไม่ดัง ให้เพิ่มเสียงแจ้งเตือนของเครื่อง และปิดโหมดเงียบ/ห้ามรบกวน",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
                     Spacer(modifier = Modifier.height(14.dp))
                     Text("บริการฟังออเดอร์ตลอด (แม้ปิดแอป)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -1001,6 +1012,41 @@ fun SettingsView(viewModel: MainViewModel) {
                     }
                     Text(
                         "เปิดไว้ = แอปทำงานต่อเนื่อง ได้ยินเสียงเมื่อมีออเดอร์ใหม่แม้ปิดหน้าจอ (ใช้แบตมากขึ้น)",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+                    val batteryExempt = powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                context.startActivity(
+                                    android.content.Intent(
+                                        android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                        Uri.parse("package:${context.packageName}")
+                                    )
+                                )
+                            } catch (_: Exception) {
+                                try {
+                                    context.startActivity(
+                                        android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                    )
+                                } catch (_: Exception) {
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            if (batteryExempt) "อนุญาตทำงานเบื้องหลังแล้ว (ไม่ถูกจำกัดแบต)"
+                            else "อนุญาตให้ทำงานเบื้องหลัง (ปิดการประหยัดแบต)",
+                            fontSize = 12.sp
+                        )
+                    }
+                    Text(
+                        "แนะนำกดอนุญาต เพื่อไม่ให้ระบบมือถือปิดบริการตอนปิดจอ (สำคัญมากบนมือถือจีน)",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

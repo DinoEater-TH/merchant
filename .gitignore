@@ -70,3 +70,5 @@ docs/prototype/*.apk
 
 # Firebase CLI
 .firebase/
+
+functions/package-lock.json

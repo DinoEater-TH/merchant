@@ -31,6 +31,15 @@ class OrderAlertService : Service() {
         const val ACTION_START = "com.example.action.START_ORDER_ALERT"
         const val ACTION_STOP = "com.example.action.STOP_ORDER_ALERT"
 
+        private const val DATABASE_URL =
+            "https://dinoeater-merchant-default-rtdb.asia-southeast1.firebasedatabase.app"
+        private const val ROOT_PATH = "shops/dinoeater-merchant"
+
+        /** True while the service is alive (used to avoid duplicate alerts). */
+        @Volatile
+        var isRunning: Boolean = false
+            private set
+
         fun start(context: Context) {
             val intent = Intent(context, OrderAlertService::class.java).apply { action = ACTION_START }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -41,8 +50,10 @@ class OrderAlertService : Service() {
         }
 
         fun stop(context: Context) {
-            val intent = Intent(context, OrderAlertService::class.java).apply { action = ACTION_STOP }
-            context.startService(intent)
+            try {
+                context.stopService(Intent(context, OrderAlertService::class.java))
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -53,6 +64,9 @@ class OrderAlertService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
+        // Load the shop's saved sound settings even if the UI was never opened.
+        SoundHelper.init(applicationContext)
         ensureChannel()
     }
 
@@ -101,7 +115,7 @@ class OrderAlertService : Service() {
 
     private fun attachListener() {
         if (listener != null) return
-        val ref = FirebaseDatabase.getInstance().reference.child("shops/dinoeater-merchant/state")
+        val ref = FirebaseDatabase.getInstance(DATABASE_URL).reference.child("$ROOT_PATH/state")
         val vl = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val raw = snapshot.value
@@ -120,13 +134,17 @@ class OrderAlertService : Service() {
                 }
                 knownOrderIds = currentIds
                 if (incoming.isNotEmpty()) {
-                    SoundHelper.playNewOrderAlert(applicationContext)
-                    val latest = incoming.last()
-                    NotificationHelper.showNewOrderNotification(
-                        applicationContext,
-                        latest.optString("id", "ออเดอร์ใหม่"),
-                        latest.optDouble("totalAmount", Double.NaN).let { if (it.isNaN()) null else it }
-                    )
+                    // While the admin UI is on screen the ViewModel already
+                    // alerts, so only alert here when the app is in background.
+                    if (!AppVisibility.isForeground) {
+                        SoundHelper.playNewOrderAlert(applicationContext)
+                        val latest = incoming.last()
+                        NotificationHelper.showNewOrderNotification(
+                            applicationContext,
+                            latest.optString("id", "ออเดอร์ใหม่"),
+                            latest.optDouble("totalAmount", Double.NaN).let { if (it.isNaN()) null else it }
+                        )
+                    }
                 }
             }
             override fun onCancelled(error: DatabaseError) {}
@@ -153,10 +171,20 @@ class OrderAlertService : Service() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         listener?.let {
-            try { FirebaseDatabase.getInstance().reference.child("shops/dinoeater-merchant/state").removeEventListener(it) } catch (_: Exception) {}
+            try { FirebaseDatabase.getInstance(DATABASE_URL).reference.child("$ROOT_PATH/state").removeEventListener(it) } catch (_: Exception) {}
         }
         listener = null
         super.onDestroy()
+    }
+
+    /**
+     * Android 15+ calls this when a foreground service reaches its time limit.
+     * Stop cleanly so the app is not killed.
+     */
+    override fun onTimeout(startId: Int) {
+        try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) {}
+        stopSelf()
     }
 }

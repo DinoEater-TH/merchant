@@ -10,12 +10,19 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 object SoundHelper {
     private var toneGenerator: ToneGenerator? = null
     private var appContext: Context? = null
+    private var alertJob: Job? = null
+
+    // How long the new-order alert keeps repeating before it gives up.
+    private const val ALERT_MAX_DURATION_MS = 3 * 60 * 1000L
+    private const val ALERT_REPEAT_DELAY_MS = 2500L
 
     // User-configurable settings (persisted in SharedPreferences)
     var soundEnabled: Boolean = true
@@ -62,9 +69,14 @@ object SoundHelper {
     }
 
     fun stopAlert() {
-        try { toneGenerator?.release() } catch (_: Exception) {}
-        // rebuild so future alerts still work
-        rebuildToneGenerator()
+        val wasRinging = alertJob != null
+        alertJob?.cancel()
+        alertJob = null
+        if (wasRinging) {
+            try { toneGenerator?.stopTone() } catch (_: Exception) {}
+            // rebuild so future alerts still work
+            rebuildToneGenerator()
+        }
     }
 
     fun playOrderReadyChime(context: Context) {
@@ -82,14 +94,39 @@ object SoundHelper {
         }
     }
 
+    /**
+     * Repeating alert for a new customer order. It keeps beeping until
+     * [stopAlert] is called (admin opens the Orders tab or handles an order),
+     * or until [ALERT_MAX_DURATION_MS] has passed.
+     */
     fun playNewOrderAlert(context: Context) {
         if (!soundEnabled) return
-        vibrate(context, 200)
+        // Already ringing: do not stack another loop on top of it.
+        if (alertJob?.isActive == true) return
+        vibrate(context, 400)
+        alertJob = CoroutineScope(Dispatchers.Default).launch {
+            val endAt = System.currentTimeMillis() + ALERT_MAX_DURATION_MS
+            try {
+                while (isActive && System.currentTimeMillis() < endAt) {
+                    toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 300)
+                    delay(350)
+                    toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 300)
+                    delay(ALERT_REPEAT_DELAY_MS)
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    /** Plays the alert sound once, for the "ทดสอบเสียง" button in settings. */
+    fun playTestAlert(context: Context) {
+        if (!soundEnabled) return
+        vibrate(context, 300)
         CoroutineScope(Dispatchers.Default).launch {
             try {
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 250)
-                delay(250)
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 300)
+                delay(350)
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 300)
             } catch (_: Exception) {
             }
         }
