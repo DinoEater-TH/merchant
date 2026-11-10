@@ -15,6 +15,7 @@ import com.example.data.model.CustomPromo
 import com.example.data.repository.FirebaseSyncManager
 import com.example.data.repository.MeatballRepository
 import com.example.util.DeliveryRouteHelper
+import com.example.util.AppUpdater
 import com.example.util.AppVisibility
 import com.example.util.NewOrderMessagingService
 import com.example.util.NotificationHelper
@@ -56,6 +57,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isPinDialogOpen: StateFlow<Boolean> = _isPinDialogOpen.asStateFlow()
 
     val adminPin: StateFlow<String> = repository.adminPin
+
+    // In-app self update (sideloaded app, not Play Store)
+    private val _updateInfo = MutableStateFlow<com.example.util.UpdateInfo?>(null)
+    val updateInfo: StateFlow<com.example.util.UpdateInfo?> = _updateInfo.asStateFlow()
+    private val _updateStatus = MutableStateFlow("")
+    val updateStatus: StateFlow<String> = _updateStatus.asStateFlow()
+    private val _updateProgress = MutableStateFlow(-1)
+    val updateProgress: StateFlow<Int> = _updateProgress.asStateFlow()
+    private val _updateDismissed = MutableStateFlow(false)
+    val updateDismissed: StateFlow<Boolean> = _updateDismissed.asStateFlow()
+    private var updateChecked = false
 
     // Incoming order alert (admin mode only)
     private val locallySubmittedOrderIds = mutableSetOf<String>()
@@ -809,6 +821,71 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPhoneInputDialogOpen(open: Boolean) {
         _isPhoneInputDialogOpen.value = open
+    }
+
+    // ---------- In-app self update ----------
+
+    /** Checks the published version.json. Silent failures never disturb the shop. */
+    fun checkForUpdate(silent: Boolean = true) {
+        if (!silent) _updateStatus.value = "กำลังตรวจหาอัปเดต..."
+        viewModelScope.launch {
+            val app = getApplication<android.app.Application>()
+            AppUpdater.check(app)
+                .onSuccess { info ->
+                    _updateInfo.value = info
+                    if (info != null) {
+                        _updateStatus.value = "มีเวอร์ชันใหม่ v${info.versionName}"
+                    } else {
+                        _updateStatus.value =
+                            "เป็นเวอร์ชันล่าสุดแล้ว (v${AppUpdater.installedVersionName(app)})"
+                    }
+                }
+                .onFailure { e ->
+                    _updateStatus.value =
+                        if (silent) "" else "ตรวจสอบไม่สำเร็จ: ${e.message ?: "ไม่ทราบสาเหตุ"}"
+                }
+            updateChecked = true
+        }
+    }
+
+    /** Called once when the admin screen opens. */
+    fun checkForUpdateOnLaunch() {
+        if (updateChecked) return
+        updateChecked = true
+        checkForUpdate(silent = true)
+    }
+
+    fun dismissUpdate() {
+        _updateDismissed.value = true
+    }
+
+    /** Downloads the published APK and opens the system installer. */
+    fun downloadAndInstallUpdate() {
+        val info = _updateInfo.value ?: return
+        val app = getApplication<android.app.Application>()
+        viewModelScope.launch {
+            _updateProgress.value = 0
+            _updateStatus.value = "กำลังดาวน์โหลด v${info.versionName}..."
+            try {
+                val file = AppUpdater.download(app, info) { p -> _updateProgress.value = p }
+                _updateProgress.value = 100
+                val opened = AppUpdater.install(app, file)
+                _updateStatus.value = if (opened) {
+                    "เปิดหน้าติดตั้งแล้ว กรุณากด \"ติดตั้ง\""
+                } else {
+                    "กรุณาอนุญาต \"ติดตั้งแอปจากแหล่งอื่น\" ให้แอปนี้ แล้วกดอัปเดตอีกครั้ง"
+                }
+            } catch (e: Exception) {
+                _updateProgress.value = -1
+                _updateStatus.value = "ดาวน์โหลดไม่สำเร็จ: ${e.message ?: "ไม่ทราบสาเหตุ"}"
+            }
+        }
+    }
+
+    /** Resets the dialog after the user granted the install permission. */
+    fun retryUpdateInstall() {
+        _updateDismissed.value = false
+        downloadAndInstallUpdate()
     }
 }
 

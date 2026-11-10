@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Store
@@ -93,6 +94,7 @@ import com.example.util.LocationHelper
 @Composable
 fun SettingsView(viewModel: MainViewModel) {
     val shopInfo by viewModel.shopInfo.collectAsState()
+    val updateStatus by viewModel.updateStatus.collectAsState()
     val context = LocalContext.current
 
     // Keep the form stable while the admin is typing. Remote values (e.g. from the web
@@ -1137,6 +1139,48 @@ fun SettingsView(viewModel: MainViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("เปลี่ยนรหัส PIN")
+                    }
+                }
+            }
+        }
+
+        // 4b. App update card (sideloaded app — not Play Store)
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, tint = OrangePrimary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "อัปเดตแอป", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "เวอร์ชันปัจจุบัน: v${com.example.util.AppUpdater.installedVersionName(context)} " +
+                            "(build ${com.example.util.AppUpdater.installedVersionCode(context)})",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = { viewModel.checkForUpdate(silent = false) },
+                        colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("ตรวจหาอัปเดต")
+                    }
+
+                    if (updateStatus.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(text = updateStatus, fontSize = 12.sp)
                     }
                 }
             }

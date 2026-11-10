@@ -56,6 +56,11 @@ fun AdminScreen(viewModel: MainViewModel) {
         viewModel.exitAdminMode()
     }
 
+    // Check for a newer sideloaded build once per launch.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.checkForUpdateOnLaunch()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -236,4 +241,6 @@ fun AdminScreen(viewModel: MainViewModel) {
             }
         }
     }
+
+    AppUpdateDialog(viewModel = viewModel)
 }
