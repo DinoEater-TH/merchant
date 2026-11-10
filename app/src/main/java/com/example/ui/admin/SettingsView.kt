@@ -128,7 +128,7 @@ fun SettingsView(viewModel: MainViewModel) {
     var soundVolume by remember { mutableStateOf(com.example.util.SoundHelper.volume) }
     // Foreground service: keep listening for new orders even when app is closed
     val servicePrefs = context.getSharedPreferences("order_alert_service", Context.MODE_PRIVATE)
-    var serviceEnabled by remember { mutableStateOf(servicePrefs.getBoolean("enabled", false)) }
+    var serviceEnabled by remember { mutableStateOf(servicePrefs.getBoolean("enabled", true)) }
     var isLocatingShop by remember { mutableStateOf(false) }
     var showLongdoMapPicker by remember { mutableStateOf(false) }
 

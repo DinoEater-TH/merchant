@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
                         viewModel.registerAdminPushToken()
                         // Auto-start order alert service if enabled
                         val prefs = getSharedPreferences("order_alert_service", android.content.Context.MODE_PRIVATE)
-                        if (prefs.getBoolean("enabled", false)) {
+                        if (prefs.getBoolean("enabled", true)) {
                             com.example.util.OrderAlertService.start(this@MainActivity)
                         }
                     } else {

@@ -135,10 +135,18 @@ class OrderAlertService : Service() {
         ref.addValueEventListener(vl)
     }
 
-    private fun parseState(raw: Any?): JSONObject? {
+    private val moshi = com.squareup.moshi.Moshi.Builder()
+        .addLast(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
+        .build()
+    private val mapAdapter: com.squareup.moshi.JsonAdapter<Any> = moshi.adapter(
+        com.squareup.moshi.Types.newParameterizedType(java.util.Map::class.java, String::class.java, Any::class.java)
+    )
+
+    private fun parseState(raw: Any?): org.json.JSONObject? {
         if (raw == null) return null
         return try {
-            if (raw is String) JSONObject(raw) else JSONObject(raw.toString())
+            val json = if (raw is String) raw else try { mapAdapter.toJson(raw) } catch (_: Exception) { null }
+            if (json.isNullOrBlank()) null else org.json.JSONObject(json)
         } catch (_: Exception) {
             null
         }
