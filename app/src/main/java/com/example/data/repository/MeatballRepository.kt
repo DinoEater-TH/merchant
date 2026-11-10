@@ -159,6 +159,7 @@ class MeatballRepository(context: Context? = null) {
     companion object {
         private const val PREFS_NAME = "meatball_shop_state"
         private const val KEY_STATE = "state_json"
+        private const val KEY_ADMIN_LOGGED_IN = "admin_logged_in"
         private const val DEFAULT_ADMIN_PIN = "09286840"
     }
 
@@ -485,6 +486,13 @@ fun addOrUpdateMenuItem(item: MenuItem) {
             _adminPin.value = pin
             persistState()
         }
+    }
+
+    fun hasAdminLoggedIn(): Boolean =
+        preferences?.getBoolean(KEY_ADMIN_LOGGED_IN, false) ?: false
+
+    fun setAdminLoggedIn(loggedIn: Boolean) {
+        preferences?.edit()?.putBoolean(KEY_ADMIN_LOGGED_IN, loggedIn)?.apply()
     }
 
     fun calculateBreakEvenSummary(): BreakEvenSummary {

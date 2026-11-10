@@ -59,6 +59,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var knownOrderIds: Set<String>? = null
 
     init {
+        // Auto-login if the admin has logged in before on this device (PIN remembered).
+        if (repository.hasAdminLoggedIn()) {
+            _isAdminMode.value = true
+            knownOrderIds = orders.value.map { it.id }.toSet()
+            registerAdminPushToken()
+        }
         viewModelScope.launch {
             orders.collect { list ->
                 if (!_isAdminMode.value) {
@@ -682,6 +688,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun verifyPin(entered: String): Boolean {
         if (entered == adminPin.value) {
             _isAdminMode.value = true
+            repository.setAdminLoggedIn(true)
             // Seed existing orders so only genuinely new ones trigger the alert.
             knownOrderIds = orders.value.map { it.id }.toSet()
             registerAdminPushToken()
@@ -706,6 +713,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun exitAdminMode() {
         _isAdminMode.value = false
+        repository.setAdminLoggedIn(false)
     }
 
     fun setAdminPin(newPin: String) {
