@@ -44,13 +44,19 @@ import com.example.ui.theme.OrangePrimary
 @Composable
 fun PosMenuView(viewModel: MainViewModel) {
     val menuItems by viewModel.menuItems.collectAsState()
+    val categoriesState by viewModel.categories.collectAsState()
     val shopInfo by viewModel.shopInfo.collectAsState()
     val cart = remember { mutableStateMapOf<String, Int>() }
     var selectedCategory by remember { mutableStateOf("all") }
     var phone by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
-    val categories = remember(menuItems) {
+    // map categoryId -> display name (Thai). Fall back to id when no category found.
+    fun categoryName(id: String): String {
+        val c = categoriesState.find { it.id == id }
+        return c?.name?.takeIf { it.isNotBlank() } ?: id
+    }
+    val categories = remember(menuItems, categoriesState) {
         menuItems.map { it.categoryId }.distinct().filter { it.isNotBlank() && it != "all" }
     }
     val filtered = remember(menuItems, selectedCategory) {
@@ -74,7 +80,7 @@ fun PosMenuView(viewModel: MainViewModel) {
                 FilterChip(
                     selected = selectedCategory == cat,
                     onClick = { selectedCategory = cat },
-                    label = { Text(cat, fontSize = 11.sp) }
+                    label = { Text(categoryName(cat), fontSize = 11.sp) }
                 )
             }
         }
