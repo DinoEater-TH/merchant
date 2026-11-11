@@ -1114,7 +1114,7 @@
         orderId: order.id || '',
         timestamp: order.timestamp || '',
         total: Number(order.totalAmount) || 0,
-        itemsText: (order.items || []).map(i => `${i.name} x${i.quantity}`).join(', '),
+        itemsText: (order.items || []).map(i => `${i.name} x${i.quantity}` + (i.subItemSummary ? ` (${i.subItemSummary})` : '')).join(', '),
         stampsEarned: earned || 0,
         channel: channel || ''
       };
@@ -1324,7 +1324,7 @@
             orderId: o.id,
             timestamp: o.timestamp,
             total: o.totalAmount,
-            itemsText: (o.items || []).map(i => `${i.name} x${i.quantity}`).join(', '),
+            itemsText: (o.items || []).map(i => `${i.name} x${i.quantity}` + (i.subItemSummary ? ` (${i.subItemSummary})` : '')).join(', '),
             stampsEarned: 0,
             channel: isPosOrder(o) ? 'POS' : 'ออนไลน์'
           }));
