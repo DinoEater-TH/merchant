@@ -312,9 +312,9 @@
 
       <!-- Stepper -->
       <div class="flex justify-between text-xs text-center">
-        <div class="w-1/3 text-orange-600 font-bold">● รับออเดอร์แล้ว</div>
-        <div class="w-1/3 text-orange-600 font-bold">● กำลังทอด</div>
-        <div class="w-1/3 text-gray-400 font-medium">○ เสร็จแล้ว</div>
+        <div id="trackerStep0" class="w-1/3 text-orange-600 font-bold">● รับออเดอร์แล้ว</div>
+        <div id="trackerStep1" class="w-1/3 text-orange-600 font-bold">● กำลังทอด</div>
+        <div id="trackerStep2" class="w-1/3 text-gray-400 font-medium">○ เสร็จแล้ว</div>
       </div>
 
       <div class="bg-gray-50 p-3 rounded-lg text-xs space-y-1">
@@ -322,6 +322,12 @@
         <div id="trackerItemsList">-</div>
         <div class="text-gray-500" id="trackerOptionsText"></div>
         <div class="text-red-500 font-bold hidden" id="trackerCommentText"></div>
+        <div class="border-t border-gray-200 mt-1.5 pt-1.5 space-y-0.5">
+          <div class="flex justify-between text-gray-600"><span>ยอดรวมสินค้า</span><span id="trackerSubtotal">฿0</span></div>
+          <div class="flex justify-between text-green-600 hidden" id="trackerDiscountRow"><span>ส่วนลด</span><span id="trackerDiscount">-฿0</span></div>
+          <div class="flex justify-between text-gray-600 hidden" id="trackerDeliveryRow"><span>ค่าจัดส่ง</span><span id="trackerDelivery">฿0</span></div>
+          <div class="flex justify-between font-extrabold text-orange-600 text-sm"><span>ยอดสุทธิ</span><span id="trackerTotal">฿0</span></div>
+        </div>
       </div>
 
       <button onclick="closeTrackerModalWithPrompt()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs">
@@ -1237,7 +1243,105 @@
       if (ok) finishOrderUI();
     }
 
+    // ---------- Order tracker ----------
+    const TRACKER_STATUS = {
+      PENDING:   { icon: '🍳', text: 'ร้านรับออเดอร์แล้ว กำลังเตรียมของ...', short: 'รอร้านรับออเดอร์...', step: 1, cls: 'text-orange-600 font-bold' },
+      COOKING:   { icon: '🔥', text: 'กำลังปรุงทอดร้อนๆ กรอบๆ...', short: 'กำลังทอดร้อนๆ...', step: 2, cls: 'text-orange-600 font-bold' },
+      READY:     { icon: '🛍️', text: 'เสร็จแล้ว พร้อมรับ/จัดส่ง', short: 'เสร็จแล้ว พร้อมรับ/ส่ง', step: 3, cls: 'text-green-600 font-bold' },
+      COMPLETED: { icon: '✅', text: 'ออเดอร์สำเร็จแล้ว ขอบคุณครับ', short: 'ออเดอร์สำเร็จแล้ว', step: 3, cls: 'text-green-600 font-bold' },
+      CANCELLED: { icon: '❌', text: 'ออเดอร์นี้ถูกยกเลิก', short: 'ออเดอร์ถูกยกเลิก', step: 0, cls: 'text-red-600 font-bold' }
+    };
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function fmtMoney(v) {
+      const n = Number(v) || 0;
+      return n % 1 === 0 ? String(n) : n.toFixed(2);
+    }
+
+    // Fill the tracker dialog from the active order (items, sub-items, options, totals).
+    function renderTracker() {
+      const o = activeOrder;
+      if (!o) return;
+
+      const idEl = document.getElementById('trackerOrderId');
+      if (idEl) idEl.textContent = o.id || '-';
+
+      const st = TRACKER_STATUS[o.status] || TRACKER_STATUS.PENDING;
+      const iconEl = document.getElementById('trackerStatusIcon');
+      const textEl = document.getElementById('trackerStatusText');
+      if (iconEl) iconEl.textContent = st.icon;
+      if (textEl) {
+        textEl.textContent = st.text;
+        textEl.className = 'font-extrabold text-base ' + st.cls;
+      }
+
+      // Stepper: filled circles for reached steps
+      [0, 1, 2].forEach(i => {
+        const el = document.getElementById('trackerStep' + i);
+        if (!el) return;
+        const done = i < st.step;
+        const active = i === st.step - 1;
+        const color = o.status === 'CANCELLED' ? 'text-red-500 font-bold'
+          : done ? 'text-green-600 font-bold'
+          : active ? 'text-orange-600 font-bold'
+          : 'text-gray-400 font-medium';
+        el.className = 'w-1/3 ' + color;
+        const label = ['รับออเดอร์แล้ว', 'กำลังทอด', 'เสร็จแล้ว'][i];
+        el.textContent = done || active ? '● ' + label : '○ ' + label;
+      });
+
+      const itemsEl = document.getElementById('trackerItemsList');
+      if (itemsEl) {
+        const items = Array.isArray(o.items) ? o.items : [];
+        itemsEl.innerHTML = items.length ? items.map(i => {
+          const subs = i.subItemSummary
+            || (typeof i.selectedSubItems === 'string' ? i.selectedSubItems.replace(/,/g, ', ') : '');
+          return `<div class="flex justify-between gap-2 py-1 border-b border-gray-200 last:border-0">
+            <div class="min-w-0">
+              <div class="font-bold text-gray-800">${esc(i.name)} <span class="text-orange-600">x${i.quantity || 0}</span></div>
+              ${subs ? `<div class="text-[11px] text-orange-600">${esc(subs)}</div>` : ''}
+            </div>
+            <div class="font-bold text-gray-700 whitespace-nowrap">฿${fmtMoney((i.price || 0) * (i.quantity || 0))}</div>
+          </div>`;
+        }).join('') : '<div class="text-gray-400">-</div>';
+      }
+
+      const opts = o.options || {};
+      const optParts = [];
+      if (opts.skewer) optParts.push('ไม้: ' + opts.skewer);
+      if (Array.isArray(opts.addons) && opts.addons.length) optParts.push('เครื่องเคียง: ' + opts.addons.join(', '));
+      const optEl = document.getElementById('trackerOptionsText');
+      if (optEl) optEl.textContent = optParts.join(' • ');
+
+      const commentEl = document.getElementById('trackerCommentText');
+      if (commentEl) {
+        const note = String(o.comment || '').replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (note) { commentEl.textContent = 'หมายเหตุ: ' + note; commentEl.classList.remove('hidden'); }
+        else { commentEl.textContent = ''; commentEl.classList.add('hidden'); }
+      }
+
+      const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+      setText('trackerSubtotal', '฿' + fmtMoney(o.subtotal));
+      setText('trackerTotal', '฿' + fmtMoney(o.totalAmount));
+
+      const discount = Number(o.discount) || 0;
+      const dRow = document.getElementById('trackerDiscountRow');
+      if (dRow) dRow.classList.toggle('hidden', discount <= 0);
+      setText('trackerDiscount', '-฿' + fmtMoney(discount));
+
+      const delivery = Number(o.deliveryFee) || 0;
+      const feeRow = document.getElementById('trackerDeliveryRow');
+      if (feeRow) feeRow.classList.toggle('hidden', o.fulfillment !== 'DELIVERY');
+      setText('trackerDelivery', delivery <= 0 ? 'ฟรี' : '฿' + fmtMoney(delivery));
+    }
+
     function openTrackerModal() {
+      renderTracker();
       document.getElementById('trackerModal').classList.remove('hidden');
     }
 
@@ -1581,6 +1685,18 @@
           try { parsed = JSON.parse(json); } catch (e) { return; }
           window.remoteState = parsed;
           window.customPromos = Array.isArray(parsed.customPromos) ? parsed.customPromos : [];
+          // Keep the order tracker in sync with the shop's latest status
+          if (activeOrder) {
+            const fresh = (parsed.orders || []).find(x => x.id === activeOrder.id);
+            if (fresh) {
+              activeOrder = fresh;
+              const t = document.getElementById('trackerModal');
+              if (t && !t.classList.contains('hidden')) renderTracker();
+              const shortEl = document.getElementById('activeOrderStatusText');
+              const info = TRACKER_STATUS[fresh.status];
+              if (shortEl && info) shortEl.textContent = info.short;
+            }
+          }
           const si = parsed.shopInfo || {};
           const nameEl = document.getElementById('shopNameText');
           if (nameEl) nameEl.textContent = si.name || 'DinoEater ลูกชิ้นทอด';
