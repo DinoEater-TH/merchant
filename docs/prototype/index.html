@@ -604,6 +604,17 @@
       `).join('') || '<p class="text-xs text-gray-400">ไม่มีตัวเลือกไม้</p>';
     }
 
+    // Parse an item's admin-managed sub-item list (stored as a JSON string or array).
+    function subItemsOf(m) {
+      if (!m) return [];
+      let subs = [];
+      try {
+        if (Array.isArray(m.subItems)) subs = m.subItems;
+        else if (typeof m.subItems === 'string' && m.subItems.trim()) subs = JSON.parse(m.subItems);
+      } catch (e) { subs = []; }
+      return (Array.isArray(subs) ? subs : []).filter(s => s && s.enabled !== false);
+    }
+
     // Render admin-managed sub-item selectors (e.g. เกี๊ยวห่อลูกชิ้น: หมู/ไก่/เนื้อ)
     window.selectedSubItems = window.selectedSubItems || {};
     function renderSubItems() {
@@ -615,9 +626,7 @@
       for (const [id, qty] of Object.entries(cart)) {
         const m = menu.find(x => x.id === id);
         if (!m) continue;
-        let subs = [];
-        try { subs = JSON.parse(m.subItems || '[]'); } catch (e) { subs = []; }
-        subs = (subs || []).filter(s => s.enabled !== false);
+        const subs = subItemsOf(m);
         if (!subs.length) continue;
         hasAny = true;
         const current = window.selectedSubItems[id] || [];
@@ -643,8 +652,23 @@
           if (!window.selectedSubItems[itemId]) window.selectedSubItems[itemId] = [];
           if (cb.checked) window.selectedSubItems[itemId].push(name);
           else window.selectedSubItems[itemId] = window.selectedSubItems[itemId].filter(n => n !== name);
+          renderMenu();
         });
       });
+    }
+
+    // Cart items that require a sub-item choice but have none selected.
+    function missingSubItemSelections() {
+      const missing = [];
+      for (const [id] of Object.entries(cart)) {
+        const m = menu.find(x => x.id === id);
+        if (!m) continue;
+        const subs = subItemsOf(m);
+        if (!subs.length) continue;
+        const picked = (window.selectedSubItems && window.selectedSubItems[id]) || [];
+        if (!picked.length) missing.push(m.name + ' (' + subs.map(s => s.name).join(' / ') + ')');
+      }
+      return missing;
     }
 
     // 1 stamp per shopCfg.spendPerStamp baht. Below that amount = 0 stamps.
@@ -711,13 +735,21 @@
       if (text) text.textContent = parts.length ? 'โปรสุดคุ้ม: ' + parts.join(' | ') : '';
     }
 
-    function renderMenu(catFilter = 'all') {
+    function renderMenu(catFilter) {
+      if (catFilter === undefined) catFilter = window.currentMenuCat || 'all';
+      window.currentMenuCat = catFilter;
       const list = document.getElementById('menuList');
       list.innerHTML = '';
       const filtered = catFilter === 'all' ? menu : menu.filter(m => m.cat === catFilter);
 
       filtered.forEach(item => {
         const qty = cart[item.id] || 0;
+        const subs = subItemsOf(item);
+        const picked = (window.selectedSubItems && window.selectedSubItems[item.id]) || [];
+        const subHint = subs.length
+          ? `<p class="text-xs font-medium text-orange-600 mt-1">เลือกเมนูรองได้: ${subs.map(s => s.name).join(' / ')}</p>` +
+            (picked.length ? `<p class="text-xs font-bold text-green-600 mt-0.5">เลือกแล้ว: ${picked.join(', ')}</p>` : '')
+          : '';
         const card = document.createElement('div');
         card.className = 'bg-white rounded-2xl p-4 shadow-sm border border-gray-100';
         card.innerHTML = `
@@ -729,6 +761,7 @@
                 ${item.bestseller ? '<span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-md font-bold">ขายดี 🔥</span>' : ''}
               </div>
               <p class="text-sm text-gray-500 mt-1 leading-snug line-clamp-2">${item.desc}</p>
+              ${subHint}
               <div class="flex flex-wrap items-baseline gap-x-2 mt-2">
                 <span class="font-extrabold text-orange-600 text-2xl">฿${item.price}</span>
                 <span class="text-sm font-medium text-gray-500">/ ${item.saleUnit || 'ไม้'}</span>
@@ -944,6 +977,13 @@
     function captureGps() { openGpsMap(); }
 
     function goToPaymentModal() {
+      const missing = missingSubItemSelections();
+      if (missing.length) {
+        alert('กรุณาเลือกเมนูรองให้ครบทุกรายการก่อนชำระเงิน:\n- ' + missing.join('\n- '));
+        const sec = document.getElementById('subItemsSection');
+        if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       closeAddonsModal();
       let net = document.getElementById('modalNetTotal').textContent.replace('฿', '');
       document.getElementById('promptPayAmount').textContent = net;
@@ -1093,6 +1133,15 @@
 
     async function confirmOrder() {
       if (isDeliveryBlocked()) { alert('ไม่สามารถสั่งแบบจัดส่งได้ในขณะนี้'); return; }
+      const missing = missingSubItemSelections();
+      if (missing.length) {
+        alert('กรุณาเลือกเมนูรองให้ครบทุกรายการก่อนสั่งซื้อ:\n- ' + missing.join('\n- '));
+        closePaymentModal();
+        openAddonsModal();
+        const sec = document.getElementById('subItemsSection');
+        if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       closePaymentModal();
       const ok = await submitOrderToFirebase();
       if (ok) finishOrderUI();
@@ -1100,6 +1149,13 @@
 
     async function confirmCashOrder() {
       if (isDeliveryBlocked()) { alert('ไม่สามารถสั่งแบบจัดส่งได้ในขณะนี้'); return; }
+      const missing = missingSubItemSelections();
+      if (missing.length) {
+        alert('กรุณาเลือกเมนูรองให้ครบทุกรายการก่อนสั่งซื้อ:\n- ' + missing.join('\n- '));
+        const sec = document.getElementById('subItemsSection');
+        if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       closeAddonsModal();
       const ok = await submitOrderToFirebase();
       if (ok) finishOrderUI();
@@ -1510,7 +1566,7 @@
             menu = parsed.menuItems
               .filter(m => m.status !== 'HIDDEN')
               .sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0))
-              .map(m => ({ id: m.id, cat: m.categoryId, name: m.name, price: m.price, stock: m.stockQty, unlimited: m.isUnlimitedStock !== false, saleUnit: m.saleUnit || 'ไม้', bestseller: !!m.isBestseller, emoji: m.emoji || '🍢', desc: m.description || '', imageUrl: m.imageUrl || null }));
+              .map(m => ({ id: m.id, cat: m.categoryId, name: m.name, price: m.price, stock: m.stockQty, unlimited: m.isUnlimitedStock !== false, saleUnit: m.saleUnit || 'ไม้', bestseller: !!m.isBestseller, emoji: m.emoji || '🍢', desc: m.description || '', imageUrl: m.imageUrl || null, subItems: m.subItems || '' }));
             // Categories tabs - only categories that have items
             const tabsEl = document.getElementById('categoryTabs');
             if (tabsEl && Array.isArray(parsed.categories) && parsed.categories.length > 0) {

@@ -666,7 +666,15 @@ fun AddMenuItemDialog(
                         emoji = emoji.ifBlank { "🍢" },
                         description = description.trim(),
                         imageUrl = imageUrl,
-                        subItems = org.json.JSONArray().apply { subItemList.forEach { put(org.json.JSONObject().apply { put("id", "sub_${System.currentTimeMillis()}"); put("name", it); put("enabled", true) }) } }.toString(),
+                        subItems = org.json.JSONArray().apply {
+                            subItemList.forEachIndexed { idx, label ->
+                                put(org.json.JSONObject().apply {
+                                    put("id", "sub_${System.currentTimeMillis()}_$idx")
+                                    put("name", label)
+                                    put("enabled", true)
+                                })
+                            }
+                        }.toString(),
                         sortOrder = existing?.sortOrder ?: 0,
                         packagePrice = existing?.packagePrice ?: 0.0,
                         piecesPerPackage = existing?.piecesPerPackage ?: 0
