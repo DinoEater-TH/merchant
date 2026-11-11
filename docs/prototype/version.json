@@ -1,7 +1,7 @@
 {
-  "versionCode": 5,
-  "versionName": "1.4",
+  "versionCode": 6,
+  "versionName": "1.5",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "แก้เมนูรอง: รหัสเมนูรองไม่ซ้ำกันแล้ว เพื่อให้แก้ไข/ลบเมนูรองได้ถูกตัว และฝั่งลูกค้าเว็บแสดงตัวเลือกเมนูรองของเมนูที่กำหนดได้",
+  "notes": "แสดงเมนูรองในรายการออเดอร์ (เช่น ลูกชิ้นหมู x2, คอกเทล x1) และรองรับออเดอร์ที่ลูกค้าเลือกเมนูรองหลายแบบในรายการเดียว",
   "mandatory": false
 }
