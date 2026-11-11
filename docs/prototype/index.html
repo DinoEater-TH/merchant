@@ -936,6 +936,8 @@
 
     function closeAddonsModal() {
       document.getElementById('addonsModal').classList.add('hidden');
+      // Keep the big sub-item buttons on the menu cards in sync with choices made here.
+      renderMenu();
     }
 
     function setFulfillment(type) {
