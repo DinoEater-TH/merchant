@@ -784,7 +784,10 @@
 
     function updateQty(id, delta) {
       cart[id] = (cart[id] || 0) + delta;
-      if (cart[id] <= 0) delete cart[id];
+      if (cart[id] <= 0) {
+        delete cart[id];
+        if (window.selectedSubItems) delete window.selectedSubItems[id];
+      }
       updateCartSummary();
       renderMenu();
     }
@@ -1122,6 +1125,7 @@
 
     function finishOrderUI() {
       cart = {};
+      window.selectedSubItems = {};
       updateCartSummary();
       renderMenu();
       const orderAlert = document.getElementById('activeOrderAlert');
