@@ -1003,7 +1003,7 @@
               const armed = pendingRemoveItemKey === key;
               const canEdit = o.status !== 'COMPLETED' && o.status !== 'CANCELLED';
               return `<div class="flex justify-between items-center text-xs">
-                <span>${i.name} x${i.quantity} <span class="text-gray-400">฿${(i.price || 0) * (i.quantity || 0)}</span></span>
+                <span>${i.name} x${i.quantity} <span class="text-gray-400">฿${(i.price || 0) * (i.quantity || 0)}</span>${i.subItemSummary ? `<div class="text-[11px] font-medium text-orange-600">${i.subItemSummary}</div>` : ''}</span>
                 ${canEdit ? `<button onclick="removeOrderItem('${o.id}', ${idx})" class="${armed ? 'bg-red-600 text-white' : 'text-red-500'} font-bold px-1.5 py-0.5 rounded">${armed ? '⚠️ ยืนยันลบ' : '🗑️'}</button>` : ''}
               </div>`;
             }).join('')}

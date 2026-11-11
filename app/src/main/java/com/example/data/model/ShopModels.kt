@@ -143,7 +143,8 @@ data class OrderItem(
     val price: Double,
     val directCost: Double,
     val quantity: Int,
-    val selectedSubItems: String = ""
+    val selectedSubItems: String = "",
+    val subItemSummary: String = ""
 )
 
 data class Order(

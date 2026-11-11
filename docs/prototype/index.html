@@ -615,8 +615,60 @@
       return (Array.isArray(subs) ? subs : []).filter(s => s && s.enabled !== false);
     }
 
-    // Render admin-managed sub-item selectors (e.g. เกี๊ยวห่อลูกชิ้น: หมู/ไก่/เนื้อ)
-    window.selectedSubItems = window.selectedSubItems || {};
+    // Sub-item choices are counted per cart line, e.g. เกี๊ยวห่อลูกชิ้น = หมู x2 + คอกเทล x1.
+    // The cart quantity of a menu that has sub-items is the sum of those counts.
+    window.subItemCounts = window.subItemCounts || {};
+
+    function subItemCountsFor(id) {
+      return window.subItemCounts[id] || {};
+    }
+
+    // Names repeated once per unit, kept as a string for the Android admin app.
+    function subItemNamesFor(id) {
+      const picked = [];
+      const c = subItemCountsFor(id);
+      Object.keys(c).forEach(name => {
+        for (let i = 0; i < (c[name] || 0); i++) picked.push(name);
+      });
+      return picked;
+    }
+
+    // e.g. "ลูกชิ้นหมู x2, คอกเทล x1"
+    function subItemSummaryFor(id) {
+      const c = subItemCountsFor(id);
+      return Object.keys(c).filter(n => c[n] > 0).map(n => `${n} x${c[n]}`).join(', ');
+    }
+
+    function subItemTotalFor(id) {
+      const c = subItemCountsFor(id);
+      return Object.keys(c).reduce((sum, n) => sum + (c[n] || 0), 0);
+    }
+
+    // +1 / -1 a specific sub-item. Adding also adds a unit to the cart.
+    function changeSubItemQty(btn) {
+      const itemId = btn.getAttribute('data-item');
+      const name = btn.getAttribute('data-name');
+      const delta = Number(btn.getAttribute('data-delta')) || 0;
+      const m = menu.find(x => x.id === itemId);
+      if (!m || !delta) return;
+      if (!window.subItemCounts[itemId]) window.subItemCounts[itemId] = {};
+      const c = window.subItemCounts[itemId];
+      const next = Math.max(0, (c[name] || 0) + delta);
+      if (next === 0) delete c[name]; else c[name] = next;
+
+      const total = subItemTotalFor(itemId);
+      if (total > 0) cart[itemId] = total;
+      else {
+        delete cart[itemId];
+        delete window.subItemCounts[itemId];
+      }
+      updateCartSummary();
+      renderMenu();
+      const modal = document.getElementById('addonsModal');
+      if (modal && !modal.classList.contains('hidden')) renderSubItems();
+    }
+
+    // Read-only breakdown shown in the checkout dialog.
     function renderSubItems() {
       const container = document.getElementById('subItemsContainer');
       const section = document.getElementById('subItemsSection');
@@ -626,47 +678,29 @@
       for (const [id, qty] of Object.entries(cart)) {
         const m = menu.find(x => x.id === id);
         if (!m) continue;
-        const subs = subItemsOf(m);
-        if (!subs.length) continue;
+        if (!subItemsOf(m).length) continue;
         hasAny = true;
-        const current = window.selectedSubItems[id] || [];
         html += `<div class="bg-gray-50 rounded-lg p-2">
-          <div class="font-bold text-xs mb-1">${m.name} (x${qty}) — เลือก ${qty} รายการ</div>
-          <div class="space-y-1">`;
-        subs.forEach(s => {
-          const checked = current.includes(s.name) ? 'checked' : '';
-          html += `<label class="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" data-subitem="${id}" data-name="${s.name}" ${checked} class="accent-orange-600 subItemCb">
-            <span>${s.name}</span>
-          </label>`;
-        });
-        html += `</div></div>`;
+          <div class="font-bold text-sm">${m.name} x${qty}</div>
+          <div class="text-sm text-orange-700 font-medium">${subItemSummaryFor(id) || '-'}</div>
+        </div>`;
       }
       container.innerHTML = html || '<p class="text-xs text-gray-400">ไม่มีเมนูรองสำหรับรายการในตะกร้า</p>';
       if (section) section.style.display = hasAny ? '' : 'none';
-      // bind change handlers to keep selectedSubItems in sync
-      document.querySelectorAll('.subItemCb').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const itemId = cb.getAttribute('data-subitem');
-          const name = cb.getAttribute('data-name');
-          if (!window.selectedSubItems[itemId]) window.selectedSubItems[itemId] = [];
-          if (cb.checked) window.selectedSubItems[itemId].push(name);
-          else window.selectedSubItems[itemId] = window.selectedSubItems[itemId].filter(n => n !== name);
-          renderMenu();
-        });
-      });
     }
 
-    // Cart items that require a sub-item choice but have none selected.
+    // Safety net: a menu with sub-items must have a count for every unit in the cart.
     function missingSubItemSelections() {
       const missing = [];
-      for (const [id] of Object.entries(cart)) {
+      for (const [id, qty] of Object.entries(cart)) {
         const m = menu.find(x => x.id === id);
         if (!m) continue;
         const subs = subItemsOf(m);
         if (!subs.length) continue;
-        const picked = (window.selectedSubItems && window.selectedSubItems[id]) || [];
-        if (!picked.length) missing.push(m.name + ' (' + subs.map(s => s.name).join(' / ') + ')');
+        const picked = subItemNamesFor(id);
+        if (picked.length !== qty) {
+          missing.push(`${m.name} (${subs.map(s => s.name).join(' / ')}) — เลือกแล้ว ${picked.length}/${qty} ไม้`);
+        }
       }
       return missing;
     }
@@ -745,22 +779,40 @@
       filtered.forEach(item => {
         const qty = cart[item.id] || 0;
         const subs = subItemsOf(item);
-        const picked = (window.selectedSubItems && window.selectedSubItems[item.id]) || [];
+        const counts = subItemCountsFor(item.id);
+        const totalPicked = subItemTotalFor(item.id);
         const subHint = subs.length
           ? `<div class="mt-2 bg-orange-50 border border-orange-200 rounded-xl p-2.5">
-              <p class="text-sm font-bold text-orange-700">เลือกเมนูรอง</p>
-              <div class="flex flex-wrap gap-2 mt-1.5">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-bold text-orange-700">เลือกเมนูรอง</p>
+                <span class="text-sm font-bold text-orange-700">รวม ${totalPicked} ${item.saleUnit || 'ไม้'}</span>
+              </div>
+              <div class="mt-1.5 space-y-1.5">
                 ${subs.map(s => {
-                  const on = picked.indexOf(s.name) >= 0;
-                  return `<button type="button" data-item="${item.id}" data-name="${s.name}"
-                    aria-pressed="${on ? 'true' : 'false'}"
-                    onclick="toggleMenuSubItem(this)"
-                    class="subitem-btn text-lg font-bold px-4 py-2 rounded-xl border-2 active:scale-95 transition ${on ? 'bg-orange-600 border-orange-600 text-white' : 'bg-white border-orange-400 text-orange-700'}">${s.name}</button>`;
+                  const c = counts[s.name] || 0;
+                  return `<div class="flex items-center gap-2 rounded-xl border-2 px-2 py-1.5 bg-white ${c > 0 ? 'border-orange-500' : 'border-orange-200'}">
+                    <span class="flex-1 text-lg font-bold ${c > 0 ? 'text-orange-700' : 'text-gray-700'}">${s.name}</span>
+                    <button type="button" data-item="${item.id}" data-name="${s.name}" data-delta="-1"
+                      onclick="changeSubItemQty(this)" ${c > 0 ? '' : 'disabled'}
+                      class="w-11 h-11 rounded-lg bg-gray-100 text-gray-700 text-2xl font-bold flex items-center justify-center active:scale-95 transition disabled:opacity-30">−</button>
+                    <span class="w-8 text-center text-xl font-bold tabular-nums ${c > 0 ? 'text-orange-700' : 'text-gray-400'}">${c}</span>
+                    <button type="button" data-item="${item.id}" data-name="${s.name}" data-delta="1"
+                      onclick="changeSubItemQty(this)"
+                      class="w-11 h-11 rounded-lg bg-orange-600 text-white text-2xl font-bold flex items-center justify-center active:scale-95 transition">+</button>
+                  </div>`;
                 }).join('')}
               </div>
-              <p id="picked-${item.id}" class="text-sm font-medium text-green-700 mt-2">${picked.length ? 'เลือกแล้ว: ' + picked.join(', ') : ''}</p>
             </div>`
           : '';
+        const qtyRow = subs.length ? '' : `
+          <div class="mt-3 flex items-center justify-between">
+            <span class="text-sm font-semibold text-gray-500">จำนวน</span>
+            <div class="flex items-center gap-3">
+              <button onclick="updateQty('${item.id}', -1)" ${qty > 0 ? '' : 'disabled'} class="w-14 h-14 rounded-full bg-gray-100 text-gray-700 text-2xl font-bold flex items-center justify-center active:scale-95 transition disabled:opacity-40 disabled:active:scale-100">−</button>
+              <span class="w-9 text-center font-bold text-2xl tabular-nums">${qty}</span>
+              <button onclick="updateQty('${item.id}', 1)" class="w-14 h-14 rounded-full bg-orange-600 text-white text-2xl font-bold flex items-center justify-center shadow-sm active:scale-95 transition">+</button>
+            </div>
+          </div>`;
         const card = document.createElement('div');
         card.className = 'bg-white rounded-2xl p-4 shadow-sm border border-gray-100';
         card.innerHTML = `
@@ -780,49 +832,20 @@
               </div>
             </div>
           </div>
-          <div class="mt-3 flex items-center justify-between">
-            <span class="text-sm font-semibold text-gray-500">จำนวน</span>
-            <div class="flex items-center gap-3">
-              <button onclick="updateQty('${item.id}', -1)" ${qty > 0 ? '' : 'disabled'} class="w-14 h-14 rounded-full bg-gray-100 text-gray-700 text-2xl font-bold flex items-center justify-center active:scale-95 transition disabled:opacity-40 disabled:active:scale-100">−</button>
-              <span class="w-9 text-center font-bold text-2xl tabular-nums">${qty}</span>
-              <button onclick="updateQty('${item.id}', 1)" class="w-14 h-14 rounded-full bg-orange-600 text-white text-2xl font-bold flex items-center justify-center shadow-sm active:scale-95 transition">+</button>
-            </div>
-          </div>
+          ${qtyRow}
         `;
         list.appendChild(card);
       });
     }
 
-    // Toggle a sub-item choice directly on the menu card (no dialog needed).
-    function toggleMenuSubItem(btn) {
-      const itemId = btn.getAttribute('data-item');
-      const name = btn.getAttribute('data-name');
-      if (!window.selectedSubItems) window.selectedSubItems = {};
-      const list = (window.selectedSubItems[itemId] || []).slice();
-      const idx = list.indexOf(name);
-      if (idx >= 0) list.splice(idx, 1); else list.push(name);
-      window.selectedSubItems[itemId] = list;
-
-      const wrap = btn.parentElement;
-      wrap.querySelectorAll('.subitem-btn').forEach(b => {
-        const on = list.indexOf(b.getAttribute('data-name')) >= 0;
-        b.className = 'subitem-btn text-lg font-bold px-4 py-2 rounded-xl border-2 active:scale-95 transition ' +
-          (on ? 'bg-orange-600 border-orange-600 text-white' : 'bg-white border-orange-400 text-orange-700');
-        b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      });
-      const pickedEl = document.getElementById('picked-' + itemId);
-      if (pickedEl) pickedEl.textContent = list.length ? 'เลือกแล้ว: ' + list.join(', ') : '';
-
-      // Keep the checkout dialog's sub-item checkboxes in sync when it is open.
-      const modal = document.getElementById('addonsModal');
-      if (modal && !modal.classList.contains('hidden')) renderSubItems();
-    }
-
     function updateQty(id, delta) {
+      // Menus with sub-items are counted by their sub-item steppers instead.
+      const m = menu.find(x => x.id === id);
+      if (m && subItemsOf(m).length) return;
       cart[id] = (cart[id] || 0) + delta;
       if (cart[id] <= 0) {
         delete cart[id];
-        if (window.selectedSubItems) delete window.selectedSubItems[id];
+        if (window.subItemCounts) delete window.subItemCounts[id];
       }
       updateCartSummary();
       renderMenu();
@@ -1055,8 +1078,18 @@
         const m = menu.find(x => x.id === id);
         if (m) {
           subtotal += m.price * qty;
-          const subs = (window.selectedSubItems && window.selectedSubItems[m.id]) ? window.selectedSubItems[m.id] : [];
-          items.push({ itemId: m.id, name: m.name, price: m.price, directCost: m.directCost || 0, quantity: qty, selectedSubItems: subs });
+          const picked = subItemNamesFor(m.id);
+          const summary = subItemSummaryFor(m.id);
+          items.push({
+            itemId: m.id,
+            name: m.name,
+            price: m.price,
+            directCost: m.directCost || 0,
+            quantity: qty,
+            // String (not an array) so the Android admin app can read web orders.
+            selectedSubItems: picked.join(','),
+            subItemSummary: summary
+          });
         }
       }
       let discount = (shopCfg.promoDiscountEnabled && subtotal >= shopCfg.minOrderForDiscount) ? shopCfg.discountAmount : 0;
@@ -1086,12 +1119,13 @@
       const commentParts = [];
       if (skewerLabel) commentParts.push(`[ไม้: ${skewerLabel}]`);
       if (addonNames.length) commentParts.push(`[เครื่องเคียง: ${addonNames.join(', ')}]`);
-      for (const [id, subs] of Object.entries(window.selectedSubItems || {})) {
-        if (subs && subs.length) {
-          const m = menu.find(x => x.id === id);
-          commentParts.push(`[${m ? m.name : id}: ${subs.join(', ')}]`);
+      const subItemMap = {};
+      items.forEach(it => {
+        if (it.subItemSummary) {
+          commentParts.push(`[${it.name}: ${it.subItemSummary}]`);
+          subItemMap[it.itemId] = it.subItemSummary;
         }
-      }
+      });
       if (userComment) commentParts.push(userComment);
       return {
         order: {
@@ -1102,7 +1136,7 @@
           deliveryAddress: fulfillment === 'delivery' ? ((addrEl && addrEl.value) || '') : '',
           gpsCoordinates: (selectedLat != null && selectedLng != null) ? `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}` : '',
           items,
-          options: { skewer: skewerLabel, skewerId: skewerId || '', addons: addonNames, subItems: window.selectedSubItems || {} },
+          options: { skewer: skewerLabel, skewerId: skewerId || '', addons: addonNames, subItems: subItemMap },
           comment: commentParts.join(' '),
           subtotal, discount, deliveryFee, totalAmount,
           status: 'PENDING',
@@ -1163,7 +1197,7 @@
 
     function finishOrderUI() {
       cart = {};
-      window.selectedSubItems = {};
+      window.subItemCounts = {};
       updateCartSummary();
       renderMenu();
       const orderAlert = document.getElementById('activeOrderAlert');

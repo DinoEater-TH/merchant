@@ -251,11 +251,21 @@ fun AdminOrderCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "${item.name} x${item.quantity}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "${item.name} x${item.quantity}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        val subText = item.subItemSummary.ifBlank { item.selectedSubItems.replace(",", ", ") }
+                        if (subText.isNotBlank()) {
+                            Text(
+                                text = "เมนูรอง: $subText",
+                                fontSize = 11.sp,
+                                color = OrangePrimary
+                            )
+                        }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "฿${String.format(Locale.US, "%.0f", item.price * item.quantity)}",
