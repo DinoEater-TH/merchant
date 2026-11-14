@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.example.ui.MainViewModel
 import com.example.ui.admin.AdminPinDialog
 import com.example.ui.admin.AdminScreen
@@ -54,6 +55,13 @@ class MainActivity : ComponentActivity() {
                 val viewModel: MainViewModel = viewModel()
                 val isAdminMode by viewModel.isAdminMode.collectAsState()
                 val shouldOpenOrders by openOrdersTab
+
+                // Coming back to the app: retry the Firebase connection if it dropped
+                // (e.g. the app was first opened with no internet at that moment).
+                LifecycleResumeEffect(Unit) {
+                    viewModel.retrySyncIfNeeded()
+                    onPauseOrDispose { }
+                }
 
                 // Keep this device registered for push so alerts arrive even when the app is closed.
                 LaunchedEffect(isAdminMode) {

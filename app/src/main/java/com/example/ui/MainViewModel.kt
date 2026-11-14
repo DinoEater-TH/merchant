@@ -626,6 +626,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         firebaseSync.retry()
     }
 
+    /** Called when the app comes back to the foreground: reconnect if the sync is down. */
+    fun retrySyncIfNeeded() {
+        if (!firebaseSync.isConnected()) firebaseSync.retry()
+    }
+
     /**
      * Creates a completed POS (walk-in) order: deducts stock, awards member
      * stamps and syncs to Firebase. Returns the new order id, or null when the

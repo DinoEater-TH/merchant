@@ -1,7 +1,7 @@
 {
-  "versionCode": 7,
-  "versionName": "1.6",
+  "versionCode": 8,
+  "versionName": "1.7",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "รูปแบบการใส่ไม้เลือกได้หลายรายการ และแอดมินเพิ่ม/แก้ไข/ลบตัวเลือกได้ทั้งบนเว็บและแอป",
-  "mandatory": false
+  "notes": "แก้การเชื่อมต่อ Firebase บนมือถือจริง: ลองเชื่อมต่อซ้ำอัตโนมัติ และมีโหมดสำรอง (REST) ใช้ได้แม้มือถือไม่มี/มี Google Play services เก่า พร้อมข้อความบอกสาเหตุที่ชัดเจน",
+  "mandatory": true
 }
