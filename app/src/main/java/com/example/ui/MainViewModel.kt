@@ -809,6 +809,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.moveMenuItem(itemId, direction)
     }
 
+    /** Saves the new top/bottom arrangement after a drag in the POS menu list. */
+    fun reorderMenuItems(visibleIdsInOrder: List<String>) {
+        repository.reorderMenuItems(visibleIdsInOrder)
+    }
+
     fun addCategory(name: String, emoji: String) {
         repository.addCategory(name, emoji)
     }

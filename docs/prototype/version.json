@@ -1,7 +1,7 @@
 {
-  "versionCode": 11,
-  "versionName": "2.0",
+  "versionCode": 12,
+  "versionName": "2.1",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "หน้า POS เลือกเมนูรองได้แบบเว็บลูกค้า (ลูกชิ้นหมู/คอกเทล แยกจำนวน), สีพาสเทลแยกกลุ่มเมนู, กรอบสต็อกกระชับขึ้น และเอาแถบย้อนกลับ/PIN ออกแล้ว",
+  "notes": "หน้า POS ลากสลับตำแหน่งเมนูได้ (กดค้างแล้วลากขึ้น-ลง) และบันทึกลำดับอัตโนมัติ ลำดับเดียวกับเมนูฝั่งลูกค้า",
   "mandatory": true
 }

@@ -1,6 +1,8 @@
 package com.example.ui.admin
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -33,23 +36,32 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.ui.MainViewModel
 import com.example.ui.customer.SubItem
 import com.example.ui.customer.parseSubItems
 import com.example.ui.theme.OrangePrimary
+import kotlinx.coroutines.launch
 
 /**
  * Pastel group palette so ไม้ 5 / ไม้ 10 / เกี๊ยวทอด are easy to tell apart at a glance.
@@ -84,6 +96,22 @@ fun PosMenuView(viewModel: MainViewModel) {
     var phone by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
+    // Drag-to-reorder: the shop decides which menu sits on the upper/lower row.
+    // The arrangement is saved into the shared menu order (same order on the customer web).
+    val canonicalIds = remember(menuItems) {
+        menuItems.sortedWith(compareBy { it.sortOrder }).map { it.id }
+    }
+    var workingIds by remember { mutableStateOf(canonicalIds) }
+    var draggingId by remember { mutableStateOf<String?>(null) }
+    var draggedDistance by remember { mutableFloatStateOf(0f) }
+    val listState = rememberLazyListState()
+    val dragScope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+
+    LaunchedEffect(canonicalIds, draggingId) {
+        if (draggingId == null) workingIds = canonicalIds
+    }
+
     // Stable colour per category (shop order first, then any extra categories).
     val categoryOrder = remember(categoriesState, menuItems) {
         val ordered = categoriesState.filter { it.id != "all" }.sortedBy { it.sort }.map { it.id }
@@ -103,8 +131,10 @@ fun PosMenuView(viewModel: MainViewModel) {
     val categories = remember(menuItems) {
         menuItems.map { it.categoryId }.distinct().filter { it.isNotBlank() && it != "all" }
     }
-    val filtered = remember(menuItems, selectedCategory) {
-        menuItems.filter { it.status.name != "HIDDEN" && (selectedCategory == "all" || it.categoryId == selectedCategory) }
+    val menuById = remember(menuItems) { menuItems.associateBy { it.id } }
+    val filtered = remember(workingIds, menuById, selectedCategory) {
+        workingIds.mapNotNull { menuById[it] }
+            .filter { it.status.name != "HIDDEN" && (selectedCategory == "all" || it.categoryId == selectedCategory) }
     }
 
     // +1/-1 for one sub-item. The cart line always equals the sum of the sub counts.
@@ -157,7 +187,13 @@ fun PosMenuView(viewModel: MainViewModel) {
                 )
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "กดค้างที่เมนูแล้วลากขึ้น-ลงเพื่อสลับตำแหน่ง • บันทึกอัตโนมัติ",
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 2.dp, top = 3.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
 
         if (filtered.isEmpty()) {
             // Never leave the screen blank: explain what is happening.
@@ -190,7 +226,80 @@ fun PosMenuView(viewModel: MainViewModel) {
             }
         } else {
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { offset ->
+                                val startItem = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+                                    offset.y.toInt() in info.offset..(info.offset + info.size)
+                                }
+                                val key = startItem?.key as? String
+                                if (key != null) {
+                                    draggingId = key
+                                    draggedDistance = 0f
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            },
+                            onDrag = { change, dragAmount ->
+                                val key = draggingId
+                                if (key != null) {
+                                    change.consume()
+                                    draggedDistance += dragAmount.y
+                                    val layout = listState.layoutInfo
+                                    val current = layout.visibleItemsInfo.firstOrNull { it.key == key }
+                                    if (current != null) {
+                                        val start = current.offset + draggedDistance
+                                        val end = start + current.size
+                                        val middle = (start + end) / 2f
+                                        // Swap with the card the finger is now over.
+                                        val target = layout.visibleItemsInfo.firstOrNull { info ->
+                                            info.key != key && middle.toInt() in info.offset..(info.offset + info.size)
+                                        }
+                                        if (target != null) {
+                                            val targetId = target.key as? String
+                                            val from = workingIds.indexOf(key)
+                                            val to = if (targetId == null) -1 else workingIds.indexOf(targetId)
+                                            if (from >= 0 && to >= 0 && from != to) {
+                                                workingIds = workingIds.toMutableList().apply {
+                                                    removeAt(from)
+                                                    add(to, key)
+                                                }
+                                                draggedDistance += current.offset - target.offset
+                                            }
+                                        }
+                                        // Keep long drags usable: scroll when near the edges.
+                                        val edge = 80f
+                                        val viewportEnd = layout.viewportEndOffset.toFloat()
+                                        val push = when {
+                                            start < edge -> (start - edge) / edge
+                                            end > viewportEnd - edge -> (viewportEnd - edge - end) / edge
+                                            else -> 0f
+                                        }
+                                        if (push != 0f) dragScope.launch { listState.scrollBy(push * 24f) }
+                                    }
+                                }
+                            },
+                            onDragEnd = {
+                                if (draggingId != null) {
+                                    val visibleNow = workingIds.filter { id ->
+                                        val m = menuItems.firstOrNull { it.id == id }
+                                        m != null && m.status.name != "HIDDEN" &&
+                                            (selectedCategory == "all" || m.categoryId == selectedCategory)
+                                    }
+                                    if (visibleNow.isNotEmpty()) viewModel.reorderMenuItems(visibleNow)
+                                }
+                                draggingId = null
+                                draggedDistance = 0f
+                            },
+                            onDragCancel = {
+                                draggingId = null
+                                draggedDistance = 0f
+                                workingIds = canonicalIds
+                            }
+                        )
+                    },
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filtered, key = { it.id }) { m ->
@@ -198,8 +307,12 @@ fun PosMenuView(viewModel: MainViewModel) {
                     val subs = remember(m.id, m.subItems) {
                         parseSubItems(m.subItems).filter { it.enabled }
                     }
+                    val isDragging = draggingId == m.id
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .zIndex(if (isDragging) 1f else 0f)
+                            .graphicsLayer { translationY = if (isDragging) draggedDistance else 0f },
                         colors = CardDefaults.cardColors(containerColor = style.container),
                         border = BorderStroke(1.dp, style.border)
                     ) {

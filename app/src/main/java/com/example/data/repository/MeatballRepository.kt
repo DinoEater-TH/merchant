@@ -373,6 +373,17 @@ class MeatballRepository(context: Context? = null) {
         persistState()
     }
 
+    /**
+     * Applies a drag-and-drop re-order from the POS list. [visibleIdsInOrder] is the new
+     * relative order of the items the shop can currently see (all categories, or one
+     * category). Items that are not visible keep their slots, so nothing else moves.
+     */
+    fun reorderMenuItems(visibleIdsInOrder: List<String>) {
+        val reordered = applyVisibleOrderSlots(_menuItems.value, visibleIdsInOrder) ?: return
+        _menuItems.value = reordered
+        persistState()
+    }
+
 fun addOrUpdateMenuItem(item: MenuItem) {
         val current = _menuItems.value.toMutableList()
         val index = current.indexOfFirst { it.id == item.id }
@@ -578,4 +589,26 @@ fun addOrUpdateMenuItem(item: MenuItem) {
             smartAdvices = advices
         )
     }
+}
+
+/**
+ * Slot-based re-order used by POS drag and drop: the visible items keep the slots they
+ * already occupied and only their relative order changes, so hidden/other-category items
+ * never move. Returns null when the drag no longer matches the current data.
+ */
+internal fun applyVisibleOrderSlots(
+    currentItems: List<MenuItem>,
+    visibleIdsInOrder: List<String>
+): List<MenuItem>? {
+    if (visibleIdsInOrder.isEmpty()) return null
+    if (visibleIdsInOrder.distinct().size != visibleIdsInOrder.size) return null
+    val base = currentItems.sortedWith(compareBy { it.sortOrder })
+    val byId = base.associateBy { it.id }
+    if (visibleIdsInOrder.any { it !in byId }) return null
+    val visible = visibleIdsInOrder.toSet()
+    val slots = base.indices.filter { base[it].id in visible }
+    if (slots.size != visibleIdsInOrder.size) return null
+    val ids = base.map { it.id }.toMutableList()
+    slots.forEachIndexed { index, slot -> ids[slot] = visibleIdsInOrder[index] }
+    return ids.mapNotNull { byId[it] }.mapIndexed { index, item -> item.copy(sortOrder = index) }
 }
