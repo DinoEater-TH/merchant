@@ -712,25 +712,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 menuItems.value.find { it.id == id }?.let { m ->
                     // Menus with admin-managed sub-items (เมนูรอง) carry a per-unit breakdown,
                     // exactly like the customer web cart: "ลูกชิ้นหมู x2, คอกเทล x1".
-                    val subNames = parseEnabledSubItemNames(m.subItems)
-                    val counts = subCounts[id].orEmpty()
-                    val picked = mutableListOf<String>()
-                    val summaryParts = mutableListOf<String>()
-                    subNames.forEach { name ->
-                        val c = (counts[name] ?: 0).coerceAtLeast(0)
-                        if (c > 0) {
-                            repeat(c) { picked.add(name) }
-                            summaryParts.add("$name x$c")
-                        }
-                    }
+                    val selection = buildSubItemSelection(m.subItems, subCounts[id].orEmpty())
                     OrderItem(
                         itemId = m.id,
                         name = m.name,
                         price = m.price,
                         directCost = m.directCost,
                         quantity = qty,
-                        selectedSubItems = picked.joinToString(","),
-                        subItemSummary = summaryParts.joinToString(", ")
+                        selectedSubItems = selection.selected,
+                        subItemSummary = selection.summary
                     )
                 }
             }
@@ -1022,7 +1012,7 @@ data class CartCalculation(
 )
 
 /** Enabled sub-item names of a menu, parsed from the admin-managed JSON string. */
-private fun parseEnabledSubItemNames(config: String): List<String> {
+internal fun parseEnabledSubItemNames(config: String): List<String> {
     if (config.isBlank()) return emptyList()
     return try {
         val arr = org.json.JSONArray(config)
@@ -1034,4 +1024,20 @@ private fun parseEnabledSubItemNames(config: String): List<String> {
     } catch (_: Exception) {
         emptyList()
     }
+}
+
+/** Per-unit sub-item picks for one menu: readable summary plus the comma list stored on the order. */
+internal data class SubItemSelection(val selected: String, val summary: String)
+
+internal fun buildSubItemSelection(subItemsJson: String, counts: Map<String, Int>): SubItemSelection {
+    val picked = mutableListOf<String>()
+    val parts = mutableListOf<String>()
+    parseEnabledSubItemNames(subItemsJson).forEach { name ->
+        val count = (counts[name] ?: 0).coerceAtLeast(0)
+        if (count > 0) {
+            repeat(count) { picked.add(name) }
+            parts.add("$name x$count")
+        }
+    }
+    return SubItemSelection(picked.joinToString(","), parts.joinToString(", "))
 }
