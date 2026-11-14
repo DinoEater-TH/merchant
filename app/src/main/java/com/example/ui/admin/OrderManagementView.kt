@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -35,6 +36,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Order
@@ -62,6 +65,7 @@ import java.util.Locale
 fun OrderManagementView(viewModel: MainViewModel) {
     val orders by viewModel.orders.collectAsState()
     val activeFilter by viewModel.adminOrderFilter.collectAsState()
+    val members by viewModel.users.collectAsState()
 
     val filteredOrders = if (activeFilter == null) {
         orders
@@ -131,10 +135,13 @@ fun OrderManagementView(viewModel: MainViewModel) {
                 items(filteredOrders, key = { it.id }) { order ->
                     AdminOrderCard(
                         order = order,
+                        members = members,
                         onUpdateStatus = { newStatus -> viewModel.updateOrderStatus(order.id, newStatus) },
                         onRemoveItem = { itemId -> viewModel.removeOrderItem(order.id, itemId) },
                         onDeleteOrder = { viewModel.deleteOrder(order.id) },
-                        onPrintSlip = { viewModel.openPrintingOrder(order) }
+                        onPrintSlip = { viewModel.openPrintingOrder(order) },
+                        onClaimStamps = { phone, name -> viewModel.claimOrderStamps(order.id, phone, name) },
+                        onPreviewStamps = { amount -> viewModel.stampsForAmount(amount) }
                     )
                 }
             }
@@ -145,10 +152,15 @@ fun OrderManagementView(viewModel: MainViewModel) {
 @Composable
 fun AdminOrderCard(
     order: Order,
+    members: Map<String, com.example.data.model.MemberUser> = emptyMap(),
     onUpdateStatus: (OrderStatus) -> Unit,
     onRemoveItem: (String) -> Unit = {},
     onDeleteOrder: () -> Unit = {},
-    onPrintSlip: () -> Unit
+    onPrintSlip: () -> Unit,
+    onClaimStamps: (String, String) -> com.example.data.repository.MeatballRepository.StampClaimResult = { _, _ ->
+        com.example.data.repository.MeatballRepository.StampClaimResult(false, "ยังไม่พร้อมใช้งาน")
+    },
+    onPreviewStamps: (Double) -> Int = { 0 }
 ) {
     var awaitingCancelConfirm by androidx.compose.runtime.remember(order.id) {
         androidx.compose.runtime.mutableStateOf(false)
@@ -159,6 +171,20 @@ fun AdminOrderCard(
     var itemToRemove by androidx.compose.runtime.remember(order.id) {
         androidx.compose.runtime.mutableStateOf<com.example.data.model.OrderItem?>(null)
     }
+    var showClaimDialog by androidx.compose.runtime.remember(order.id) {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    var claimPhone by androidx.compose.runtime.remember(order.id) {
+        androidx.compose.runtime.mutableStateOf(order.customerPhone)
+    }
+    var claimName by androidx.compose.runtime.remember(order.id) {
+        androidx.compose.runtime.mutableStateOf("")
+    }
+    var claimMessage by androidx.compose.runtime.remember(order.id) {
+        androidx.compose.runtime.mutableStateOf("")
+    }
+    val linkedMember = members[order.customerPhone]
+    val orderAwardEntry = linkedMember?.history?.firstOrNull { it.orderId == order.id }
     val canEditItems = order.status != OrderStatus.COMPLETED && order.status != OrderStatus.CANCELLED
     Card(
         modifier = Modifier
@@ -352,6 +378,71 @@ fun AdminOrderCard(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Member stamps: link this order to a phone number and award what the order is worth.
+            Surface(
+                color = if (linkedMember != null) Color(0xFFE8F5E9) else Color(0xFFFFF8E1),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("แสตมป์สมาชิก", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            if (linkedMember != null) {
+                                Text(
+                                    text = "สมาชิก ${order.customerPhone}" +
+                                        if (linkedMember.name.isNotBlank()) " (${linkedMember.name})" else "",
+                                    fontSize = 11.sp
+                                )
+                                Text(
+                                    text = if (orderAwardEntry != null) {
+                                        "ออเดอร์นี้ให้ ${orderAwardEntry.stampsEarned} ดวง • สะสมรวม ${linkedMember.stamps} ดวง"
+                                    } else {
+                                        "ยังไม่ได้ให้แสตมป์ออเดอร์นี้ • สะสมรวม ${linkedMember.stamps} ดวง"
+                                    },
+                                    fontSize = 11.sp,
+                                    color = CucumberGreen,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else {
+                                Text(
+                                    text = "ยังไม่ผูกสมาชิก (ลูกค้าทั่วไป)",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                claimPhone = order.customerPhone
+                                claimName = ""
+                                claimMessage = ""
+                                showClaimDialog = true
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (linkedMember != null) "เปลี่ยนเบอร์" else "เคลมแสตมป์",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    if (claimMessage.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = claimMessage,
+                            fontSize = 11.sp,
+                            color = OrangePrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             // Action Buttons for Order Status Transitions
@@ -421,28 +512,29 @@ fun AdminOrderCard(
                             Text("🚫 ปฏิเสธ/ยกเลิก", fontSize = 11.sp, color = ChiliRed, fontWeight = FontWeight.Bold)
                         }
                     }
+                }
 
-                    if (awaitingDeleteConfirm) {
-                        Button(
-                            onClick = {
-                                awaitingDeleteConfirm = false
-                                onDeleteOrder()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("⚠️ ยืนยันลบออเดอร์", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { awaitingDeleteConfirm = true },
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text("🗑️ ลบออเดอร์", fontSize = 11.sp, color = Color.Gray)
-                        }
+                // The shop can always remove an order from the list (done, cancelled or active).
+                if (awaitingDeleteConfirm) {
+                    Button(
+                        onClick = {
+                            awaitingDeleteConfirm = false
+                            onDeleteOrder()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("⚠️ ยืนยันลบออเดอร์", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { awaitingDeleteConfirm = true },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("🗑️ ลบออเดอร์", fontSize = 11.sp, color = Color.Gray)
                     }
                 }
             }
@@ -466,6 +558,86 @@ fun AdminOrderCard(
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { itemToRemove = null }) { Text("ยกเลิก") }
+            }
+        )
+    }
+
+    if (showClaimDialog) {
+        val phoneClean = claimPhone.filter { it.isDigit() }.take(10)
+        val phoneValid = phoneClean.length == 10 && phoneClean.startsWith("0")
+        val previewMember = members[phoneClean]
+        val previewEarned = onPreviewStamps(order.totalAmount)
+        val previewAwarded = previewMember?.history?.any { it.orderId == order.id } == true
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showClaimDialog = false },
+            title = { Text("เคลมแสตมป์ให้สมาชิก", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        text = "ออเดอร์ #${order.id} • ยอด ฿${String.format(Locale.US, "%.0f", order.totalAmount)}",
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = claimPhone,
+                        onValueChange = { claimPhone = it.filter { c -> c.isDigit() }.take(10) },
+                        label = { Text("เบอร์โทร 10 หลัก") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (previewMember == null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = claimName,
+                            onValueChange = { claimName = it },
+                            label = { Text("ชื่อลูกค้า (ไม่บังคับ)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = when {
+                            !phoneValid -> "กรอกเบอร์โทร 10 หลัก เริ่มต้นด้วย 0"
+                            previewMember != null && previewAwarded ->
+                                "เบอร์นี้เป็นสมาชิกอยู่แล้ว และออเดอร์นี้ให้แสตมป์ไปแล้ว (ไม่นับซ้ำ)"
+                            previewMember != null ->
+                                "สมาชิก: ${previewMember.name.ifBlank { "ไม่ระบุชื่อ" }} • มี ${previewMember.stamps} ดวง " +
+                                    "→ รับเพิ่ม +$previewEarned รวม ${previewMember.stamps + previewEarned} ดวง"
+                            previewEarned > 0 ->
+                                "ยังไม่มีสมาชิกเบอร์นี้ → ระบบจะสร้างสมาชิกใหม่ให้ และ +$previewEarned ดวง"
+                            else ->
+                                "ยังไม่มีสมาชิกเบอร์นี้ → ระบบจะสร้างสมาชิกใหม่ (ยอดนี้ยังไม่ถึงเกณฑ์รับแสตมป์)"
+                        },
+                        fontSize = 11.sp,
+                        color = if (phoneValid) OrangePrimary else Color.Gray
+                    )
+                    if (order.customerPhone.isNotBlank() && order.customerPhone != phoneClean) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "หมายเหตุ: เบอร์เดิม ${order.customerPhone} จะถูกถอนแสตมป์ของออเดอร์นี้ออก",
+                            fontSize = 10.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    enabled = phoneValid,
+                    onClick = {
+                        val result = onClaimStamps(phoneClean, claimName.trim())
+                        claimMessage = result.message +
+                            if (result.ok && result.totalStamps > 0) " • สะสมรวม ${result.totalStamps} ดวง" else ""
+                        if (result.ok) showClaimDialog = false
+                    }
+                ) {
+                    Text("ยืนยันเคลม", color = if (phoneValid) OrangePrimary else Color.Gray, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showClaimDialog = false }) { Text("ยกเลิก") }
             }
         )
     }

@@ -1,7 +1,7 @@
 {
-  "versionCode": 13,
-  "versionName": "2.2",
+  "versionCode": 14,
+  "versionName": "2.3",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "หน้าสรุปออเดอร์ POS ยุบเป็นแถบเล็ก ไม่บังเมนูแล้ว กดดูรายละเอียดเมื่อต้องการ และปุ่มยืนยันขายยังกดได้ตลอด",
+  "notes": "หน้าออเดอร์: ลบได้ทุกสถานะ และมีช่องใส่เบอร์โทรเพื่อเคลมแสตมป์ให้สมาชิก (ผูกออเดอร์/สร้างสมาชิกใหม่/กันนับซ้ำ) พร้อมปุ่มแจ้งเสร็จแล้วถึงลูกค้า",
   "mandatory": true
 }

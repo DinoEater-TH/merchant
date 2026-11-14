@@ -622,6 +622,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.removeOrderItem(orderId, itemId)
     }
 
+    /** How many stamps an amount is worth (used by the POS / order card previews). */
+    fun stampsForAmount(amount: Double): Int = repository.stampsForAmount(amount)
+
+    /**
+     * Links an order to a member phone and awards its stamps. Returns the outcome so
+     * the order card can show exactly what happened (new member, +N stamps, etc.).
+     */
+    fun claimOrderStamps(
+        orderId: String,
+        phone: String,
+        name: String = ""
+    ): MeatballRepository.StampClaimResult {
+        val result = repository.claimOrderStamps(orderId, phone, name)
+        if (result.ok && result.stampsAwarded > 0) {
+            SoundHelper.playStampSuccessSound(getApplication())
+        }
+        return result
+    }
+
     fun retrySync() {
         firebaseSync.retry()
     }

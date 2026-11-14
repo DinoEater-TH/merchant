@@ -301,6 +301,109 @@ class MeatballRepository(context: Context? = null) {
         persistState()
     }
 
+    /** Outcome of linking an order to a member and awarding its stamps. */
+    data class StampClaimResult(
+        val ok: Boolean,
+        val message: String,
+        val stampsAwarded: Int = 0,
+        val totalStamps: Int = 0,
+        val isNewMember: Boolean = false
+    )
+
+    /**
+     * Links [orderId] to the member [phoneRaw] and awards the stamps that order is
+     * worth. Safe to call again: the same order is never counted twice, and moving
+     * an order to another phone takes the award back from the previous member.
+     */
+    fun claimOrderStamps(orderId: String, phoneRaw: String, name: String = ""): StampClaimResult {
+        val phone = phoneRaw.trim()
+        if (phone.length != 10 || !phone.startsWith("0")) {
+            return StampClaimResult(false, "เบอร์โทรไม่ถูกต้อง (ต้องเป็น 10 หลัก เริ่มด้วย 0)")
+        }
+        val order = _orders.value.firstOrNull { it.id == orderId }
+            ?: return StampClaimResult(false, "ไม่พบออเดอร์นี้ในเครื่อง")
+
+        val users = _users.value.toMutableMap()
+        val previousPhone = order.customerPhone.trim()
+        val alreadyAwarded = users[phone]?.let { member ->
+            member.history.any { it.orderId == orderId }
+        } == true
+
+        if (alreadyAwarded) {
+            // Make sure the order itself points at the member, then stop.
+            if (previousPhone != phone || order.isGuest) {
+                _orders.value = _orders.value.map { current ->
+                    if (current.id == orderId) current.copy(customerPhone = phone, isGuest = false)
+                    else current
+                }
+                persistState()
+            }
+            val member = users[phone]
+            return StampClaimResult(
+                ok = true,
+                message = "ออเดอร์นี้ให้แสตมป์กับเบอร์ $phone ไปแล้ว",
+                totalStamps = member?.stamps ?: 0
+            )
+        }
+
+        // Re-linking to a different member: take the earlier award back first.
+        if (previousPhone.isNotEmpty() && previousPhone != phone) {
+            users[previousPhone]?.let { old ->
+                val oldEntry = old.history.firstOrNull { it.orderId == orderId }
+                if (oldEntry != null) {
+                    users[previousPhone] = old.copy(
+                        stamps = (old.stamps - oldEntry.stampsEarned).coerceAtLeast(0),
+                        totalOrders = (old.totalOrders - 1).coerceAtLeast(0),
+                        history = old.history.filterNot { it.orderId == orderId }
+                    )
+                }
+            }
+        }
+
+        val linkedOrder = order.copy(customerPhone = phone, isGuest = false)
+        val existing = users[phone]
+        val isNewMember = existing == null
+        val base = existing ?: MemberUser(phoneNumber = phone)
+        val earned = stampsForAmount(order.totalAmount)
+        val entry = MemberHistoryEntry(
+            orderId = orderId,
+            timestamp = order.timestamp,
+            total = order.totalAmount,
+            itemsText = order.items.joinToString(", ") { "${it.name} x${it.quantity}" },
+            stampsEarned = earned,
+            channel = if (order.comment.trim().uppercase().startsWith("POS")) "POS" else "ออนไลน์"
+        )
+        val updated = base.copy(
+            name = if (base.name.isBlank()) name.trim() else base.name,
+            stamps = base.stamps + earned,
+            totalOrders = base.totalOrders + 1,
+            lastOrder = linkedOrder,
+            history = (listOf(entry) + base.history).take(MAX_MEMBER_HISTORY)
+        )
+        users[phone] = updated
+        _users.value = users
+        _orders.value = _orders.value.map { current ->
+            if (current.id == orderId) linkedOrder else current
+        }
+        persistState()
+
+        val per = _shopInfo.value.spendPerStamp
+        val detail = if (earned > 0) {
+            "+$earned แสตมป์"
+        } else if (per > 0.0) {
+            "ยอดนี้ยังไม่ถึงเกณฑ์ (ซื้อครบ ฿${per.toInt()} = 1 ดวง)"
+        } else {
+            "ยอดนี้ยังไม่ถึงเกณฑ์รับแสตมป์"
+        }
+        return StampClaimResult(
+            ok = true,
+            message = (if (isNewMember) "สร้างสมาชิกใหม่และผูกออเดอร์สำเร็จ " else "ผูกออเดอร์กับสมาชิกสำเร็จ ") + detail,
+            stampsAwarded = earned,
+            totalStamps = updated.stamps,
+            isNewMember = isNewMember
+        )
+    }
+
     private fun restoreStockForItems(items: List<OrderItem>) {
         val menu = _menuItems.value.toMutableList()
         items.forEach { orderItem ->
