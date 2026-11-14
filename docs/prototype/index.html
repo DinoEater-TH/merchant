@@ -302,7 +302,7 @@
     <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4">
       <div class="flex justify-between items-center border-b pb-2">
         <h3 class="font-bold text-base text-gray-800">🛵 ติดตามออเดอร์ #<span id="trackerOrderId">-</span></h3>
-        <button onclick="closeTrackerModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+        <button onclick="closeTrackerModalWithPrompt()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
       </div>
 
       <div class="text-center p-4 bg-orange-50 rounded-xl">
@@ -333,6 +333,37 @@
       <button onclick="closeTrackerModalWithPrompt()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs">
         ปิดหน้าต่าง
       </button>
+    </div>
+  </div>
+
+  <!-- Modal: Stamp signup when closing the order tracker -->
+  <div id="trackerJoinModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-base text-gray-800">รับ stamp จากออเดอร์นี้</h3>
+        <button onclick="declineTrackerJoin()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <div id="joinAskSection" class="space-y-3">
+        <p class="text-sm text-gray-600">ออเดอร์ <span id="joinOrderId" class="font-bold">-</span> ยอด <span id="joinOrderTotal" class="font-bold text-orange-600">฿0</span></p>
+        <div id="joinEarnPreview" class="bg-orange-50 border border-orange-200 rounded-xl p-3 text-sm text-orange-800"></div>
+        <p class="text-xs text-gray-500">ยังไม่ได้เป็นสมาชิก — ต้องการสมัคร/ผูกเบอร์เพื่อรับ stamp จากออเดอร์นี้หรือไม่?</p>
+        <button onclick="showTrackerJoinForm()" class="w-full bg-green-600 text-white font-bold py-2.5 rounded-xl text-sm">สมัคร / รับ stamp</button>
+        <button onclick="declineTrackerJoin()" class="w-full bg-gray-100 text-gray-700 font-bold py-2.5 rounded-xl text-xs">ไม่รับสิทธิ์ ปิดหน้าต่าง</button>
+      </div>
+
+      <div id="joinFormSection" class="space-y-3 hidden">
+        <input id="joinPhoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="เบอร์โทร 10 หลัก (เช่น 0812345678)" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+        <input id="joinNameInput" type="text" placeholder="ชื่อ (ไม่บังคับ)" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+        <div id="joinError" class="text-xs text-red-500 hidden"></div>
+        <button onclick="submitTrackerJoin()" class="w-full bg-orange-600 text-white font-bold py-2.5 rounded-xl text-sm">ยืนยันรับ stamp</button>
+        <button onclick="declineTrackerJoin()" class="w-full bg-gray-100 text-gray-700 font-bold py-2.5 rounded-xl text-xs">ไม่รับสิทธิ์ ปิดหน้าต่าง</button>
+      </div>
+
+      <div id="joinResultSection" class="space-y-3 hidden">
+        <div id="joinResultText" class="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800"></div>
+        <button onclick="finishTrackerJoin()" class="w-full bg-orange-600 text-white font-bold py-2.5 rounded-xl text-sm">เสร็จสิ้น</button>
+      </div>
     </div>
   </div>
 
@@ -1371,98 +1402,161 @@
     function closeTrackerModal() {
       document.getElementById('trackerModal').classList.add('hidden');
     }
-    async function closeTrackerModalWithPrompt() {
-      if (isMember) { closeTrackerModal(); return; }
-      // Guest: offer to register / enter phone to earn stamps from this purchase
-      const want = confirm('ต้องการใส่เบอร์โทร/ลงทะเบียนสมาชิก เพื่อรับสะสม stamp จากรายการนี้หรือไม่?');
-      if (!want) { closeTrackerModal(); return; }
-      const phone = prompt('กรุณาใส่เบอร์โทร 10 หลัก:');
-      if (!phone || !/^\d{10}$/.test(phone.trim())) { alert('เบอร์โทรไม่ถูกต้อง'); closeTrackerModal(); return; }
-      const p = phone.trim();
-      const si = (window.remoteState && window.remoteState.shopInfo) ? window.remoteState.shopInfo : {};
-      const users = (window.remoteState && window.remoteState.users) ? window.remoteState.users : {};
-      if (users[p]) {
-        // existing member: claim stamps retroactively for this order
-        customerPhone = p;
-        isMember = true;
-        stamps = users[p].stamps || 0;
-        // Award spend-based stamps for this purchase if not already counted
-        const earned = stampsForAmount(activeOrder ? activeOrder.totalAmount : 0);
-        try {
-          const ref = firebase.database().ref(STATE_PATH);
-          await ref.transaction(cur => {
-            if (cur == null) return cur;
-            const parsed = typeof cur === 'string' ? JSON.parse(cur) : cur;
-            if (parsed.users && parsed.users[p]) {
-              const mu = parsed.users[p];
-              mu.stamps = (mu.stamps || 0) + earned;
-              mu.totalOrders = (mu.totalOrders || 0) + 1;
-              if (activeOrder) {
-                mu.lastOrder = activeOrder;
-                if (!Array.isArray(mu.history)) mu.history = [];
-                mu.history.unshift(makeHistoryEntry(activeOrder, earned, 'ออนไลน์'));
-                if (mu.history.length > 100) mu.history = mu.history.slice(0, 100);
-                // link the order to this member so it shows in both places
-                if (Array.isArray(parsed.orders)) {
-                  const ord = parsed.orders.find(o => o.id === activeOrder.id);
-                  if (ord) { ord.customerPhone = p; ord.isGuest = false; }
-                  activeOrder.customerPhone = p;
-                  activeOrder.isGuest = false;
-                }
-              }
-            }
-            window.remoteState = parsed;
-            return typeof cur === 'string' ? JSON.stringify(parsed) : parsed;
-          });
-        } catch (e) { console.error(e); }
-        if (window.remoteState) hydrateMemberData(window.remoteState);
-        alert(earned > 0
-          ? `บันทึกแล้ว — คุณได้รับ +${earned} stamp จากรายการนี้`
-          : `บันทึกแล้ว — ยอดนี้ยังไม่ถึงเกณฑ์รับ stamp (ซื้อครบ ฿${Number(shopCfg.spendPerStamp) || 0} = 1 stamp)`);
-      } else {
-        // not found: ask to register
-        const reg = confirm('ไม่พบสมาชิกเบอร์นี้ ต้องการลงทะเบียนสมาชิกใหม่หรือไม่?');
-        if (reg) {
-          const name = prompt('กรุณาใส่ชื่อ (หรือเว้นว่าง):') || '';
-          customerPhone = p;
-          isMember = true;
-          const earned = stampsForAmount(activeOrder ? activeOrder.totalAmount : 0);
-          stamps = earned;
-          try {
-            const ref = firebase.database().ref(STATE_PATH);
-            await ref.transaction(cur => {
-              if (cur == null) return cur;
-              const parsed = typeof cur === 'string' ? JSON.parse(cur) : cur;
-              if (!parsed.users) parsed.users = {};
-              const history = [];
-              if (activeOrder) {
-                history.push(makeHistoryEntry(activeOrder, earned, 'ออนไลน์'));
-                if (Array.isArray(parsed.orders)) {
-                  const ord = parsed.orders.find(o => o.id === activeOrder.id);
-                  if (ord) { ord.customerPhone = p; ord.isGuest = false; }
-                  activeOrder.customerPhone = p;
-                  activeOrder.isGuest = false;
-                }
-              }
-              parsed.users[p] = {
-                phoneNumber: p,
-                name: name.trim(),
-                stamps: earned,
-                totalOrders: 1,
-                lastOrder: activeOrder || null,
-                history
-              };
-              window.remoteState = parsed;
-              return typeof cur === 'string' ? JSON.stringify(parsed) : parsed;
-            });
-          } catch (e) { console.error(e); }
-          if (window.remoteState) hydrateMemberData(window.remoteState);
-          alert(earned > 0
-            ? `ลงทะเบียนสำเร็จ — คุณได้รับ +${earned} stamp จากรายการนี้`
-            : `ลงทะเบียนสำเร็จ — ยอดนี้ยังไม่ถึงเกณฑ์รับ stamp (ซื้อครบ ฿${Number(shopCfg.spendPerStamp) || 0} = 1 stamp)`);
-        }
-      }
+    // ---- Close tracker: membership check + optional signup to receive stamps ----
+    function setJoinText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    function trackerJoinEarned() {
+      return activeOrder ? stampsForAmount(activeOrder.totalAmount) : 0;
+    }
+
+    function trackerOrderIsMember() {
+      const phone = activeOrder ? String(activeOrder.customerPhone || '').trim() : '';
+      const rs = window.remoteState || {};
+      return !!(phone && rs.users && rs.users[phone]);
+    }
+
+    function closeTrackerModalWithPrompt() {
+      if (!activeOrder) { closeTrackerModal(); return; }
+      // Already a member (order linked to a member, or this session is a member): just close.
+      if (trackerOrderIsMember() || isMember) { closeTrackerModal(); return; }
+      openTrackerJoinModal();
+    }
+
+    function openTrackerJoinModal() {
+      const order = activeOrder;
+      if (!order) { closeTrackerModal(); return; }
+      const earned = trackerJoinEarned();
+      const per = Number(shopCfg.spendPerStamp) || 0;
+      setJoinText('joinOrderId', '#' + (order.id || '-'));
+      setJoinText('joinOrderTotal', '฿' + fmtMoney(order.totalAmount || 0));
+      setJoinText('joinEarnPreview', earned > 0
+        ? 'ออเดอร์นี้เข้าเงื่อนไข รับได้ +' + earned + ' stamp'
+        : (per > 0 ? 'ยอดนี้ยังไม่ถึงเกณฑ์รับ stamp (ซื้อครบ ฿' + per + ' = 1 stamp)' : 'ยอดนี้ยังไม่ถึงเกณฑ์รับ stamp'));
+      const phoneEl = document.getElementById('joinPhoneInput');
+      const nameEl = document.getElementById('joinNameInput');
+      if (phoneEl) phoneEl.value = String(customerPhone || '').replace(/\D/g, '').slice(0, 10);
+      if (nameEl) nameEl.value = '';
+      document.getElementById('joinError').classList.add('hidden');
+      document.getElementById('joinAskSection').classList.remove('hidden');
+      document.getElementById('joinFormSection').classList.add('hidden');
+      document.getElementById('joinResultSection').classList.add('hidden');
+      document.getElementById('trackerJoinModal').classList.remove('hidden');
+    }
+
+    function showTrackerJoinForm() {
+      document.getElementById('joinAskSection').classList.add('hidden');
+      document.getElementById('joinFormSection').classList.remove('hidden');
+      const input = document.getElementById('joinPhoneInput');
+      setTimeout(() => { if (input) input.focus(); }, 60);
+    }
+
+    function showJoinError(msg) {
+      const el = document.getElementById('joinError');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function closeTrackerJoinModal() {
+      document.getElementById('trackerJoinModal').classList.add('hidden');
+    }
+
+    function declineTrackerJoin() {
+      closeTrackerJoinModal();
       closeTrackerModal();
+    }
+
+    function finishTrackerJoin() {
+      closeTrackerJoinModal();
+      closeTrackerModal();
+    }
+
+    async function submitTrackerJoin() {
+      const order = activeOrder;
+      if (!order) { declineTrackerJoin(); return; }
+      const phone = String(document.getElementById('joinPhoneInput').value || '').replace(/\D/g, '').slice(0, 10);
+      const name = String(document.getElementById('joinNameInput').value || '').trim();
+      if (!/^0\d{9}$/.test(phone)) {
+        showJoinError('เบอร์โทรไม่ถูกต้อง (ต้องเป็น 10 หลัก เริ่มด้วย 0)');
+        return;
+      }
+      const earned = stampsForAmount(order.totalAmount);
+      const wasMember = !!(window.remoteState && window.remoteState.users && window.remoteState.users[phone]);
+      let alreadyAwarded = false;
+      let committed = false;
+      try {
+        const ref = firebase.database().ref(STATE_PATH);
+        const result = await ref.transaction((cur) => {
+          if (cur == null) return cur;
+          const parsed = typeof cur === 'string' ? JSON.parse(cur) : cur;
+          if (!parsed.users) parsed.users = {};
+          let u = parsed.users[phone];
+          if (!u) {
+            u = { phoneNumber: phone, name: name, stamps: 0, totalOrders: 0, lastOrder: null, history: [] };
+            parsed.users[phone] = u;
+          } else if (!u.name && name) {
+            u.name = name;
+          }
+          if (!Array.isArray(u.history)) u.history = [];
+          // Link this order to the member before storing it, so lastOrder/history show the phone.
+          order.customerPhone = phone;
+          order.isGuest = false;
+          // Never count the same order twice (closing the tracker again must not duplicate).
+          alreadyAwarded = u.history.some(h => h && h.orderId === order.id);
+          if (!alreadyAwarded) {
+            u.stamps = (u.stamps || 0) + earned;
+            u.totalOrders = (u.totalOrders || 0) + 1;
+            u.lastOrder = order;
+            u.history.unshift(makeHistoryEntry(order, earned, 'ออนไลน์'));
+            if (u.history.length > 100) u.history = u.history.slice(0, 100);
+          }
+          // Link this order to the member so the shop sees who ordered.
+          if (Array.isArray(parsed.orders)) {
+            const ord = parsed.orders.find(o => o.id === order.id);
+            if (ord) { ord.customerPhone = phone; ord.isGuest = false; }
+          }
+          window.remoteState = parsed;
+          return typeof cur === 'string' ? JSON.stringify(parsed) : parsed;
+        });
+        committed = !!(result && result.committed);
+      } catch (e) {
+        console.error('tracker join failed', e);
+        showJoinError('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+      if (!committed) {
+        showJoinError('ยังซิงก์กับเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+      activeOrder.customerPhone = phone;
+      activeOrder.isGuest = false;
+      customerPhone = phone;
+      isMember = true;
+      if (window.remoteState) hydrateMemberData(window.remoteState);
+      const member = (window.remoteState && window.remoteState.users) ? window.remoteState.users[phone] : null;
+      const total = member ? (member.stamps || 0) : 0;
+      const need = Number(shopCfg.stampsRequired) || 10;
+      const per = Number(shopCfg.spendPerStamp) || 0;
+      let msg;
+      if (alreadyAwarded) {
+        msg = 'ออเดอร์นี้ได้รับ stamp ไปแล้ว';
+      } else if (earned > 0) {
+        msg = (wasMember ? 'ผูกออเดอร์กับสมาชิกเดิมสำเร็จ' : 'สมัครสมาชิกสำเร็จ') + ' ได้รับ +' + earned + ' stamp';
+      } else {
+        msg = (wasMember ? 'ผูกออเดอร์กับสมาชิกเดิมสำเร็จ' : 'สมัครสมาชิกสำเร็จ') +
+          (per > 0 ? ' — ยอดนี้ยังไม่ถึงเกณฑ์รับ stamp (ซื้อครบ ฿' + per + ' = 1 stamp)' : '');
+      }
+      msg += ' • สะสมรวม ' + total + '/' + need + ' ดวง';
+      if (total >= need) msg += ' — ครบเกณฑ์แลกเมนูรางวัลแล้ว';
+      setJoinText('joinResultText', msg);
+      document.getElementById('joinAskSection').classList.add('hidden');
+      document.getElementById('joinFormSection').classList.add('hidden');
+      document.getElementById('joinResultSection').classList.remove('hidden');
+      renderStamps();
+      renderMemberVisibility();
     }
 
     function reorderPrevious() {
@@ -1699,13 +1793,13 @@
         projectId: "dinoeater-merchant"
       };
       firebase.initializeApp(fbConfig);
-      firebase.auth().signInAnonymously().then(() => {
-        firebase.database().ref('shops/dinoeater-merchant/state').on('value', snap => {
-          const val = snap.val();
-          if (val == null) return;
+      // Shared by the live listener and the periodic fallback, so an open page always
+      // picks up menu re-orders made from the app POS.
+      window.applyRemoteStateValue = function(val) {
+          if (val == null) return false;
           const json = (typeof val === 'string') ? val : JSON.stringify(val);
           let parsed;
-          try { parsed = JSON.parse(json); } catch (e) { return; }
+          try { parsed = JSON.parse(json); } catch (e) { return false; }
           window.remoteState = parsed;
           window.customPromos = Array.isArray(parsed.customPromos) ? parsed.customPromos : [];
           // Keep the order tracker in sync with the shop's latest status
@@ -1799,7 +1893,38 @@
           // If already logged in, refresh this member's stamps/history from the shop data
           hydrateMemberData(parsed);
           if (!window._pvLogged) { window._pvLogged = true; trackEvent('pageViews'); }
+          return true;
+      };
+
+      firebase.auth().signInAnonymously().then(() => {
+        firebase.database().ref('shops/dinoeater-merchant/state').on('value', snap => {
+          window.applyRemoteStateValue(snap.val());
         }, () => {});
+
+        // Fallback refresh (ETag-conditional; empty body when nothing changed). Keeps the
+        // customer menu order identical to the app POS even if the socket silently stalls.
+        let stateEtag = null;
+        async function refreshShopState() {
+          try {
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+            const token = await user.getIdToken();
+            const url = 'https://dinoeater-merchant-default-rtdb.asia-southeast1.firebasedatabase.app' +
+              '/shops/dinoeater-merchant/state.json?auth=' + encodeURIComponent(token);
+            const headers = { 'X-Firebase-ETag': 'true' };
+            if (stateEtag) headers['if-none-match'] = stateEtag;
+            const res = await fetch(url, { headers, cache: 'no-store' });
+            const etag = res.headers.get('etag');
+            if (etag) stateEtag = etag;
+            if (res.status === 304 || !res.ok) return;
+            window.applyRemoteStateValue(await res.json());
+          } catch (e) { /* the live listener stays primary */ }
+        }
+        window.refreshShopStateNow = refreshShopState;
+        setInterval(() => { if (!document.hidden) refreshShopState(); }, 60000);
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) refreshShopState();
+        });
       }).catch(()=>{});
     } catch (e) { console.error(e); }
 
