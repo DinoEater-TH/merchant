@@ -1014,7 +1014,9 @@
             const parts = [];
             const sk = (Array.isArray(op.skewerLabels) && op.skewerLabels.length)
               ? op.skewerLabels.join(', ')
-              : (op.skewerLabel || (op.skewer && op.skewer !== 'SKEWERED' ? op.skewer : ''));
+              : (({ SKEWERED: 'เสียบไม้', IN_BAG: 'ใส่ถุง (ไม่เสียบไม้)', SEPARATE: 'รับไม้เสียบแยก' })[op.skewerLabel]
+                || ({ SKEWERED: 'เสียบไม้', IN_BAG: 'ใส่ถุง (ไม่เสียบไม้)', SEPARATE: 'รับไม้เสียบแยก' })[op.skewer]
+                || op.skewerLabel || op.skewer || '');
             if (sk) parts.push('ไม้: ' + sk);
             if (Array.isArray(op.addons) && op.addons.length) parts.push('เครื่องเคียง: ' + op.addons.join(', '));
             return parts.length ? `<div class="text-[11px] text-gray-600 bg-yellow-50 rounded px-2 py-1">${parts.join(' • ')}</div>` : '';

@@ -1327,9 +1327,11 @@
 
       const opts = o.options || {};
       const optParts = [];
+      // Skewer labels: web orders carry skewerLabels; app/POS orders carry an enum name.
+      const SKEWER_ENUM_TH = { SKEWERED: 'เสียบไม้', IN_BAG: 'ใส่ถุง (ไม่เสียบไม้)', SEPARATE: 'รับไม้เสียบแยก' };
       const skewerText = (Array.isArray(opts.skewerLabels) && opts.skewerLabels.length)
         ? opts.skewerLabels.join(', ')
-        : (opts.skewer || '');
+        : (SKEWER_ENUM_TH[opts.skewerLabel] || SKEWER_ENUM_TH[opts.skewer] || opts.skewerLabel || opts.skewer || '');
       if (skewerText) optParts.push('ไม้: ' + skewerText);
       if (Array.isArray(opts.addons) && opts.addons.length) optParts.push('เครื่องเคียง: ' + opts.addons.join(', '));
       const optEl = document.getElementById('trackerOptionsText');
