@@ -8,7 +8,9 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.data.model.Order
@@ -34,6 +36,8 @@ class OrderAlertService : Service() {
         private const val DATABASE_URL =
             "https://dinoeater-merchant-default-rtdb.asia-southeast1.firebasedatabase.app"
         private const val ROOT_PATH = "shops/dinoeater-merchant"
+        private const val REBIND_DELAY_MS = 15_000L
+        private const val MAX_REBIND_ATTEMPTS = 20
 
         /** True while the service is alive (used to avoid duplicate alerts). */
         @Volatile
@@ -59,6 +63,11 @@ class OrderAlertService : Service() {
 
     private var knownOrderIds: Set<String>? = null
     private var listener: ValueEventListener? = null
+
+    // Retry the listener when the database rejects it (e.g. the sign-in was not ready yet).
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var rebindAttempts = 0
+    private val rebindTask = Runnable { attachListener() }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -118,6 +127,7 @@ class OrderAlertService : Service() {
         val ref = FirebaseDatabase.getInstance(DATABASE_URL).reference.child("$ROOT_PATH/state")
         val vl = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
+                rebindAttempts = 0
                 val raw = snapshot.value
                 val parsed = parseState(raw) ?: return
                 val orders = parsed.optJSONArray("orders") ?: return
@@ -147,7 +157,15 @@ class OrderAlertService : Service() {
                     }
                 }
             }
-            override fun onCancelled(error: DatabaseError) {}
+            override fun onCancelled(error: DatabaseError) {
+                // Sign-in may not have finished yet, or the socket dropped: retry instead of
+                // staying silent for the rest of the day.
+                listener = null
+                if (rebindAttempts >= MAX_REBIND_ATTEMPTS) return
+                rebindAttempts++
+                mainHandler.removeCallbacks(rebindTask)
+                mainHandler.postDelayed(rebindTask, REBIND_DELAY_MS)
+            }
         }
         listener = vl
         ref.addValueEventListener(vl)
@@ -172,6 +190,7 @@ class OrderAlertService : Service() {
 
     override fun onDestroy() {
         isRunning = false
+        mainHandler.removeCallbacks(rebindTask)
         listener?.let {
             try { FirebaseDatabase.getInstance(DATABASE_URL).reference.child("$ROOT_PATH/state").removeEventListener(it) } catch (_: Exception) {}
         }
