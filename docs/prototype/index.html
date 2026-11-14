@@ -1132,6 +1132,10 @@
         return found ? found.label : id;
       });
       const skewerLabel = skewerLabels.join(', ');
+      // The app reads `skewer` as an enum (SKEWERED / IN_BAG / SEPARATE). Keep the readable
+      // labels in skewerLabels only, otherwise the Android parser rejects the whole state.
+      const SKEWER_ENUM_BY_ID = { skewered: 'SKEWERED', in_bag: 'IN_BAG', separate: 'SEPARATE' };
+      const skewerEnum = SKEWER_ENUM_BY_ID[skewerIds[0]] || 'SKEWERED';
       const addonNames = Array.from(document.querySelectorAll('#addonOptionsContainer input[type="checkbox"]:checked'))
         .map(c => (c.closest('label') ? c.closest('label').textContent.trim() : c.getAttribute('data-addon')))
         .filter(Boolean);
@@ -1156,7 +1160,7 @@
           deliveryAddress: fulfillment === 'delivery' ? ((addrEl && addrEl.value) || '') : '',
           gpsCoordinates: (selectedLat != null && selectedLng != null) ? `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}` : '',
           items,
-          options: { skewer: skewerLabel, skewerId: skewerIds[0] || '', skewerIds: skewerIds, skewerLabels: skewerLabels, addons: addonNames, subItems: subItemMap },
+          options: { skewer: skewerEnum, skewerId: skewerIds[0] || '', skewerIds: skewerIds, skewerLabels: skewerLabels, addons: addonNames, subItems: subItemMap },
           comment: commentParts.join(' '),
           subtotal, discount, deliveryFee, totalAmount,
           status: 'PENDING',

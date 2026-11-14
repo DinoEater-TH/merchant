@@ -42,6 +42,7 @@ class MeatballRepository(context: Context? = null) {
     private val preferences = context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val stateAdapter = if (context != null) {
         Moshi.Builder()
+            .add(com.example.data.model.LenientEnums.FACTORY)
             .addLast(KotlinJsonAdapterFactory())
             .build()
             .adapter(PersistedState::class.java)

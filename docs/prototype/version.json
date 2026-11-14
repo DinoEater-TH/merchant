@@ -1,7 +1,7 @@
 {
-  "versionCode": 9,
-  "versionName": "1.8",
+  "versionCode": 10,
+  "versionName": "1.9",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "แก้การเชื่อมต่อ Firebase บนมือถือจริง: เชื่อมต่อซ้ำอัตโนมัติ มีโหมดสำรอง (REST) ที่ใช้ได้แม้เครื่องไม่มี/มี Google Play services เก่า, แจ้งสาเหตุเป็นภาษาไทย และระบบแจ้งเตือนออเดอร์ลองเชื่อมต่อใหม่เอง",
+  "notes": "แก้บั๊กอ่านข้อมูลไม่สำเร็จ (Read data error) จากค่า 'รูปแบบการใส่ไม้' ที่เว็บส่งมาเป็นชื่อไทย ทำให้แอปโหลดออเดอร์/เมนู/สต๊อกไม่ได้",
   "mandatory": true
 }

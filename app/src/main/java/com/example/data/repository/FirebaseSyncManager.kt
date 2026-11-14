@@ -59,6 +59,7 @@ class FirebaseSyncManager(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val moshi = Moshi.Builder()
+        .add(com.example.data.model.LenientEnums.FACTORY)
         .addLast(KotlinJsonAdapterFactory())
         .build()
     private val adapter = moshi.adapter(MeatballRepository.PersistedState::class.java)
@@ -302,7 +303,7 @@ class FirebaseSyncManager(
         val state = try {
             adapter.fromJson(json)
         } catch (e: Exception) {
-            _status.value = "Read data error: ${e.message ?: "parse failed"}"
+            _status.value = "อ่านข้อมูลจาก Firebase ไม่สำเร็จ: ${e.message ?: "ข้อมูลไม่ถูกต้อง"}"
             null
         } ?: return
         lastAppliedJson = json
