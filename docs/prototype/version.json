@@ -1,7 +1,7 @@
 {
-  "versionCode": 12,
-  "versionName": "2.1",
+  "versionCode": 13,
+  "versionName": "2.2",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "หน้า POS ลากสลับตำแหน่งเมนูได้ (กดค้างแล้วลากขึ้น-ลง) และบันทึกลำดับอัตโนมัติ ลำดับเดียวกับเมนูฝั่งลูกค้า",
+  "notes": "หน้าสรุปออเดอร์ POS ยุบเป็นแถบเล็ก ไม่บังเมนูแล้ว กดดูรายละเอียดเมื่อต้องการ และปุ่มยืนยันขายยังกดได้ตลอด",
   "mandatory": true
 }
