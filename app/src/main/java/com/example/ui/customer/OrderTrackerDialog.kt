@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.OrderStatus
+import com.example.data.model.skewerDisplayText
 import com.example.ui.MainViewModel
 import com.example.ui.theme.ChiliRed
 import com.example.ui.theme.CucumberGreen
@@ -261,7 +262,7 @@ fun OrderTrackerDialog(viewModel: MainViewModel) {
                 ) {
                     Column(modifier = Modifier.padding(10.dp)) {
                         Text(text = "📌 ตัวเลือกที่เลือก:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = OrangePrimary)
-                        Text(text = "- รูปแบบ: ${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }}", fontSize = 12.sp)
+                        Text(text = "- รูปแบบ: ${order.options.skewerDisplayText()}", fontSize = 12.sp)
                         val extras = mutableListOf<String>()
                         if (order.options.friedChili) extras.add("พริกทอด")
                         if (order.options.cucumber) extras.add("แตงกวา")

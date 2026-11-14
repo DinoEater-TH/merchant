@@ -2,6 +2,7 @@ package com.example.util
 
 import com.example.data.model.Order
 import com.example.data.model.ShopInfo
+import com.example.data.model.skewerDisplayText
 import java.util.Locale
 
 object ThermalSlipHelper {
@@ -37,7 +38,7 @@ object ThermalSlipHelper {
 
         sb.appendLine(line)
         sb.appendLine("ตัวเลือกเสริม:")
-        sb.appendLine("- ไม้เสียบ : ${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }}")
+        sb.appendLine("- ไม้เสียบ : ${order.options.skewerDisplayText()}")
         val condiments = mutableListOf<String>()
         if (order.options.friedChili) condiments.add("พริกทอด")
         if (order.options.cucumber) condiments.add("แตงกวา")

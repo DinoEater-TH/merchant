@@ -213,7 +213,8 @@
       </div>
 
       <div class="bg-white rounded-2xl p-4 shadow-sm space-y-2">
-        <h3 class="font-bold text-sm">รูปแบบการใส่ไม้ (ที่ลูกค้าเลือก)</h3>
+        <h3 class="font-bold text-sm">รูปแบบการใส่ไม้ (ลูกค้าเลือกได้หลายรายการ)</h3>
+        <p class="text-xs text-gray-500">เพิ่ม/แก้ไข/ลบได้ตามต้องการ ตัวเลือกที่เปิดใช้งานจะไปแสดงให้ลูกค้าติ๊กเลือก</p>
         <div id="skewerAdminList" class="space-y-1"></div>
         <div class="flex gap-2 mt-2">
           <input id="newSkewerName" placeholder="เพิ่มตัวเลือกใหม่" class="flex-1 border rounded-lg px-3 py-2 text-sm">
@@ -1008,6 +1009,16 @@
               </div>`;
             }).join('')}
           </div>
+          ${(() => {
+            const op = o.options || {};
+            const parts = [];
+            const sk = (Array.isArray(op.skewerLabels) && op.skewerLabels.length)
+              ? op.skewerLabels.join(', ')
+              : (op.skewerLabel || (op.skewer && op.skewer !== 'SKEWERED' ? op.skewer : ''));
+            if (sk) parts.push('ไม้: ' + sk);
+            if (Array.isArray(op.addons) && op.addons.length) parts.push('เครื่องเคียง: ' + op.addons.join(', '));
+            return parts.length ? `<div class="text-[11px] text-gray-600 bg-yellow-50 rounded px-2 py-1">${parts.join(' • ')}</div>` : '';
+          })()}
           <div class="flex justify-between items-center text-xs text-gray-500"><span>ยอดรวมสินค้า ฿${o.subtotal || 0} • ส่วนลด ฿${o.discount || 0} • ค่าส่ง ฿${o.deliveryFee || 0}</span><span class="font-bold text-orange-600 text-sm">฿${o.totalAmount || 0}</span></div>
           ${o.comment ? `<div class="text-xs text-orange-600">หมายเหตุ: ${o.comment}</div>` : ''}
           <div class="flex gap-2 flex-wrap">
@@ -2459,7 +2470,7 @@
        const name = input.value.trim();
        if (!name) return;
        if (!window.skewerAdminItems) window.skewerAdminItems = [];
-       window.skewerAdminItems.push({ id: 'skewer_' + Date.now(), label: name, icon: '🍢', enabled: true });
+       window.skewerAdminItems.push({ id: 'skewer_' + Date.now(), label: name, icon: '', enabled: true });
        input.value = '';
        renderSkewerAdminList();
      }

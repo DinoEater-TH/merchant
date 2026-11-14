@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Order
 import com.example.data.model.OrderStatus
+import com.example.data.model.skewerDisplayText
 import com.example.ui.MainViewModel
 import com.example.ui.theme.ChiliRed
 import com.example.ui.theme.CucumberGreen
@@ -293,7 +294,7 @@ fun AdminOrderCard(
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        text = "เสียบไม้: ${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }} | น้ำจิ้ม: ${order.options.sauceChoice.displayName}",
+                        text = "รูปแบบการใส่ไม้: ${order.options.skewerDisplayText()} | น้ำจิ้ม: ${order.options.sauceChoice.displayName}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )

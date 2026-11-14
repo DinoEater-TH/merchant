@@ -419,11 +419,11 @@
     // Admin-managed skewer options ("รูปแบบการใส่ไม้"). Falls back to the classic 3.
     const DEFAULT_SKEWER_OPTIONS = [
       { id: 'skewered', label: 'เสียบไม้' },
-      { id: 'in_bag', label: 'ใส่ถุ่่ง (ไม่เสียบไม้)' },
+      { id: 'in_bag', label: 'ใส่ถุง (ไม่เสียบไม้)' },
       { id: 'separate', label: 'รับไม้เสียบแยก' }
     ];
     window.skewerConfig = [];
-    let selectedSkewer = null;
+    let selectedSkewerIds = [];
 
     // Delivery distance state (driving distance from shop to customer GPS point)
     let deliveryDistanceKm = null;
@@ -592,7 +592,7 @@
       if (navWrap) navWrap.style.display = gpsOn ? '' : 'none';
     }
 
-    // Render the admin-managed "รูปแบบการใส่ไม้" radio list.
+    // Render the admin-managed "รูปแบบการใส่ไม้" list (multi-select).
     function renderSkewerOptions() {
       const container = document.getElementById('skewerOptionsContainer');
       if (!container) return;
@@ -601,13 +601,24 @@
       if (!Array.isArray(items) || items.length === 0) items = DEFAULT_SKEWER_OPTIONS;
       window.skewerConfig = items;
       const enabled = items.filter(i => i.enabled !== false);
-      if (!enabled.some(i => i.id === selectedSkewer)) selectedSkewer = enabled[0] ? enabled[0].id : null;
+      // Drop stale ids and always keep at least one choice (the first option).
+      const validIds = enabled.map(i => i.id);
+      selectedSkewerIds = selectedSkewerIds.filter(id => validIds.indexOf(id) >= 0);
+      if (!selectedSkewerIds.length && enabled.length) selectedSkewerIds = [enabled[0].id];
       container.innerHTML = enabled.map(i => `
         <label class="flex items-center space-x-2 cursor-pointer">
-          <input type="radio" name="skewerOpt" value="${i.id}" ${selectedSkewer === i.id ? 'checked' : ''} class="accent-orange-600">
+          <input type="checkbox" name="skewerOpt" value="${i.id}" data-label="${i.label}" ${selectedSkewerIds.indexOf(i.id) >= 0 ? 'checked' : ''} class="accent-orange-600 w-4 h-4">
           <span>${i.label}</span>
         </label>
       `).join('') || '<p class="text-xs text-gray-400">ไม่มีตัวเลือกไม้</p>';
+      container.querySelectorAll('input[name="skewerOpt"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const picked = Array.from(container.querySelectorAll('input[name="skewerOpt"]:checked')).map(x => x.value);
+          // Do not allow clearing every option: keep the last checked one.
+          if (!picked.length) { cb.checked = true; return; }
+          selectedSkewerIds = picked;
+        });
+      });
     }
 
     // Parse an item's admin-managed sub-item list (stored as a JSON string or array).
@@ -926,9 +937,9 @@
       document.getElementById('modalNetTotal').textContent = `฿${net}`;
       renderDeliveryInfo();
 
-      // Track selected skewer from the radio buttons
-      const checkedSkewer = document.querySelector('input[name="skewerOpt"]:checked');
-      if (checkedSkewer) selectedSkewer = checkedSkewer.value;
+      // Track every checked skewer option, then re-render to reflect the state
+      const checkedSkewers = Array.from(document.querySelectorAll('input[name="skewerOpt"]:checked')).map(x => x.value);
+      if (checkedSkewers.length) selectedSkewerIds = checkedSkewers;
       renderSkewerOptions();
 
       // Render sub-item selectors for cart items that have admin-managed sub-items
@@ -1114,10 +1125,13 @@
       const addrEl = document.getElementById('deliveryAddressInput');
       const now = new Date();
       const pad = n => String(n).padStart(2, '0');
-      const skewerRadio = document.querySelector('input[name="skewerOpt"]:checked');
-      const skewerId = skewerRadio ? skewerRadio.value : selectedSkewer;
-      const skewerItem = (Array.isArray(window.skewerConfig) ? window.skewerConfig : []).find(i => i.id === skewerId);
-      const skewerLabel = skewerItem ? skewerItem.label : (skewerId || '');
+      const skewerCbs = Array.from(document.querySelectorAll('input[name="skewerOpt"]:checked'));
+      const skewerIds = skewerCbs.length ? skewerCbs.map(c => c.value) : selectedSkewerIds.slice();
+      const skewerLabels = skewerIds.map(id => {
+        const found = (Array.isArray(window.skewerConfig) ? window.skewerConfig : []).find(i => i.id === id);
+        return found ? found.label : id;
+      });
+      const skewerLabel = skewerLabels.join(', ');
       const addonNames = Array.from(document.querySelectorAll('#addonOptionsContainer input[type="checkbox"]:checked'))
         .map(c => (c.closest('label') ? c.closest('label').textContent.trim() : c.getAttribute('data-addon')))
         .filter(Boolean);
@@ -1142,7 +1156,7 @@
           deliveryAddress: fulfillment === 'delivery' ? ((addrEl && addrEl.value) || '') : '',
           gpsCoordinates: (selectedLat != null && selectedLng != null) ? `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}` : '',
           items,
-          options: { skewer: skewerLabel, skewerId: skewerId || '', addons: addonNames, subItems: subItemMap },
+          options: { skewer: skewerLabel, skewerId: skewerIds[0] || '', skewerIds: skewerIds, skewerLabels: skewerLabels, addons: addonNames, subItems: subItemMap },
           comment: commentParts.join(' '),
           subtotal, discount, deliveryFee, totalAmount,
           status: 'PENDING',
@@ -1313,7 +1327,10 @@
 
       const opts = o.options || {};
       const optParts = [];
-      if (opts.skewer) optParts.push('ไม้: ' + opts.skewer);
+      const skewerText = (Array.isArray(opts.skewerLabels) && opts.skewerLabels.length)
+        ? opts.skewerLabels.join(', ')
+        : (opts.skewer || '');
+      if (skewerText) optParts.push('ไม้: ' + skewerText);
       if (Array.isArray(opts.addons) && opts.addons.length) optParts.push('เครื่องเคียง: ' + opts.addons.join(', '));
       const optEl = document.getElementById('trackerOptionsText');
       if (optEl) optEl.textContent = optParts.join(' • ');

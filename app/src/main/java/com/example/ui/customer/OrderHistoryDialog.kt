@@ -67,6 +67,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.FulfillmentType
 import com.example.data.model.Order
 import com.example.data.model.OrderStatus
+import com.example.data.model.skewerDisplayText
 import com.example.ui.MainViewModel
 import com.example.ui.theme.ChiliRed
 import com.example.ui.theme.CucumberGreen
@@ -468,7 +469,7 @@ fun OrderHistoryCard(
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        text = "${order.options.skewerLabel.ifBlank { order.options.skewer.displayName }} • ${order.options.sauceChoice.displayName}",
+                        text = "${order.options.skewerDisplayText()} • ${order.options.sauceChoice.displayName}",
                         fontSize = 11.sp,
                         color = Color.DarkGray
                     )

@@ -115,6 +115,7 @@ enum class SauceChoice(val displayName: String) {
 data class AddonOptions(
     val skewer: SkewerOption = SkewerOption.SKEWERED,
     val skewerLabel: String = "",
+    val skewerLabels: List<String> = emptyList(), // multi-select from the customer web
     val selectedSubItemsJson: String = "", // JSON: {"itemId":["subName",...]}
     val friedChili: Boolean = true,
     val cucumber: Boolean = true,
@@ -123,6 +124,14 @@ data class AddonOptions(
     val comment: String = "",
 val selectedAddons: List<String> = emptyList()
 )
+
+/** Text for "รูปแบบการใส่ไม้", supporting both single and multi-select orders. */
+fun AddonOptions.skewerDisplayText(): String {
+    val joined = skewerLabels.filter { it.isNotBlank() }.joinToString(", ")
+    if (joined.isNotBlank()) return joined
+    if (skewerLabel.isNotBlank()) return skewerLabel
+    return try { skewer.displayName } catch (e: Exception) { "" }
+}
 
 enum class FulfillmentType(val title: String) {
     DELIVERY("จัดส่งตามที่อยู่"),

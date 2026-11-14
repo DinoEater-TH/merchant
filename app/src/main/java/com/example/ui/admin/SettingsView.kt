@@ -1095,6 +1095,11 @@ fun SettingsView(viewModel: MainViewModel) {
             }
         }
 
+        // 4.5 Skewer options manager (customers can pick several)
+        item {
+            SkewerOptionsCard(viewModel = viewModel, shopInfo = shopInfo)
+        }
+
         // 5. Security card
         item {
             Card(
@@ -1356,3 +1361,150 @@ fun WebPwaExportDialog(onDismiss: () -> Unit) {
         }
     }
 }
+
+// ---------- รูปแบบการใส่ไม้ (ลูกค้าเลือกได้หลายรายการ) ----------
+
+private data class SkewerRow(
+    val id: String,
+    val label: String,
+    val icon: String,
+    val enabled: Boolean
+)
+
+private fun parseSkewerRows(json: String): List<SkewerRow> {
+    val rows = mutableListOf<SkewerRow>()
+    try {
+        val arr = org.json.JSONArray(json)
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            rows.add(
+                SkewerRow(
+                    id = o.optString("id", "skewer_$i"),
+                    label = o.optString("label", o.optString("name", "")),
+                    icon = o.optString("icon", ""),
+                    enabled = o.optBoolean("enabled", true)
+                )
+            )
+        }
+    } catch (e: Exception) { /* fall through to defaults */ }
+    if (rows.isEmpty()) {
+        rows.add(SkewerRow("skewered", "เสียบไม้", "", true))
+        rows.add(SkewerRow("in_bag", "ใส่ถุง (ไม่เสียบไม้)", "", true))
+        rows.add(SkewerRow("separate", "รับไม้เสียบแยก", "", true))
+    }
+    return rows
+}
+
+@Composable
+private fun SkewerOptionsCard(viewModel: MainViewModel, shopInfo: ShopInfo) {
+    val context = LocalContext.current
+    var rows by remember(shopInfo.skewerOptions) {
+        mutableStateOf(parseSkewerRows(shopInfo.skewerOptions))
+    }
+    var newLabel by remember { mutableStateOf("") }
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Store, contentDescription = null, tint = OrangePrimary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "รูปแบบการใส่ไม้", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "ลูกค้าสามารถติ๊กเลือกได้หลายอย่างพร้อมกัน (เช่น เสียบไม้ + รับไม้เสียบแยก) เพิ่ม/แก้ไข/ลบได้ตามต้องการ",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            rows.forEachIndexed { idx, row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = row.enabled,
+                        onCheckedChange = { checked ->
+                            rows = rows.toMutableList().also { it[idx] = row.copy(enabled = checked) }
+                        }
+                    )
+                    OutlinedTextField(
+                        value = row.label,
+                        onValueChange = { text ->
+                            rows = rows.toMutableList().also { it[idx] = row.copy(label = text) }
+                        },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = {
+                        rows = rows.toMutableList().also { it.removeAt(idx) }
+                    }) {
+                        Text("ลบ", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = newLabel,
+                    onValueChange = { newLabel = it },
+                    label = { Text("เพิ่มตัวเลือกใหม่") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = {
+                    val label = newLabel.trim()
+                    if (label.isNotEmpty()) {
+                        rows = rows + SkewerRow("skewer_${System.currentTimeMillis()}", label, "", true)
+                        newLabel = ""
+                    }
+                }) {
+                    Text("เพิ่ม", fontSize = 11.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Button(
+                onClick = {
+                    val cleaned = rows.filter { it.label.isNotBlank() }
+                    if (cleaned.isEmpty()) {
+                        Toast.makeText(context, "ต้องมีอย่างน้อย 1 ตัวเลือก", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    val arr = org.json.JSONArray()
+                    cleaned.forEach { r ->
+                        arr.put(org.json.JSONObject().apply {
+                            put("id", r.id)
+                            put("label", r.label.trim())
+                            put("icon", r.icon)
+                            put("enabled", r.enabled)
+                        })
+                    }
+                    viewModel.updateShopInfo(shopInfo.copy(skewerOptions = arr.toString()))
+                    Toast.makeText(context, "บันทึกรูปแบบการใส่ไม้แล้ว", Toast.LENGTH_SHORT).show()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("บันทึกรูปแบบการใส่ไม้")
+            }
+        }
+    }
+}
+
+
