@@ -1022,7 +1022,10 @@
             return parts.length ? `<div class="text-[11px] text-gray-600 bg-yellow-50 rounded px-2 py-1">${parts.join(' • ')}</div>` : '';
           })()}
           <div class="flex justify-between items-center text-xs text-gray-500"><span>ยอดรวมสินค้า ฿${o.subtotal || 0} • ส่วนลด ฿${o.discount || 0} • ค่าส่ง ฿${o.deliveryFee || 0}</span><span class="font-bold text-orange-600 text-sm">฿${o.totalAmount || 0}</span></div>
-          ${o.comment ? `<div class="text-xs text-orange-600">หมายเหตุ: ${o.comment}</div>` : ''}
+          ${(() => {
+            const note = String(o.comment || '').replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim();
+            return note ? `<div class="text-xs text-orange-600">หมายเหตุ: ${note}</div>` : '';
+          })()}
           <div class="flex gap-2 flex-wrap">
             ${o.status === 'PENDING' ? `<button onclick="setStatusOrder('${o.id}','COOKING')" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-xs">เริ่มทำ</button>` : ''}
             ${o.status === 'COOKING' ? `<button onclick="setStatusOrder('${o.id}','READY')" class="bg-green-500 text-white px-3 py-1 rounded-lg text-xs">เสร็จแล้ว</button>` : ''}
