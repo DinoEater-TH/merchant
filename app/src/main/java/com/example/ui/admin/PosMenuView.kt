@@ -1,5 +1,7 @@
 package com.example.ui.admin
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,17 +12,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,25 +41,61 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.MainViewModel
+import com.example.ui.customer.SubItem
+import com.example.ui.customer.parseSubItems
 import com.example.ui.theme.OrangePrimary
+
+/**
+ * Pastel group palette so ไม้ 5 / ไม้ 10 / เกี๊ยวทอด are easy to tell apart at a glance.
+ * Order follows the shop's own category order, so each group keeps a stable colour.
+ */
+private data class PastelStyle(val container: Color, val border: Color, val chip: Color)
+
+private val PASTEL_STYLES = listOf(
+    PastelStyle(Color(0xFFFFF1E6), Color(0xFFF2C9A6), Color(0xFFFFDFC4)), // peach
+    PastelStyle(Color(0xFFE8F6EC), Color(0xFFB4DBC2), Color(0xFFD3EDDB)), // mint
+    PastelStyle(Color(0xFFE9F1FB), Color(0xFFB5CBE9), Color(0xFFD6E5F8)), // sky
+    PastelStyle(Color(0xFFF3ECFA), Color(0xFFCBB9E6), Color(0xFFE4D8F5)), // lavender
+    PastelStyle(Color(0xFFFFF9E0), Color(0xFFE7D79C), Color(0xFFFBF0BE)), // lemon
+    PastelStyle(Color(0xFFFDECF1), Color(0xFFEFC0CE), Color(0xFFFAD8E2))  // pink
+)
+
+private val NEUTRAL_STYLE = PastelStyle(
+    container = Color(0xFFF7F7F7),
+    border = Color(0xFFDDDDDD),
+    chip = Color(0xFFECECEC)
+)
 
 @Composable
 fun PosMenuView(viewModel: MainViewModel) {
     val menuItems by viewModel.menuItems.collectAsState()
     val categoriesState by viewModel.categories.collectAsState()
-    val shopInfo by viewModel.shopInfo.collectAsState()
     val syncStatus by viewModel.syncStatus.collectAsState()
     val cart = remember { mutableStateMapOf<String, Int>() }
+    // itemId -> (sub-item name -> count). The cart quantity of such a menu is the sum.
+    val subCounts = remember { mutableStateMapOf<String, Map<String, Int>>() }
     var selectedCategory by remember { mutableStateOf("all") }
     var phone by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
-    // map categoryId -> display name (Thai). Fall back to id when no category found.
+    // Stable colour per category (shop order first, then any extra categories).
+    val categoryOrder = remember(categoriesState, menuItems) {
+        val ordered = categoriesState.filter { it.id != "all" }.sortedBy { it.sort }.map { it.id }
+        ordered + menuItems.map { it.categoryId }
+            .distinct()
+            .filter { it.isNotBlank() && it != "all" && it !in ordered }
+    }
+    fun styleFor(categoryId: String): PastelStyle {
+        val index = categoryOrder.indexOf(categoryId)
+        return if (index >= 0) PASTEL_STYLES[index % PASTEL_STYLES.size] else NEUTRAL_STYLE
+    }
+
     fun categoryName(id: String): String {
         val c = categoriesState.find { it.id == id }
         return c?.name?.takeIf { it.isNotBlank() } ?: id
@@ -65,8 +106,24 @@ fun PosMenuView(viewModel: MainViewModel) {
     val filtered = remember(menuItems, selectedCategory) {
         menuItems.filter { it.status.name != "HIDDEN" && (selectedCategory == "all" || it.categoryId == selectedCategory) }
     }
+
+    // +1/-1 for one sub-item. The cart line always equals the sum of the sub counts.
+    fun changeSubItem(itemId: String, name: String, delta: Int) {
+        val next = subCounts[itemId].orEmpty().toMutableMap()
+        val value = ((next[name] ?: 0) + delta).coerceAtLeast(0)
+        if (value == 0) next.remove(name) else next[name] = value
+        val total = next.values.sum()
+        if (total <= 0) {
+            subCounts.remove(itemId)
+            cart.remove(itemId)
+        } else {
+            subCounts[itemId] = next.toMap()
+            cart[itemId] = total
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-        // Category chips
+        // Category chips, tinted with the same pastel as their group.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -76,13 +133,27 @@ fun PosMenuView(viewModel: MainViewModel) {
             FilterChip(
                 selected = selectedCategory == "all",
                 onClick = { selectedCategory = "all" },
-                label = { Text("ทั้งหมด", fontSize = 11.sp) }
+                label = { Text("ทั้งหมด", fontSize = 11.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
             )
             categories.forEach { cat ->
+                val style = styleFor(cat)
                 FilterChip(
                     selected = selectedCategory == cat,
                     onClick = { selectedCategory = cat },
-                    label = { Text(categoryName(cat), fontSize = 11.sp) }
+                    label = { Text(categoryName(cat), fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = style.container,
+                        selectedContainerColor = style.chip
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = selectedCategory == cat,
+                        borderColor = style.border,
+                        selectedBorderColor = style.border
+                    )
                 )
             }
         }
@@ -118,41 +189,98 @@ fun PosMenuView(viewModel: MainViewModel) {
                 }
             }
         } else {
-            // Menu list
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filtered, key = { it.id }) { m ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = m.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    val style = styleFor(m.categoryId)
+                    val subs = remember(m.id, m.subItems) {
+                        parseSubItems(m.subItems).filter { it.enabled }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = style.container),
+                        border = BorderStroke(1.dp, style.border)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = m.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text(
+                                        text = "฿${m.price} / ${m.saleUnit}",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (subs.isEmpty()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = {
+                                            val q = cart[m.id] ?: 0
+                                            if (q > 0) cart[m.id] = q - 1
+                                            if (cart[m.id] == 0) cart.remove(m.id)
+                                        }) {
+                                            Icon(Icons.Default.Remove, contentDescription = "ลด")
+                                        }
+                                        Text(
+                                            text = "${cart[m.id] ?: 0}",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                        )
+                                        IconButton(onClick = { cart[m.id] = (cart[m.id] ?: 0) + 1 }) {
+                                            Icon(Icons.Default.Add, contentDescription = "เพิ่ม")
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (subs.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                val itemTotal = subCounts[m.id]?.values?.sum() ?: 0
                                 Text(
-                                    text = "฿${m.price} / ${m.saleUnit}",
-                                    fontSize = 12.sp,
+                                    text = "เลือกเมนูรอง • รวม $itemTotal ${m.saleUnit}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = {
-                                    val q = cart[m.id] ?: 0
-                                    if (q > 0) cart[m.id] = q - 1
-                                    if (cart[m.id] == 0) cart.remove(m.id)
-                                }) {
-                                    Icon(Icons.Default.Remove, contentDescription = "ลด")
-                                }
-                                Text(
-                                    text = "${cart[m.id] ?: 0}",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                                IconButton(onClick = { cart[m.id] = (cart[m.id] ?: 0) + 1 }) {
-                                    Icon(Icons.Default.Add, contentDescription = "เพิ่ม")
+                                subs.forEach { sub: SubItem ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = sub.name,
+                                            fontSize = 13.sp,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        IconButton(
+                                            onClick = { changeSubItem(m.id, sub.name, -1) },
+                                            modifier = Modifier.size(34.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Remove,
+                                                contentDescription = "ลด ${sub.name}",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Text(
+                                            text = "${subCounts[m.id]?.get(sub.name) ?: 0}",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            modifier = Modifier.padding(horizontal = 6.dp)
+                                        )
+                                        IconButton(
+                                            onClick = { changeSubItem(m.id, sub.name, 1) },
+                                            modifier = Modifier.size(34.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Add,
+                                                contentDescription = "เพิ่ม ${sub.name}",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -164,7 +292,8 @@ fun PosMenuView(viewModel: MainViewModel) {
         // Live order detail: updates the moment an item is added or removed,
         // so the shop never has to open a separate review screen.
         Spacer(modifier = Modifier.height(8.dp))
-        val preview = viewModel.posOrderPreview(cart.toMap(), phone)
+        val items = cart.toMap()
+        val preview = viewModel.posOrderPreview(items, phone, subCounts.toMap())
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier
@@ -198,6 +327,14 @@ fun PosMenuView(viewModel: MainViewModel) {
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                if (oi.subItemSummary.isNotBlank()) {
+                                    Text(
+                                        text = oi.subItemSummary,
+                                        fontSize = 11.sp,
+                                        color = OrangePrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                             Text(
                                 text = "฿${fmtBaht(oi.price * oi.quantity)}",
@@ -279,16 +416,21 @@ fun PosMenuView(viewModel: MainViewModel) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = {
-                        if (cart.isEmpty()) {
+                        if (items.isEmpty()) {
                             message = "กรุณาเลือกรายการก่อน"
                             return@Button
                         }
-                        val orderId = viewModel.submitPosOrder(cart.toMap(), phone)
+                        val orderId = viewModel.submitPosOrder(
+                            cart = items,
+                            phone = phone,
+                            subCounts = subCounts.toMap()
+                        )
                         if (orderId == null) {
                             message = "บันทึกไม่สำเร็จ: ไม่พบรายการเมนู"
                         } else {
                             message = "สร้างออเดอร์ $orderId สำเร็จ ฿${fmtBaht(preview?.totalAmount ?: 0.0)}"
                             cart.clear()
+                            subCounts.clear()
                         }
                     },
                     enabled = preview != null,
@@ -308,7 +450,7 @@ fun PosMenuView(viewModel: MainViewModel) {
 private fun SummaryLine(
     label: String,
     value: String,
-    valueColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified
+    valueColor: Color = Color.Unspecified
 ) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
         Text(text = label, fontSize = 12.sp, modifier = Modifier.weight(1f))

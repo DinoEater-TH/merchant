@@ -1,7 +1,7 @@
 {
-  "versionCode": 10,
-  "versionName": "1.9",
+  "versionCode": 11,
+  "versionName": "2.0",
   "apkUrl": "https://github.com/DinoEater-TH/merchant/raw/main/docs/prototype/DinoEater-Merchant.apk",
-  "notes": "แก้บั๊กอ่านข้อมูลไม่สำเร็จ (Read data error) จากค่า 'รูปแบบการใส่ไม้' ที่เว็บส่งมาเป็นชื่อไทย ทำให้แอปโหลดออเดอร์/เมนู/สต๊อกไม่ได้",
+  "notes": "หน้า POS เลือกเมนูรองได้แบบเว็บลูกค้า (ลูกชิ้นหมู/คอกเทล แยกจำนวน), สีพาสเทลแยกกลุ่มเมนู, กรอบสต็อกกระชับขึ้น และเอาแถบย้อนกลับ/PIN ออกแล้ว",
   "mandatory": true
 }

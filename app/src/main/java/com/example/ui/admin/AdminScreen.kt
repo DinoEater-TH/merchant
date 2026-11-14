@@ -1,6 +1,5 @@
 package com.example.ui.admin
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Inventory2
@@ -22,7 +20,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -51,11 +48,6 @@ fun AdminScreen(viewModel: MainViewModel) {
     val selectedTab by viewModel.adminSelectedTab.collectAsState()
     val shopInfo by viewModel.shopInfo.collectAsState()
 
-    // Handle back button to exit admin mode
-    BackHandler {
-        viewModel.exitAdminMode()
-    }
-
     // Check for a newer sideloaded build once per launch.
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.checkForUpdateOnLaunch()
@@ -83,17 +75,6 @@ fun AdminScreen(viewModel: MainViewModel) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = { viewModel.exitAdminMode() },
-                        modifier = Modifier.testTag("admin_back_to_customer_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "กลับหน้าร้านค้าลูกค้า"
-                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

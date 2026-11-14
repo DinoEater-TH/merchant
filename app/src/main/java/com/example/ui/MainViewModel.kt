@@ -636,8 +636,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * stamps and syncs to Firebase. Returns the new order id, or null when the
      * cart is empty / items are no longer available.
      */
-    fun submitPosOrder(cart: Map<String, Int>, phone: String, note: String = ""): String? {
-        val preview = posOrderPreview(cart, phone) ?: return null
+    fun submitPosOrder(
+        cart: Map<String, Int>,
+        phone: String,
+        note: String = "",
+        subCounts: Map<String, Map<String, Int>> = emptyMap()
+    ): String? {
+        val preview = posOrderPreview(cart, phone, subCounts) ?: return null
         val items = preview.orderItems
         val subtotal = preview.subtotal
         val discount = preview.discount
@@ -696,17 +701,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Builds the POS review (items, applicable promotions, prices, member stamps)
      * without touching any data. Returns null when nothing is selected.
      */
-    fun posOrderPreview(cart: Map<String, Int>, phone: String): PosReview? {
+    fun posOrderPreview(
+        cart: Map<String, Int>,
+        phone: String,
+        subCounts: Map<String, Map<String, Int>> = emptyMap()
+    ): PosReview? {
         val items = cart.entries
             .filter { it.value > 0 }
             .mapNotNull { (id, qty) ->
                 menuItems.value.find { it.id == id }?.let { m ->
+                    // Menus with admin-managed sub-items (เมนูรอง) carry a per-unit breakdown,
+                    // exactly like the customer web cart: "ลูกชิ้นหมู x2, คอกเทล x1".
+                    val subNames = parseEnabledSubItemNames(m.subItems)
+                    val counts = subCounts[id].orEmpty()
+                    val picked = mutableListOf<String>()
+                    val summaryParts = mutableListOf<String>()
+                    subNames.forEach { name ->
+                        val c = (counts[name] ?: 0).coerceAtLeast(0)
+                        if (c > 0) {
+                            repeat(c) { picked.add(name) }
+                            summaryParts.add("$name x$c")
+                        }
+                    }
                     OrderItem(
                         itemId = m.id,
                         name = m.name,
                         price = m.price,
                         directCost = m.directCost,
-                        quantity = qty
+                        quantity = qty,
+                        selectedSubItems = picked.joinToString(","),
+                        subItemSummary = summaryParts.joinToString(", ")
                     )
                 }
             }
@@ -996,3 +1020,18 @@ data class CartCalculation(
     val isDeliveryBlocked: Boolean = false,
     val maxDeliveryDistanceKm: Double = 20.0
 )
+
+/** Enabled sub-item names of a menu, parsed from the admin-managed JSON string. */
+private fun parseEnabledSubItemNames(config: String): List<String> {
+    if (config.isBlank()) return emptyList()
+    return try {
+        val arr = org.json.JSONArray(config)
+        (0 until arr.length()).mapNotNull { i ->
+            val o = arr.optJSONObject(i) ?: return@mapNotNull null
+            if (!o.optBoolean("enabled", true)) return@mapNotNull null
+            o.optString("name").trim().takeIf { it.isNotBlank() }
+        }
+    } catch (_: Exception) {
+        emptyList()
+    }
+}

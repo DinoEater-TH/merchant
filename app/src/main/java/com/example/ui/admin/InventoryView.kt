@@ -106,7 +106,7 @@ fun InventoryView(viewModel: MainViewModel) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // One-Click Stock Reset Action Bar
+        // Compact action bar: kept short so the stock list gets most of the screen.
         Surface(
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = 2.dp,
@@ -115,39 +115,46 @@ fun InventoryView(viewModel: MainViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 12.dp, vertical = 5.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "📦 คลังสินค้า & สต็อกอัจฉริยะ",
+                        text = "📦 สต็อกสินค้า",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        fontSize = 13.sp
                     )
                     Text(
-                        text = "สต็อกตัดอัตโนมัติเมื่อลูกค้าสั่งซื้อ",
-                        fontSize = 11.sp,
+                        text = "ตัดสต็อกอัตโนมัติ",
+                        fontSize = 9.sp,
                         color = Color.Gray
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     OutlinedButton(
                         onClick = { showCategoryDialog = true },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        modifier = Modifier.height(30.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "หมวดหมู่", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(text = "หมวดหมู่", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                     OutlinedButton(
                         onClick = { showAddDialog = true },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        modifier = Modifier.height(30.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "เพิ่มเมนู", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(text = "เพิ่มเมนู", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                     Button(
                         onClick = {
@@ -155,12 +162,15 @@ fun InventoryView(viewModel: MainViewModel) {
                             Toast.makeText(context, "รีเซ็ตสต็อกเป็นค่าเริ่มต้นประจำวันเรียบร้อย! 🔄", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("one_click_stock_reset_button")
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .testTag("one_click_stock_reset_button")
                     ) {
-                        Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "One-Click Reset", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(text = "รีเซ็ต", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
